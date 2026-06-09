@@ -17,6 +17,7 @@ import SkinPackageLanding from "./pages/SkinPackageLanding";
 import ClosedBetaOps from "./pages/ClosedBetaOps";
 import CaseDashboard from "./pages/CaseDashboard";
 import QuoteBookingMvp from "./pages/QuoteBookingMvp";
+import AdminLandingRoutes from "./pages/AdminLandingRoutes";
 
 function Router() {
   return (
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/admin/beta" component={ClosedBetaOps} />
       <Route path="/admin/cases" component={CaseDashboard} />
       <Route path="/admin/quote-booking" component={QuoteBookingMvp} />
+      <Route path="/admin/landing-routes" component={AdminLandingRoutes} />
       <Route path="/:locale/:slug" component={SkinPackageLanding} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

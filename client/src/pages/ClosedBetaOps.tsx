@@ -110,6 +110,12 @@ export default function ClosedBetaOps() {
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
+              <Link href="/admin/landing-routes">
+                <Button variant="outline" className="border-ink-300 text-ink-800">
+                  Landing Routes
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Link>
             </div>
           </div>
 
