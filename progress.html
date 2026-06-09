@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Global Patient Hub Progress & Maintenance Manual</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #5f6b7a;
+        --line: #dde5ec;
+        --panel: #f7fafc;
+        --teal: #087b73;
+        --coral: #d66a4b;
+        --code: #0f172a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #fff;
+        color: var(--ink);
+        font-family:
+          Inter,
+          "Instrument Sans",
+          "Segoe UI",
+          Arial,
+          sans-serif;
+        line-height: 1.65;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(135deg, #f8fbfb 0%, #fff 65%);
+      }
+
+      .wrap {
+        width: min(1120px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      .hero {
+        padding: 56px 0 38px;
+      }
+
+      .eyebrow {
+        color: var(--teal);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        font-size: 13px;
+      }
+
+      h1 {
+        margin: 10px 0 14px;
+        max-width: 850px;
+        font-size: clamp(34px, 6vw, 64px);
+        line-height: 1.02;
+        letter-spacing: -0.02em;
+      }
+
+      h2 {
+        margin: 44px 0 14px;
+        padding-top: 10px;
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      h3 {
+        margin: 28px 0 8px;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 8px 0;
+      }
+
+      a {
+        color: var(--teal);
+      }
+
+      code {
+        border-radius: 6px;
+        background: #eef3f7;
+        color: var(--code);
+        padding: 2px 6px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 0.92em;
+      }
+
+      pre {
+        overflow: auto;
+        border-radius: 10px;
+        background: #0f172a;
+        color: #e5edf5;
+        padding: 16px;
+        font-size: 14px;
+      }
+
+      pre code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 14px 0 24px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--panel);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+        margin: 22px 0;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 18px;
+      }
+
+      .card strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .toc {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 8px;
+        margin-top: 24px;
+      }
+
+      .toc a {
+        display: block;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 11px;
+        text-decoration: none;
+        background: #fff;
+      }
+
+      .note {
+        border-left: 4px solid var(--coral);
+        background: #fff7f3;
+        padding: 12px 14px;
+        margin: 16px 0;
+      }
+
+      .ok {
+        border-left-color: var(--teal);
+        background: #f1fbf9;
+      }
+
+      main {
+        padding: 28px 0 64px;
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 22px 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media print {
+        .toc {
+          display: none;
+        }
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap hero">
+        <div class="eyebrow">Progress & Maintenance Manual</div>
+        <h1>Global Patient Hub 작업 현황과 수정 매뉴얼</h1>
+        <p>
+          최종 업데이트: 2026-06-10 · Production:
+          <a href="https://global-patient-hub.vercel.app">https://global-patient-hub.vercel.app</a> · 최신 확인 커밋:
+          <code>be8f06a</code>
+        </p>
+        <div class="toc">
+          <a href="#state">현재 상태</a>
+          <a href="#completed">완료 작업</a>
+          <a href="#routes">라우트 맵</a>
+          <a href="#manual">수정 매뉴얼</a>
+          <a href="#verify">검증/배포</a>
+          <a href="#guardrails">운영 가드레일</a>
+          <a href="#troubleshooting">문제 해결</a>
+          <a href="#next">다음 작업</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section id="state">
+        <h2>1. 현재 상태</h2>
+        <p>
+          Global Patient Hub는 한국 의료관광 외국인 환자 유치 플랫폼의 MVP입니다. 단순 병원 디렉토리가 아니라
+          <strong>International Patient Marketplace + Coordinator CRM + Quote/Booking Engine</strong> 방향으로 설계되어 있습니다.
+        </p>
+        <div class="grid">
+          <div class="card">
+            <strong>Public Site</strong>
+            홈, 병원/시술 탐색, 비교, 상담 신청, EN/JP 피부 패키지 랜딩, 플로팅 상담 버튼, Top 버튼.
+          </div>
+          <div class="card">
+            <strong>Internal Admin</strong>
+            베타 운영, 케이스 대시보드, 견적/보증금/예약 MVP, 랜딩 라우트 관리.
+          </div>
+          <div class="card">
+            <strong>Data</strong>
+            정적 seed data + Supabase lead/case 저장 구조 + local demo fallback.
+          </div>
+          <div class="card">
+            <strong>Deployment</strong>
+            GitHub main push 후 Vercel production 자동 배포.
+          </div>
+        </div>
+        <div class="note">
+          <strong>주의:</strong> <code>/admin/*</code> 경로는 공개 네비에서 숨겨졌지만 아직 인증/RBAC로 보호되지 않습니다.
+          실제 민감 데이터는 auth 적용 전 입력하지 마세요.
+        </div>
+      </section>
+
+      <section id="completed">
+        <h2>2. 완료 작업</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>영역</th>
+              <th>내용</th>
+              <th>주요 파일</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Foundation</td>
+              <td>React + Vite 프로젝트, Vercel 정적 배포, Supabase 연동 기본 구조.</td>
+              <td><code>package.json</code>, <code>vercel.json</code>, <code>README.md</code></td>
+            </tr>
+            <tr>
+              <td>Product Design</td>
+              <td>PRD, DB, API, compliance, validation roadmap, closed beta 운영계획 문서화.</td>
+              <td><code>docs/product/*</code>, <code>docs/OPERATIONS.md</code></td>
+            </tr>
+            <tr>
+              <td>Japan/Taiwan Wedge</td>
+              <td>피부 패키지 SKU, EN/JP 랜딩 라우트, 랜딩 렌더러, 상담 form prefill.</td>
+              <td><code>client/src/lib/wedgeData.ts</code>, <code>SkinPackageLanding.tsx</code></td>
+            </tr>
+            <tr>
+              <td>Lead Capture</td>
+              <td>외국인환자 eligibility, budget, travel window, consent, attribution 저장.</td>
+              <td><code>Consultation.tsx</code>, <code>client/src/lib/supabase.ts</code></td>
+            </tr>
+            <tr>
+              <td>Closed Beta Ops</td>
+              <td>5-provider SLA, 300 lead test, deposit target, ledger, ranking, case dashboard.</td>
+              <td><code>ClosedBetaOps.tsx</code>, <code>CaseDashboard.tsx</code>, <code>QuoteBookingMvp.tsx</code></td>
+            </tr>
+            <tr>
+              <td>Public/Admin Separation</td>
+              <td>공개 홈에서 라우팅 세트 제거, 내부 랜딩 라우트 관리 페이지 추가.</td>
+              <td><code>Home.tsx</code>, <code>AdminLandingRoutes.tsx</code>, <code>Navbar.tsx</code></td>
+            </tr>
+            <tr>
+              <td>i18n/RTL</td>
+              <td>다국어 번역 보강, Arabic RTL, AR에서 다른 언어 전환 시 LTR 복구.</td>
+              <td><code>I18nContext.tsx</code>, <code>index.css</code></td>
+            </tr>
+            <tr>
+              <td>Floating UI</td>
+              <td>Top 버튼, WhatsApp/LINE/WeChat/KakaoTalk 펼침 버튼, route scroll reset.</td>
+              <td><code>FloatingActionDock.tsx</code>, <code>ScrollManager.tsx</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="routes">
+        <h2>3. 라우트 맵</h2>
+        <h3>Public</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Route</th>
+              <th>Purpose</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>/</code></td><td>홈</td><td><code>client/src/pages/Home.tsx</code></td></tr>
+            <tr><td><code>/hospitals</code></td><td>병원 목록</td><td><code>Hospitals.tsx</code></td></tr>
+            <tr><td><code>/hospitals/:slug</code></td><td>병원 상세</td><td><code>HospitalDetail.tsx</code></td></tr>
+            <tr><td><code>/treatments</code></td><td>시술 목록</td><td><code>Treatments.tsx</code></td></tr>
+            <tr><td><code>/treatments/:slug</code></td><td>시술 상세</td><td><code>TreatmentDetail.tsx</code></td></tr>
+            <tr><td><code>/compare</code></td><td>비교</td><td><code>Compare.tsx</code></td></tr>
+            <tr><td><code>/consultation</code></td><td>상담 신청</td><td><code>Consultation.tsx</code></td></tr>
+            <tr><td><code>/:locale/:slug</code></td><td>랜딩 페이지</td><td><code>SkinPackageLanding.tsx</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>Internal</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Route</th>
+              <th>Purpose</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>/admin/beta</code></td><td>Closed beta command center</td><td><code>ClosedBetaOps.tsx</code></td></tr>
+            <tr><td><code>/admin/cases</code></td><td>Case dashboard</td><td><code>CaseDashboard.tsx</code></td></tr>
+            <tr><td><code>/admin/quote-booking</code></td><td>Quote/deposit/booking MVP</td><td><code>QuoteBookingMvp.tsx</code></td></tr>
+            <tr><td><code>/admin/landing-routes</code></td><td>Landing route manager</td><td><code>AdminLandingRoutes.tsx</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="manual">
+        <h2>4. 수정 매뉴얼</h2>
+        <h3>메뉴 수정</h3>
+        <p><code>client/src/components/Navbar.tsx</code>의 <code>navLinks</code>를 수정합니다. 새 문구가 필요하면 <code>I18nContext.tsx</code>에 번역 키를 추가합니다.</p>
+
+        <h3>홈 수정</h3>
+        <p><code>client/src/pages/Home.tsx</code>와 <code>client/src/contexts/I18nContext.tsx</code>의 <code>publicHome.*</code> 키를 수정합니다. 내부 운영 정보는 공개 홈에 넣지 않습니다.</p>
+
+        <h3>번역/언어 수정</h3>
+        <p><code>I18nContext.tsx</code>에서 <code>LANGUAGES</code>와 <code>T</code>를 수정합니다. Arabic은 <code>dir: "rtl"</code>, 나머지는 <code>ltr</code>로 유지합니다.</p>
+
+        <h3>플로팅 연락 버튼 수정</h3>
+        <p><code>client/src/components/FloatingActionDock.tsx</code>의 <code>CONTACT_LINKS</code>를 수정합니다. 공식 LINE/WeChat/Kakao/WhatsApp 계정이 확정되면 href만 교체하면 됩니다.</p>
+
+        <h3>피부 패키지 SKU 수정</h3>
+        <p><code>client/src/lib/wedgeData.ts</code>의 <code>SKIN_PACKAGE_SKUS</code>를 수정합니다. 랜딩에 노출하려면 <code>SKIN_LANDING_PAGES</code>의 <code>packageIds</code>에도 연결합니다.</p>
+
+        <h3>랜딩 페이지 추가</h3>
+        <p><code>client/src/lib/wedgeData.ts</code>의 <code>SKIN_LANDING_PAGES</code>에 locale/slug row를 추가하면 <code>/{locale}/{slug}</code> 라우트가 생성됩니다.</p>
+
+        <h3>병원/시술 데이터 수정</h3>
+        <p><code>client/src/lib/sampleData.ts</code>에서 병원, 시술, 언어, specialty label을 수정합니다.</p>
+
+        <h3>상담 폼 수정</h3>
+        <p><code>Consultation.tsx</code>에서 UI와 form state를 수정하고, 저장 필드는 <code>client/src/lib/supabase.ts</code>의 <code>InquiryInput</code>과 insert mapping도 같이 수정합니다.</p>
+
+        <h3>Supabase schema 수정</h3>
+        <p>기존 migration은 수정하지 말고 <code>supabase/migrations/20260610_0001_...</code>처럼 새 migration을 추가합니다.</p>
+
+        <h3>Closed beta/admin 데이터 수정</h3>
+        <p><code>client/src/lib/betaData.ts</code>를 수정합니다. 해당 데이터는 아직 seed/demo 운영 데이터입니다.</p>
+      </section>
+
+      <section id="verify">
+        <h2>5. 검증과 배포</h2>
+        <h3>Local</h3>
+        <pre><code>npm install
+npm run dev
+npm run check
+npm run build</code></pre>
+
+        <h3>Deploy</h3>
+        <pre><code>git status
+git add .
+git commit -m "Describe the change"
+git push origin main
+vercel ls global-patient-hub
+curl.exe -I -L https://global-patient-hub.vercel.app</code></pre>
+
+        <div class="note ok">
+          검증 체크: 홈, 상담 폼, 랜딩 페이지, AR → EN 방향 복구, Top 버튼, Chat 펼침 버튼, 메뉴 이동 시 상단 복귀, <code>/#process</code> 섹션 이동.
+        </div>
+      </section>
+
+      <section id="guardrails">
+        <h2>6. 운영 가드레일</h2>
+        <ul>
+          <li>치료효과를 보장하는 문구를 쓰지 않습니다.</li>
+          <li>"최고", "1위", "무조건 안전" 같은 무근거 비교/우월 표현을 피합니다.</li>
+          <li>검증되지 않은 병원을 verified로 표시하지 않습니다.</li>
+          <li>의료비와 비의료비는 분리합니다.</li>
+          <li>내부 라우트, 베타 지표, Supabase/RLS 정보는 공개 홈에 노출하지 않습니다.</li>
+          <li>민감한 의료문서/여권정보는 private storage와 접근권한 적용 전 수집하지 않습니다.</li>
+        </ul>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>7. 문제 해결</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>문제</th>
+              <th>확인 파일/조치</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>메뉴 클릭 후 푸터 위치가 보임</td>
+              <td><code>ScrollManager.tsx</code>, <code>App.tsx</code> mount 확인</td>
+            </tr>
+            <tr>
+              <td>Arabic에서 다른 언어로 바꿔도 RTL 유지</td>
+              <td><code>I18nContext.tsx</code>, <code>index.css</code>의 LTR 복구 규칙 확인</td>
+            </tr>
+            <tr>
+              <td>상담 신청이 local demo로 저장됨</td>
+              <td><code>VITE_SUPABASE_URL</code>, <code>VITE_SUPABASE_ANON_KEY</code> 확인</td>
+            </tr>
+            <tr>
+              <td>v1 insert가 inquiries로 fallback</td>
+              <td>v1 migration, RLS policy, Supabase logs 확인</td>
+            </tr>
+            <tr>
+              <td>Git index.lock</td>
+              <td>Git 프로세스가 없을 때만 <code>Remove-Item -LiteralPath .git\index.lock</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="next">
+        <h2>8. 다음 작업</h2>
+        <ol>
+          <li><code>/admin/*</code> auth/RBAC 보호.</li>
+          <li>Admin seed data를 Supabase persistence로 교체.</li>
+          <li>Landing route manager 저장/승인 workflow 연결.</li>
+          <li>공식 WhatsApp/LINE/WeChat/Kakao 계정 링크 교체.</li>
+          <li>상담 폼 spam protection 추가.</li>
+          <li>route-level code splitting으로 bundle size 개선.</li>
+          <li>provider verification workflow와 document expiry alert 추가.</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        이 문서는 저장소 루트의 <code>progress.html</code>입니다. 운영 사이트에 공개하지 않기 위해 <code>client/public</code> 아래에 두지 않았습니다.
+      </div>
+    </footer>
+  </body>
+</html>
