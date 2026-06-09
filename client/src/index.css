@@ -80,11 +80,14 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    direction: ltr;
   }
 
   body {
     @apply bg-background text-foreground font-sans;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    direction: ltr;
+    text-align: left;
   }
 
   h1,
@@ -103,8 +106,19 @@
     text-decoration: none;
   }
 
-  [dir="rtl"] {
+  html[dir="rtl"],
+  body[dir="rtl"] {
+    direction: rtl;
+  }
+
+  html[dir="rtl"] body {
     text-align: right;
+  }
+
+  html[dir="ltr"] body,
+  body[dir="ltr"] {
+    direction: ltr;
+    text-align: left;
   }
 }
 

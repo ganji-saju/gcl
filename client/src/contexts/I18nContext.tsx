@@ -1843,8 +1843,16 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const dir = currentLang.dir;
 
   useEffect(() => {
-    document.documentElement.lang = lang;
-    document.documentElement.dir = dir;
+    const root = document.documentElement;
+    const { body } = document;
+
+    root.lang = lang;
+    root.dir = dir;
+    root.dataset.lang = lang;
+    root.dataset.direction = dir;
+
+    body.dir = dir;
+    body.dataset.direction = dir;
   }, [dir, lang]);
 
   const t = useCallback(
