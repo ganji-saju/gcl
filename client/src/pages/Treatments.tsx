@@ -7,10 +7,12 @@ import { useI18n } from "@/contexts/I18nContext";
 import {
   formatKRW,
   formatUSD,
+  getLocalizedTreatmentDescription,
   getLocalizedTreatmentName,
   SAMPLE_HOSPITAL_TREATMENTS,
   SAMPLE_TREATMENTS,
   SPECIALTY_LABELS,
+  SPECIALTY_TRANSLATION_KEYS,
   type Specialty,
 } from "@/lib/sampleData";
 import { cn } from "@/lib/utils";
@@ -30,9 +32,24 @@ export default function Treatments() {
       if (activeCategory !== "all" && treatment.category !== activeCategory) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
-      return [treatment.nameEn, treatment.descriptionEn, SPECIALTY_LABELS[treatment.category].en].join(" ").toLowerCase().includes(q);
+      return [
+        treatment.nameEn,
+        treatment.nameKo,
+        treatment.nameZh,
+        treatment.nameJa,
+        treatment.nameAr,
+        treatment.descriptionEn,
+        treatment.descriptionKo,
+        treatment.descriptionZh,
+        treatment.descriptionJa,
+        treatment.descriptionAr,
+        t(SPECIALTY_TRANSLATION_KEYS[treatment.category]),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
     });
-  }, [activeCategory, search]);
+  }, [activeCategory, search, t]);
 
   return (
     <Layout>
@@ -51,12 +68,12 @@ export default function Treatments() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder={`${t("common.search")} treatments`}
+                placeholder={t("treatments.searchPlaceholder")}
                 className="h-11 border-ink-200 pl-10"
               />
             </div>
             <p className="text-sm text-ink-500">
-              <span className="font-semibold text-ink-950">{filtered.length}</span> programs
+              <span className="font-semibold text-ink-950">{filtered.length}</span> {t("treatments.programs")}
             </p>
           </div>
 
@@ -73,7 +90,7 @@ export default function Treatments() {
                     : "border-ink-200 bg-white text-ink-600 hover:bg-ink-50",
                 )}
               >
-                {category === "all" ? t("hospitals.filter.all") : SPECIALTY_LABELS[category].en}
+                {category === "all" ? t("hospitals.filter.all") : t(SPECIALTY_TRANSLATION_KEYS[category])}
               </button>
             ))}
           </div>
@@ -89,16 +106,20 @@ export default function Treatments() {
                     <div className="p-5">
                       <div className="mb-3 flex items-center justify-between">
                         <span className={cn("rounded border px-2 py-1 text-xs font-bold", specialty.color)}>
-                          {specialty.en}
+                          {t(SPECIALTY_TRANSLATION_KEYS[treatment.category])}
                         </span>
                         {treatment.popular && (
-                          <span className="rounded bg-coral-50 px-2 py-1 text-xs font-bold text-coral-700">Popular</span>
+                          <span className="rounded bg-coral-50 px-2 py-1 text-xs font-bold text-coral-700">
+                            {t("treatments.popular")}
+                          </span>
                         )}
                       </div>
                       <h2 className="min-h-14 font-serif text-2xl leading-tight text-ink-950">
                         {getLocalizedTreatmentName(treatment, lang)}
                       </h2>
-                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-600">{treatment.descriptionEn}</p>
+                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-600">
+                        {getLocalizedTreatmentDescription(treatment, lang)}
+                      </p>
                       <div className="mt-5 grid gap-2 text-sm">
                         <div className="flex items-center gap-2 text-ink-600">
                           <WalletCards className="size-4 text-teal-700" />
@@ -106,11 +127,15 @@ export default function Treatments() {
                         </div>
                         <div className="flex items-center gap-2 text-ink-600">
                           <Clock className="size-4 text-teal-700" />
-                          {treatment.recoveryDays === 0 ? "No downtime" : `${treatment.recoveryDays} ${t("treatments.days")} ${t("treatments.recovery")}`}
+                          {treatment.recoveryDays === 0
+                            ? t("treatments.noDowntime")
+                            : `${treatment.recoveryDays} ${t("treatments.days")} ${t("treatments.recovery")}`}
                         </div>
                       </div>
                       <div className="mt-5 flex items-center justify-between border-t border-ink-100 pt-4 text-sm">
-                        <span className="text-ink-500">{providers} providers</span>
+                        <span className="text-ink-500">
+                          {providers} {t("treatments.providers")}
+                        </span>
                         <span className="flex items-center gap-1 font-semibold text-teal-700">
                           {formatUSD(treatment.priceMin)} <ArrowRight className="size-4" />
                         </span>

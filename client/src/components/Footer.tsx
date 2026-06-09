@@ -16,14 +16,14 @@ export default function Footer() {
               </div>
               <div>
                 <div className="font-serif text-xl">Global Patient Hub</div>
-                <div className="text-sm text-teal-200">Independent Korea care network</div>
+                <div className="text-sm text-teal-200">{t("footer.tagline")}</div>
               </div>
             </div>
             <p className="max-w-md text-sm leading-6 text-ink-300">{t("footer.tagline")}</p>
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-white">Explore</h4>
+            <h4 className="mb-4 text-sm font-semibold text-white">{t("footer.explore")}</h4>
             <div className="grid gap-2 text-sm">
               <Link href="/hospitals" className="text-ink-300 hover:text-white">
                 {t("nav.hospitals")}
@@ -41,11 +41,11 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-white">Contact</h4>
+            <h4 className="mb-4 text-sm font-semibold text-white">{t("footer.contact")}</h4>
             <div className="grid gap-3 text-sm text-ink-300">
               <div className="flex gap-2">
                 <MapPin className="mt-0.5 size-4 text-teal-300" />
-                Seoul, South Korea
+                {t("footer.location")}
               </div>
               <a href="tel:+82-2-6200-2026" className="flex gap-2 hover:text-white">
                 <Phone className="size-4 text-teal-300" />
@@ -64,7 +64,7 @@ export default function Footer() {
           <p>
             Copyright {new Date().getFullYear()} Global Patient Hub. {t("footer.rights")}
           </p>
-          <p>Medical decisions are made directly with licensed providers.</p>
+          <p>{t("common.medicalDisclaimer")}</p>
         </div>
       </div>
     </footer>

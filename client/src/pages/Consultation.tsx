@@ -120,10 +120,10 @@ export default function Consultation() {
       setDemoMode(result.demoMode);
       setSubmitResult(result);
       setSubmitted(true);
-      toast.success(result.demoMode ? "Saved locally in demo mode." : result.storage === "v1" ? "Saved to v1 lead/case flow." : t("consult.success"));
+      toast.success(result.demoMode ? t("consult.localSaved") : result.storage === "v1" ? t("consult.v1Saved") : t("consult.success"));
     } catch (error) {
       console.error(error);
-      toast.error("Failed to save inquiry. Check Supabase settings.");
+      toast.error(t("consult.failedSave"));
     } finally {
       setIsSubmitting(false);
     }
@@ -137,18 +137,18 @@ export default function Consultation() {
             <div className="mx-auto mb-5 grid size-16 place-items-center rounded-md bg-teal-50 text-teal-700">
               <CheckCircle2 className="size-9" />
             </div>
-            <h1 className="font-serif text-4xl text-ink-950">Inquiry saved</h1>
+            <h1 className="font-serif text-4xl text-ink-950">{t("consult.savedTitle")}</h1>
             <p className="mt-4 leading-7 text-ink-600">
               {submitResult?.eligible === false
-                ? "Your request was saved for coordinator review, but eligibility needs manual confirmation before provider matching."
-                : "Your request has been saved. A coordinator will review eligibility, package fit, and provider availability before sending quote options."}
+                ? t("consult.savedEligibilityReview")
+                : t("consult.savedReview")}
             </p>
             <div className="mt-5 grid gap-3 text-left">
               {[
-                ["1", "Eligibility and consent check"],
-                ["2", "Manual provider matching for the first 100 validation leads"],
-                ["3", "Separated quote: medical fee, non-medical fee, deposit, validity"],
-                ["4", "Booking confirmation only after deposit and provider schedule check"],
+                ["1", t("consult.next.1")],
+                ["2", t("consult.next.2")],
+                ["3", t("consult.next.3")],
+                ["4", t("consult.next.4")],
               ].map(([step, text]) => (
                 <div key={step} className="flex gap-3 rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-700">
                   <span className="grid size-6 shrink-0 place-items-center rounded bg-teal-700 text-xs font-bold text-white">{step}</span>
@@ -158,21 +158,21 @@ export default function Consultation() {
             </div>
             {submitResult?.storage && (
               <p className="mt-4 rounded-md bg-teal-50 p-3 text-sm text-teal-800">
-                Storage path: {submitResult.storage}
+                {t("consult.storagePath")} {submitResult.storage}
                 {submitResult.caseId ? ` · Case ${submitResult.caseId.slice(0, 8)}` : ""}
               </p>
             )}
             {demoMode && (
               <p className="mt-4 rounded-md bg-coral-50 p-3 text-sm text-coral-800">
-                Supabase environment variables are not set yet, so this was stored in local demo storage.
+                {t("consult.demoStorage")}
               </p>
             )}
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button variant="outline" className="border-ink-300" onClick={() => setSubmitted(false)}>
-                Submit another
+                {t("consult.submitAnother")}
               </Button>
               <a href="/">
-                <Button className="bg-teal-700 text-white hover:bg-teal-800">Back to home</Button>
+                <Button className="bg-teal-700 text-white hover:bg-teal-800">{t("consult.backHome")}</Button>
               </a>
             </div>
           </div>
@@ -186,9 +186,7 @@ export default function Consultation() {
       <section className="border-b border-ink-200 bg-ink-950 py-14 text-white">
         <div className="container-wide">
           <h1 className="font-serif text-5xl">{t("consult.title")}</h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-ink-300">
-            Submit package, market, travel window, budget, and eligibility signals for manual coordinator matching.
-          </p>
+          <p className="mt-4 max-w-2xl text-lg leading-8 text-ink-300">{t("consult.subtitle")}</p>
         </div>
       </section>
 
@@ -197,7 +195,7 @@ export default function Consultation() {
           <div className="rounded-lg border border-ink-200 bg-white p-6">
             <form onSubmit={handleSubmit(onSubmit)} className="grid gap-7">
               <div>
-                <h2 className="mb-4 font-serif text-3xl text-ink-950">Patient details</h2>
+                <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("consult.patientDetails")}</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={`${t("consult.name")} *`} error={errors.name?.message}>
                     <Input
@@ -220,7 +218,7 @@ export default function Consultation() {
                   <Field label={t("consult.nationality")}>
                     <Input {...register("nationality")} placeholder="United States" className="h-11" />
                   </Field>
-                  <Field label="Residence country *" error={errors.residenceCountry?.message}>
+                  <Field label={`${t("consult.residenceCountry")} *`} error={errors.residenceCountry?.message}>
                     <Input
                       {...register("residenceCountry", { required: "Residence country is required" })}
                       placeholder="Japan"
@@ -231,14 +229,14 @@ export default function Consultation() {
               </div>
 
               <div>
-                <h2 className="mb-4 font-serif text-3xl text-ink-950">Validation request</h2>
+                <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("consult.validationRequest")}</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Skin package wedge">
+                  <Field label={t("consult.packageWedge")}>
                     <select
                       {...register("packageInterest")}
                       className="h-11 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                     >
-                      <option value="">Select package</option>
+                      <option value="">{t("consult.selectPackage")}</option>
                       {SKIN_PACKAGE_SKUS.map((pkg) => (
                         <option key={pkg.id} value={pkg.id}>
                           {pkg.id} · {pkg.shortTitle}
@@ -246,7 +244,7 @@ export default function Consultation() {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Target market">
+                  <Field label={t("consult.targetMarket")}>
                     <select
                       {...register("market")}
                       className="h-11 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
@@ -260,7 +258,7 @@ export default function Consultation() {
                       {...register("treatmentInterest")}
                       className="h-11 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                     >
-                      <option value="">Select treatment</option>
+                      <option value="">{t("consult.selectTreatment")}</option>
                       {SAMPLE_TREATMENTS.map((treatment) => (
                         <option key={treatment.slug} value={treatment.slug}>
                           {getLocalizedTreatmentName(treatment, lang)}
@@ -268,12 +266,12 @@ export default function Consultation() {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Preferred hospital">
+                  <Field label={t("consult.preferredHospital")}>
                     <select
                       {...register("hospitalSlug")}
                       className="h-11 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                     >
-                      <option value="">No preference</option>
+                      <option value="">{t("consult.noPreference")}</option>
                       {SAMPLE_HOSPITALS.map((hospital) => (
                         <option key={hospital.slug} value={hospital.slug}>
                           {getLocalizedHospitalName(hospital, lang)}
@@ -289,10 +287,10 @@ export default function Consultation() {
                       min={new Date().toISOString().split("T")[0]}
                     />
                   </Field>
-                  <Field label="Travel start">
+                  <Field label={t("consult.travelStart")}>
                     <Input type="date" {...register("travelStartDate")} className="h-11" min={new Date().toISOString().split("T")[0]} />
                   </Field>
-                  <Field label="Travel end">
+                  <Field label={t("consult.travelEnd")}>
                     <Input type="date" {...register("travelEndDate")} className="h-11" min={new Date().toISOString().split("T")[0]} />
                   </Field>
                   <Field label={t("consult.budget")}>
@@ -300,7 +298,7 @@ export default function Consultation() {
                       {...register("budget")}
                       className="h-11 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                     >
-                      <option value="">Select budget</option>
+                      <option value="">{t("consult.selectBudget")}</option>
                       {BUDGETS.map((budget) => (
                         <option key={budget.label} value={budget.label}>
                           {budget.label}
@@ -311,19 +309,19 @@ export default function Consultation() {
                 </div>
                 {selectedPackage && (
                   <div className="mt-4 rounded-md border border-teal-200 bg-teal-50 p-4 text-sm leading-6 text-teal-900">
-                    Selected package: <span className="font-semibold">{selectedPackage.title}</span> · {selectedPackage.recoveryWindow} recovery ·
-                    final price confirmed after provider consultation.
+                    {t("consult.selectedPackagePrefix")} <span className="font-semibold">{selectedPackage.title}</span> -{" "}
+                    {selectedPackage.recoveryWindow} {t("consult.selectedPackageSuffix")}
                   </div>
                 )}
               </div>
 
               <div>
-                <h2 className="mb-4 font-serif text-3xl text-ink-950">Foreign-patient eligibility check</h2>
+                <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("consult.eligibilityTitle")}</h2>
                 <div className="grid gap-3">
                   {[
-                    ["hasKoreanNationalHealthInsurance", "I currently have Korean National Health Insurance."],
-                    ["hasKoreanAlienRegistration", "I have Korean alien registration."],
-                    ["hasOverseasKoreanResidenceReport", "I have an overseas Korean residence report in Korea."],
+                    ["hasKoreanNationalHealthInsurance", t("consult.eligibility.nhi")],
+                    ["hasKoreanAlienRegistration", t("consult.eligibility.alien")],
+                    ["hasOverseasKoreanResidenceReport", t("consult.eligibility.overseas")],
                   ].map(([name, label]) => (
                     <label key={name} className="flex gap-3 rounded-md border border-ink-200 bg-ink-50 p-4 text-sm text-ink-700">
                       <input
@@ -336,7 +334,7 @@ export default function Consultation() {
                   ))}
                 </div>
                 <p className="mt-3 text-xs leading-5 text-ink-500">
-                  If any box applies, the coordinator will manually review eligibility before matching providers.
+                  {t("consult.eligibilityHelp")}
                 </p>
               </div>
 
@@ -365,7 +363,7 @@ export default function Consultation() {
                 <Textarea
                   {...register("message")}
                   rows={5}
-                  placeholder="Tell us your goals, timing, previous procedures, and any concerns."
+                  placeholder={t("consult.messagePlaceholder")}
                   className="resize-none"
                 />
               </Field>
@@ -376,8 +374,7 @@ export default function Consultation() {
                   {...register("consent", { required: true })}
                   className="mt-1 size-4 rounded border-ink-300 accent-teal-700"
                 />
-                I agree that Global Patient Hub may store this request and share it with relevant coordinators or
-                providers for consultation follow-up.
+                {t("consult.consent")}
               </label>
               <label className="flex gap-3 rounded-md border border-ink-200 bg-white p-4 text-sm text-ink-700">
                 <input
@@ -385,43 +382,39 @@ export default function Consultation() {
                   {...register("consentMarketing")}
                   className="mt-1 size-4 rounded border-ink-300 accent-teal-700"
                 />
-                I agree to receive package updates and follow-up messages about this validation request.
+                {t("consult.marketingConsent")}
               </label>
 
               <Button type="submit" disabled={isSubmitting} className="h-12 bg-teal-700 text-white hover:bg-teal-800">
-                {isSubmitting ? "Saving..." : t("consult.submit")}
+                {isSubmitting ? t("consult.saving") : t("consult.submit")}
               </Button>
             </form>
           </div>
 
           <aside className="space-y-4">
             <div className="rounded-lg border border-ink-200 bg-white p-5">
-              <h2 className="font-serif text-2xl text-ink-950">Operational status</h2>
+              <h2 className="font-serif text-2xl text-ink-950">{t("consult.operationalStatus")}</h2>
               <div className="mt-4 grid gap-3">
                 <StatusItem
                   icon={Database}
-                  title={isSupabaseConfigured() ? "Supabase connected" : "Demo storage active"}
-                  text={isSupabaseConfigured() ? "Submissions try v1 leads/cases first, then fallback to inquiries." : "Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for production."}
+                  title={isSupabaseConfigured() ? t("consult.supabaseConnected") : t("consult.demoStorageActive")}
+                  text={isSupabaseConfigured() ? t("consult.supabaseConnectedText") : t("consult.demoStorageActiveText")}
                 />
-                <StatusItem icon={LockKeyhole} title="Consent captured" text="Each lead stores explicit consent and request source." />
-                <StatusItem icon={Clock} title="Manual matching SLA" text="First 100 validation leads should be matched by a coordinator before automation." />
+                <StatusItem icon={LockKeyhole} title={t("consult.consentCaptured")} text={t("consult.consentCapturedText")} />
+                <StatusItem icon={Clock} title={t("consult.manualMatchingSla")} text={t("consult.manualMatchingSlaText")} />
               </div>
             </div>
 
             <div className="rounded-lg border border-ink-200 bg-ink-950 p-5 text-white">
               <MessageCircle className="mb-4 size-6 text-teal-300" />
-              <h2 className="font-serif text-2xl">What happens next?</h2>
-              <p className="mt-3 text-sm leading-6 text-ink-300">
-                A coordinator reviews your goal, budget, and travel dates, then suggests hospitals and next documents.
-              </p>
+              <h2 className="font-serif text-2xl">{t("consult.whatNext")}</h2>
+              <p className="mt-3 text-sm leading-6 text-ink-300">{t("consult.whatNextCopy")}</p>
             </div>
 
             <div className="rounded-lg border border-ink-200 bg-white p-5">
               <Globe2 className="mb-4 size-6 text-teal-700" />
-              <h2 className="font-serif text-2xl text-ink-950">Global routing</h2>
-              <p className="mt-3 text-sm leading-6 text-ink-600">
-                Language preference, nationality, and UTM source are stored for segmentation and partner follow-up.
-              </p>
+              <h2 className="font-serif text-2xl text-ink-950">{t("consult.globalRouting")}</h2>
+              <p className="mt-3 text-sm leading-6 text-ink-600">{t("consult.globalRoutingCopy")}</p>
             </div>
           </aside>
         </div>

@@ -10,6 +10,7 @@ import {
   formatUSD,
   getLocalizedHospitalDescription,
   getLocalizedHospitalName,
+  getLocalizedTreatmentName,
   LANGUAGE_LABELS,
   REGION_LABELS,
   SAMPLE_DOCTORS,
@@ -17,6 +18,7 @@ import {
   SAMPLE_HOSPITAL_TREATMENTS,
   SAMPLE_TREATMENTS,
   SPECIALTY_LABELS,
+  SPECIALTY_TRANSLATION_KEYS,
 } from "@/lib/sampleData";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -33,9 +35,9 @@ export default function HospitalDetail() {
     return (
       <Layout>
         <div className="container-wide py-24 text-center">
-          <h1 className="mb-4 font-serif text-4xl text-ink-950">Hospital not found</h1>
+          <h1 className="mb-4 font-serif text-4xl text-ink-950">{t("hospitals.notFound")}</h1>
           <Link href="/hospitals">
-            <Button variant="outline">Back to hospitals</Button>
+            <Button variant="outline">{t("hospitals.back")}</Button>
           </Link>
         </div>
       </Layout>
@@ -69,7 +71,7 @@ export default function HospitalDetail() {
         <div className="container-wide py-3">
           <Link href="/hospitals" className="inline-flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-950">
             <ChevronLeft className="size-4" />
-            {t("common.back")} to hospitals
+            {t("hospitals.back")}
           </Link>
         </div>
       </div>
@@ -100,7 +102,9 @@ export default function HospitalDetail() {
             </div>
 
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className={cn("rounded border px-2 py-1 text-xs font-bold", specialty.color)}>{specialty.en}</span>
+              <span className={cn("rounded border px-2 py-1 text-xs font-bold", specialty.color)}>
+                {t(SPECIALTY_TRANSLATION_KEYS[hospital.specialty])}
+              </span>
               <span className="flex items-center gap-1 text-sm font-semibold text-ink-700">
                 <Star className="size-4 fill-coral-500 text-coral-500" />
                 {hospital.rating} ({hospital.reviewCount.toLocaleString()} {t("hospitals.reviews")})
@@ -120,35 +124,44 @@ export default function HospitalDetail() {
               </div>
               <div className="rounded-lg border border-ink-200 p-5">
                 <Globe2 className="mb-4 size-5 text-teal-700" />
-                <div className="font-semibold text-ink-950">{hospital.languages.length} languages</div>
+                <div className="font-semibold text-ink-950">
+                  {hospital.languages.length} {t("compare.languages")}
+                </div>
                 <p className="mt-1 text-sm text-ink-500">{hospital.languages.map((language) => LANGUAGE_LABELS[language].label).join(", ")}</p>
               </div>
               <div className="rounded-lg border border-ink-200 p-5">
                 <CheckCircle2 className="mb-4 size-5 text-teal-700" />
-                <div className="font-semibold text-ink-950">{hospital.priceTier} price tier</div>
+                <div className="font-semibold text-ink-950">
+                  {hospital.priceTier} {t("hospitals.priceTier")}
+                </div>
                 <p className="mt-1 text-sm text-ink-500">{hospital.highlights[0]}</p>
               </div>
             </div>
 
             <section className="mt-8 rounded-lg border border-teal-200 bg-teal-50 p-5">
-              <h2 className="mb-4 font-serif text-3xl text-ink-950">International patient trust signals</h2>
+              <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("hospitals.trustSignals")}</h2>
               <div className="grid gap-3 md:grid-cols-4">
                 <TrustSignal
                   icon={ShieldCheck}
-                  title="Registration"
+                  title={t("hospitals.registration")}
                   text={hospital.registrationLabel}
                   active={hospital.registrationStatus === "verified"}
                 />
                 <TrustSignal
                   icon={CheckCircle2}
-                  title="Insurance"
-                  text={hospital.insuranceVerified ? "Insurance evidence checked" : "Insurance review pending"}
+                  title={t("hospitals.insurance")}
+                  text={hospital.insuranceVerified ? t("hospitals.insuranceChecked") : t("hospitals.insurancePending")}
                   active={hospital.insuranceVerified}
                 />
-                <TrustSignal icon={Clock} title="Quote SLA" text={`Target under ${hospital.responseSlaHours}h`} active />
+                <TrustSignal
+                  icon={Clock}
+                  title={t("hospitals.quoteSla")}
+                  text={`${t("hospitals.targetUnder")} ${hospital.responseSlaHours}${t("hospitals.hours")}`}
+                  active
+                />
                 <TrustSignal
                   icon={WalletCards}
-                  title="Package range"
+                  title={t("hospitals.packageRange")}
                   text={`${formatUSD(hospital.packagePriceMinUsd * 1300)} - ${formatUSD(hospital.packagePriceMaxUsd * 1300)}`}
                   active
                 />
@@ -156,7 +169,7 @@ export default function HospitalDetail() {
             </section>
 
             <section className="mt-10">
-              <h2 className="mb-4 font-serif text-3xl text-ink-950">Care strengths</h2>
+              <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("hospitals.careStrengths")}</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {hospital.specialties.map((item) => (
                   <div key={item} className="rounded-md border border-ink-200 p-4 text-sm font-medium text-ink-800">
@@ -167,13 +180,13 @@ export default function HospitalDetail() {
             </section>
 
             <section className="mt-10">
-              <h2 className="mb-4 font-serif text-3xl text-ink-950">Treatment pricing</h2>
+              <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("hospitals.treatmentPricing")}</h2>
               <div className="overflow-hidden rounded-lg border border-ink-200">
                 {offerings.map(({ id, treatment, priceKrw, notes }, index) => (
                   <Link key={id} href={`/treatments/${treatment!.slug}`}>
                     <div className={cn("grid gap-4 p-4 hover:bg-teal-50/40 md:grid-cols-[1fr_180px]", index > 0 && "border-t border-ink-200")}>
                       <div>
-                        <h3 className="font-semibold text-ink-950">{treatment!.nameEn}</h3>
+                        <h3 className="font-semibold text-ink-950">{getLocalizedTreatmentName(treatment!, lang)}</h3>
                         <p className="mt-1 text-sm text-ink-500">{notes}</p>
                       </div>
                       <div className="text-left md:text-right">
@@ -188,7 +201,7 @@ export default function HospitalDetail() {
 
             {doctors.length > 0 && (
               <section className="mt-10">
-                <h2 className="mb-4 font-serif text-3xl text-ink-950">Medical team</h2>
+                <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("hospitals.medicalTeam")}</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {doctors.map((doctor) => (
                     <div key={doctor.id} className="rounded-lg border border-ink-200 p-5">
@@ -204,14 +217,12 @@ export default function HospitalDetail() {
 
           <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <div className="rounded-lg border border-ink-200 bg-ink-950 p-5 text-white">
-              <h2 className="font-serif text-2xl">Shortlist this hospital</h2>
-              <p className="mt-3 text-sm leading-6 text-ink-300">
-                Add it to your comparison or send a request with this provider attached.
-              </p>
+              <h2 className="font-serif text-2xl">{t("hospitals.shortlistTitle")}</h2>
+              <p className="mt-3 text-sm leading-6 text-ink-300">{t("hospitals.shortlistCopy")}</p>
               <div className="mt-5 grid gap-3">
                 <Button onClick={toggleCompare} variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10">
                   <Scale className="size-4" />
-                  {inCompare ? "Remove from compare" : t("compare.add")}
+                  {inCompare ? t("compare.remove") : t("compare.add")}
                 </Button>
                 <Link href={`/consultation?hospital=${hospital.slug}`}>
                   <Button className="w-full bg-teal-600 text-white hover:bg-teal-500">
@@ -223,7 +234,7 @@ export default function HospitalDetail() {
             </div>
 
             <div className="rounded-lg border border-ink-200 bg-white p-5">
-              <h2 className="mb-4 font-serif text-2xl text-ink-950">Coordinator checklist</h2>
+              <h2 className="mb-4 font-serif text-2xl text-ink-950">{t("hospitals.coordinatorChecklist")}</h2>
               <div className="grid gap-3">
                 {hospital.highlights.map((item) => (
                   <div key={item} className="flex gap-2 text-sm text-ink-700">
@@ -235,7 +246,7 @@ export default function HospitalDetail() {
             </div>
 
             <div className="rounded-lg border border-ink-200 bg-white p-5">
-              <h2 className="mb-4 font-serif text-2xl text-ink-950">Contact</h2>
+              <h2 className="mb-4 font-serif text-2xl text-ink-950">{t("hospitals.contact")}</h2>
               <div className="grid gap-3 text-sm">
                 <a href={`tel:${hospital.phone}`} className="flex items-center gap-2 text-ink-600 hover:text-ink-950">
                   <Phone className="size-4 text-teal-700" />
@@ -244,7 +255,7 @@ export default function HospitalDetail() {
                 {hospital.website && (
                   <a href={hospital.website} className="flex items-center gap-2 text-ink-600 hover:text-ink-950" target="_blank" rel="noreferrer">
                     <Globe2 className="size-4 text-teal-700" />
-                    Official website
+                    {t("hospitals.officialWebsite")}
                   </a>
                 )}
               </div>

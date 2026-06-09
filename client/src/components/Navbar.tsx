@@ -19,8 +19,8 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
-    { href: "/en/korea-skin-clinic-gangnam", label: "Skin packages" },
-    { href: "/admin/beta", label: "Beta ops" },
+    { href: "/en/korea-skin-clinic-gangnam", label: t("nav.skinPackages") },
+    { href: "/admin/beta", label: t("nav.betaOps") },
     { href: "/hospitals", label: t("nav.hospitals") },
     { href: "/treatments", label: t("nav.treatments") },
     { href: "/compare", label: t("nav.compare") },

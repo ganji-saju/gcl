@@ -11,6 +11,7 @@ export interface Hospital {
   nameJa: string;
   nameAr: string;
   descriptionEn: string;
+  descriptionKo: string;
   descriptionZh: string;
   descriptionJa: string;
   descriptionAr: string;
@@ -45,10 +46,12 @@ export interface Treatment {
   slug: string;
   category: Specialty;
   nameEn: string;
+  nameKo: string;
   nameZh: string;
   nameJa: string;
   nameAr: string;
   descriptionEn: string;
+  descriptionKo: string;
   descriptionZh: string;
   descriptionJa: string;
   descriptionAr: string;
@@ -131,6 +134,14 @@ export const LANGUAGE_LABELS: Record<LanguageCode, { label: string; flag: string
   ru: { label: "Russian", flag: "RU" },
 };
 
+export const SPECIALTY_TRANSLATION_KEYS: Record<Specialty, string> = {
+  plastic_surgery: "cat.plastic",
+  dermatology: "cat.dermatology",
+  dental: "cat.dental",
+  hair: "cat.hair",
+  wellness: "cat.wellness",
+};
+
 const clinicExterior =
   "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&q=85&auto=format&fit=crop";
 const doctorConsult =
@@ -154,10 +165,15 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     nameJa: "Auraフェイシャル研究院",
     nameAr: "معهد أورا للوجه",
     descriptionEn:
-      "A Seoul-based facial surgery center focused on rhinoplasty, eyelid surgery, and facial contouring for international patients. Coordinators prepare translation, imaging, and quote comparisons before arrival.",
-    descriptionZh: "首尔面部手术中心，专注鼻整形、眼部手术和面部轮廓，为海外患者提供翻译、影像和报价协调。",
-    descriptionJa: "ソウルの顔専門外科センター。鼻整形、目元手術、輪郭手術を中心に、渡航前の通訳、画像確認、見積もりを支援します。",
-    descriptionAr: "مركز جراحة وجه في سيول يركز على تجميل الأنف والجفون وتنسيق الوجه مع دعم ترجمة وعروض أسعار للمرضى الدوليين.",
+      "A Seoul facial surgery center focused on rhinoplasty, eyelid surgery, and facial contouring for international patients. Coordinators prepare translation, imaging, and quote comparisons before arrival.",
+    descriptionKo:
+      "서울 강남의 안면 성형 센터로 코성형, 눈성형, 윤곽 수술 상담에 강점이 있습니다. 해외 환자 방문 전 번역, 영상 자료, 견적 비교를 코디네이터가 준비합니다.",
+    descriptionZh:
+      "位于首尔的面部整形中心，重点提供隆鼻、眼部手术和面部轮廓咨询。协调员会在患者抵达前准备翻译、影像资料和报价比较。",
+    descriptionJa:
+      "ソウルの顔専門美容外科センターです。鼻整形、目元手術、輪郭形成を中心に、渡航前から翻訳、画像資料、見積もり比較をコーディネーターが準備します。",
+    descriptionAr:
+      "مركز جراحة وجه في سيول يركز على تجميل الأنف وجراحة الجفون وتحديد ملامح الوجه للمرضى الدوليين. يجهز المنسقون الترجمة والصور ومقارنات الأسعار قبل الوصول.",
     specialty: "plastic_surgery",
     region: "gangnam",
     addressEn: "92 Apgujeong-ro, Gangnam-gu, Seoul",
@@ -187,15 +203,20 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     id: 2,
     slug: "lumen-skin-center",
     nameEn: "Lumen Skin Center",
-    nameKo: "루멘 스킨센터",
+    nameKo: "루멘 스킨 센터",
     nameZh: "Lumen皮肤中心",
-    nameJa: "Lumenスキンセンター",
+    nameJa: "ルーメン皮膚センター",
     nameAr: "مركز لومين للبشرة",
     descriptionEn:
       "A dermatology and aesthetic medicine center known for laser toning, acne scar programs, injectables, and recovery-light treatments designed for short-stay visitors.",
-    descriptionZh: "皮肤科与美容医学中心，提供激光、痘疤、注射与短停留访客可安排的低恢复期项目。",
-    descriptionJa: "レーザー、ニキビ跡、注入治療、短期滞在向けのダウンタイムが少ない施術に強い美容皮膚科です。",
-    descriptionAr: "مركز جلدية وتجميل يقدم الليزر وآثار حب الشباب والحقن وبرامج مناسبة للزيارات القصيرة.",
+    descriptionKo:
+      "레이저 토닝, 여드름 흉터, 주사 시술, 회복 부담이 낮은 피부 프로그램을 제공하는 피부·에스테틱 센터입니다. 짧은 체류 일정에 맞춘 패키지 상담이 가능합니다.",
+    descriptionZh:
+      "皮肤科与医美中心，擅长激光调色、痘疤项目、注射类治疗和低恢复期方案，适合短暂停留的访韩患者。",
+    descriptionJa:
+      "レーザートーニング、ニキビ跡、注入治療、ダウンタイムの少ない皮膚プログラムに強い皮膚・美容医療センターです。短期滞在に合わせた相談が可能です。",
+    descriptionAr:
+      "مركز جلدية وتجميل معروف بتوحيد لون البشرة بالليزر وبرامج آثار حب الشباب والحقن والعلاجات الخفيفة التعافي المناسبة للزيارات القصيرة.",
     specialty: "dermatology",
     region: "gangnam",
     addressEn: "521 Gangnam-daero, Gangnam-gu, Seoul",
@@ -228,12 +249,17 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     nameKo: "서울 덴탈 디자인",
     nameZh: "首尔牙科设计",
     nameJa: "ソウルデンタルデザイン",
-    nameAr: "تصميم سيول لطب الأسنان",
+    nameAr: "سيول لتصميم الأسنان",
     descriptionEn:
       "A cosmetic and restorative dental clinic offering veneers, implants, whitening, and smile-design packages for patients who need predictable timelines.",
-    descriptionZh: "美容修复牙科，提供贴面、种植、美白和微笑设计，适合需要明确行程的海外患者。",
-    descriptionJa: "ベニア、インプラント、ホワイトニング、スマイルデザインを行う審美修復歯科です。",
-    descriptionAr: "عيادة أسنان تجميلية وترميمية تقدم القشور والزراعة والتبييض وتصميم الابتسامة.",
+    descriptionKo:
+      "라미네이트, 임플란트, 미백, 스마일 디자인 패키지를 제공하는 심미·보철 치과입니다. 방문 횟수와 치료 일정을 예측해야 하는 해외 환자에게 적합합니다.",
+    descriptionZh:
+      "提供贴面、种植、牙齿美白和微笑设计套餐的美容修复牙科，适合需要明确就诊时间线的海外患者。",
+    descriptionJa:
+      "ベニア、インプラント、ホワイトニング、スマイルデザインを提供する審美・補綴歯科です。通院回数と日程を事前に把握したい海外患者に適しています。",
+    descriptionAr:
+      "عيادة أسنان تجميلية وترميمية تقدم القشور والزراعة والتبييض وباقات تصميم الابتسامة للمرضى الذين يحتاجون إلى جدول زمني واضح.",
     specialty: "dental",
     region: "sinchon",
     addressEn: "55 Yonsei-ro, Seodaemun-gu, Seoul",
@@ -263,15 +289,20 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     id: 4,
     slug: "rootline-hair-clinic",
     nameEn: "Rootline Hair Clinic",
-    nameKo: "루트라인 헤어클리닉",
+    nameKo: "루트라인 헤어 클리닉",
     nameZh: "Rootline植发中心",
-    nameJa: "Rootline毛髪クリニック",
+    nameJa: "ルートライン植毛クリニック",
     nameAr: "عيادة روتلاين للشعر",
     descriptionEn:
       "A hair restoration clinic providing FUE, DHI, scalp care, and PRP programs with multilingual pre-screening for international patients.",
-    descriptionZh: "植发与头皮护理中心，提供FUE、DHI、PRP和多语言术前筛查。",
-    descriptionJa: "FUE、DHI、頭皮ケア、PRPを提供し、多言語で事前スクリーニングを行う毛髪クリニックです。",
-    descriptionAr: "عيادة ترميم شعر تقدم FUE وDHI وعناية بفروة الرأس وPRP مع فحص أولي متعدد اللغات.",
+    descriptionKo:
+      "FUE, DHI, 두피 케어, PRP 프로그램을 제공하는 모발이식 클리닉입니다. 해외 환자를 위해 다국어 사전 사진 검토와 이식 모수 상담을 진행합니다.",
+    descriptionZh:
+      "提供FUE、DHI、头皮护理和PRP项目的植发诊所，为国际患者提供多语言术前照片评估。",
+    descriptionJa:
+      "FUE、DHI、頭皮ケア、PRPを提供する植毛クリニックです。海外患者向けに多言語で事前写真レビューと株数相談を行います。",
+    descriptionAr:
+      "عيادة لاستعادة الشعر تقدم FUE وDHI وعناية بفروة الرأس وبرامج PRP مع فرز أولي متعدد اللغات للمرضى الدوليين.",
     specialty: "hair",
     region: "seongsu",
     addressEn: "212 Seongsui-ro, Seongdong-gu, Seoul",
@@ -304,12 +335,17 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     nameKo: "한강 검진 라운지",
     nameZh: "汉江体检中心",
     nameJa: "漢江健診ラウンジ",
-    nameAr: "صالة هان ريفر للفحوصات",
+    nameAr: "صالة فحص نهر هان",
     descriptionEn:
       "A preventive health and executive checkup center bundling imaging, lab tests, digestive endoscopy, and physician summaries for travel-friendly schedules.",
-    descriptionZh: "预防医学与高端体检中心，结合影像、检验、内镜和医生总结，适合旅行行程。",
-    descriptionJa: "画像検査、血液検査、内視鏡、医師サマリーを旅行日程に合わせて提供する健診センターです。",
-    descriptionAr: "مركز فحوصات وقائية وتنفيذية يجمع التصوير والتحاليل والمناظير وملخص الطبيب ضمن جدول مناسب للسفر.",
+    descriptionKo:
+      "영상검사, 혈액검사, 소화기 내시경, 의사 소견 요약을 여행 일정에 맞춰 구성하는 예방 검진·프리미엄 건강검진 센터입니다.",
+    descriptionZh:
+      "预防医学与高端体检中心，将影像、实验室检查、消化内镜和医生摘要整合为适合旅行日程的套餐。",
+    descriptionJa:
+      "画像検査、血液検査、消化器内視鏡、医師サマリーを旅行日程に合わせて組み合わせる予防医療・エグゼクティブ健診センターです。",
+    descriptionAr:
+      "مركز فحوصات وقائية وتنفيذية يجمع التصوير والتحاليل ومناظير الجهاز الهضمي وملخصات الطبيب ضمن جدول مناسب للسفر.",
     specialty: "wellness",
     region: "gangnam",
     addressEn: "317 Teheran-ro, Gangnam-gu, Seoul",
@@ -339,15 +375,20 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     id: 6,
     slug: "atelier-recovery-clinic",
     nameEn: "Atelier Recovery Clinic",
-    nameKo: "아뜰리에 회복 클리닉",
+    nameKo: "아틀리에 회복 클리닉",
     nameZh: "Atelier恢复护理中心",
-    nameJa: "Atelierリカバリークリニック",
+    nameJa: "アトリエ回復クリニック",
     nameAr: "عيادة أتيليه للتعافي",
     descriptionEn:
       "A post-procedure recovery and aesthetic wellness clinic supporting swelling care, lymphatic therapy, IV nutrition, and wound-care coordination.",
-    descriptionZh: "术后恢复与美容健康中心，提供消肿、淋巴护理、营养点滴和伤口护理协调。",
-    descriptionJa: "術後の腫れケア、リンパケア、点滴栄養、創傷ケアを支援するリカバリークリニックです。",
-    descriptionAr: "عيادة تعاف وعافية تجميلية تدعم تقليل التورم والعلاج اللمفاوي والتغذية الوريدية وتنسيق الجروح.",
+    descriptionKo:
+      "시술 후 부기 관리, 림프 테라피, IV 영양, 상처 관리 코디네이션을 지원하는 회복·웰니스 클리닉입니다.",
+    descriptionZh:
+      "术后恢复与医美康养中心，支持消肿护理、淋巴疗法、静脉营养和伤口护理协调。",
+    descriptionJa:
+      "施術後の腫れケア、リンパセラピー、点滴栄養、創傷ケア調整を支援する回復・ウェルネスクリニックです。",
+    descriptionAr:
+      "عيادة للتعافي والعافية الجمالية بعد الإجراءات، تدعم العناية بالتورم والعلاج اللمفاوي والتغذية الوريدية وتنسيق رعاية الجروح.",
     specialty: "wellness",
     region: "hongdae",
     addressEn: "144 Yanghwa-ro, Mapo-gu, Seoul",
@@ -381,14 +422,20 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     slug: "rhinoplasty",
     category: "plastic_surgery",
     nameEn: "Rhinoplasty",
-    nameZh: "鼻整形",
+    nameKo: "코성형",
+    nameZh: "隆鼻术",
     nameJa: "鼻整形",
     nameAr: "تجميل الأنف",
     descriptionEn:
       "Korean rhinoplasty focuses on balanced, natural-looking changes using implant, cartilage, or revision techniques depending on anatomy and goals.",
-    descriptionZh: "韩国鼻整形重视自然比例，可根据鼻部结构和目标选择假体、软骨或修复方案。",
-    descriptionJa: "韓国の鼻整形は自然なバランスを重視し、骨格や希望に合わせてプロテーゼ、軟骨、修正術を選びます。",
-    descriptionAr: "يركز تجميل الأنف الكوري على نتائج طبيعية ومتوازنة باستخدام الغرسات أو الغضروف أو تقنيات المراجعة حسب الحالة.",
+    descriptionKo:
+      "한국 코성형은 얼굴 균형과 자연스러운 변화를 중시합니다. 해부학적 조건과 목표에 따라 보형물, 자가연골, 재수술 기법을 조합합니다.",
+    descriptionZh:
+      "韩国隆鼻强调面部平衡与自然变化，会根据鼻部结构和目标选择假体、软骨或修复技术。",
+    descriptionJa:
+      "韓国の鼻整形は顔全体のバランスと自然な変化を重視します。解剖学的条件と目的に応じてプロテーゼ、軟骨、修正術を組み合わせます。",
+    descriptionAr:
+      "يركز تجميل الأنف الكوري على التوازن والتغيير الطبيعي باستخدام الغرسات أو الغضاريف أو تقنيات المراجعة حسب البنية والأهداف.",
     priceMin: 3200000,
     priceMax: 9200000,
     currency: "KRW",
@@ -403,14 +450,20 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     slug: "double-eyelid",
     category: "plastic_surgery",
     nameEn: "Double Eyelid Surgery",
+    nameKo: "쌍꺼풀 수술",
     nameZh: "双眼皮手术",
     nameJa: "二重まぶた手術",
     nameAr: "جراحة الجفن المزدوج",
     descriptionEn:
       "Creates or refines an upper-eyelid crease with incisional or non-incisional approaches, often planned with ptosis or under-eye concerns.",
-    descriptionZh: "通过切开或非切开方式塑造上眼睑褶皱，也可结合上睑下垂或眼下问题评估。",
-    descriptionJa: "切開または非切開で上まぶたのラインを整え、眼瞼下垂や目の下の悩みも含めて計画します。",
-    descriptionAr: "تشكيل أو تحسين ثنية الجفن العلوي بطرق جراحية أو غير جراحية مع تقييم تدلي الجفن أو منطقة تحت العين.",
+    descriptionKo:
+      "절개 또는 비절개 방식으로 윗눈꺼풀 라인을 만들거나 개선합니다. 눈매교정, 처짐, 눈 밑 고민과 함께 계획되는 경우가 많습니다.",
+    descriptionZh:
+      "通过切开或非切开方式形成或改善上眼睑褶皱，常与上睑下垂或眼下问题一起规划。",
+    descriptionJa:
+      "切開または非切開で上まぶたのラインを作成・改善します。眼瞼下垂や目元の悩みと合わせて計画されることがあります。",
+    descriptionAr:
+      "ينشئ أو يحسن ثنية الجفن العلوي بطرق جراحية أو غير جراحية، وغالبا يخطط مع مشاكل تدلي الجفن أو أسفل العين.",
     priceMin: 900000,
     priceMax: 3600000,
     currency: "KRW",
@@ -425,14 +478,20 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     slug: "laser-toning",
     category: "dermatology",
     nameEn: "Laser Toning",
-    nameZh: "激光嫩肤",
+    nameKo: "레이저 토닝",
+    nameZh: "激光调色",
     nameJa: "レーザートーニング",
-    nameAr: "ليزر توحيد البشرة",
+    nameAr: "توحيد لون البشرة بالليزر",
     descriptionEn:
       "A low-downtime laser program for pigmentation, melasma, and overall tone. Multiple sessions are commonly recommended.",
-    descriptionZh: "低恢复期激光项目，用于色沉、黄褐斑和肤色改善，通常建议多次治疗。",
-    descriptionJa: "色素沈着、肝斑、肌トーンを整えるダウンタイムの少ないレーザー治療です。",
-    descriptionAr: "برنامج ليزر قليل التعافي للتصبغات والكلف وتوحيد لون البشرة، وغالبا يحتاج إلى عدة جلسات.",
+    descriptionKo:
+      "색소, 기미, 전체 피부 톤 개선을 목표로 하는 낮은 회복 부담의 레이저 프로그램입니다. 보통 여러 회차가 권장됩니다.",
+    descriptionZh:
+      "低恢复期激光项目，用于色素、黄褐斑和整体肤色改善。通常建议进行多次治疗。",
+    descriptionJa:
+      "色素、肝斑、肌全体のトーン改善を目的としたダウンタイムの少ないレーザープログラムです。複数回の施術が一般的です。",
+    descriptionAr:
+      "برنامج ليزر بفترة تعاف قصيرة للتصبغات والكلف وتوحيد لون البشرة. غالبا ما يوصى بعدة جلسات.",
     priceMin: 160000,
     priceMax: 620000,
     currency: "KRW",
@@ -447,14 +506,20 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     slug: "skin-booster",
     category: "dermatology",
     nameEn: "Skin Booster",
-    nameZh: "水光/丽珠兰",
+    nameKo: "스킨부스터",
+    nameZh: "皮肤水光针",
     nameJa: "スキンブースター",
     nameAr: "معزز البشرة",
     descriptionEn:
       "Injectable hydration and skin-quality treatment using HA, PDRN, or collagen-stimulating formulas selected by skin condition.",
-    descriptionZh: "通过HA、PDRN或胶原刺激配方改善水分、弹性和肤质，由医生根据肤况选择。",
-    descriptionJa: "HA、PDRN、コラーゲン刺激製剤などを肌状態に合わせて選ぶ注入系スキンケアです。",
-    descriptionAr: "علاج حقني لتحسين الترطيب وجودة البشرة باستخدام HA أو PDRN أو محفزات الكولاجين حسب الحالة.",
+    descriptionKo:
+      "피부 상태에 따라 HA, PDRN, 콜라겐 자극 성분을 선택해 수분감과 피부 질 개선을 돕는 주사 시술입니다.",
+    descriptionZh:
+      "根据皮肤状态选择HA、PDRN或胶原刺激配方，通过注射改善水润度和肤质。",
+    descriptionJa:
+      "肌状態に応じてHA、PDRN、コラーゲン刺激成分を選び、保湿感と肌質改善を目指す注入治療です。",
+    descriptionAr:
+      "علاج حقن للترطيب وتحسين جودة البشرة باستخدام HA أو PDRN أو تركيبات تحفز الكولاجين حسب حالة الجلد.",
     priceMin: 240000,
     priceMax: 980000,
     currency: "KRW",
@@ -469,14 +534,20 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     slug: "porcelain-veneers",
     category: "dental",
     nameEn: "Porcelain Veneers",
+    nameKo: "세라믹 베니어",
     nameZh: "瓷贴面",
-    nameJa: "ポーセレンベニア",
+    nameJa: "セラミックベニア",
     nameAr: "قشور خزفية",
     descriptionEn:
       "A cosmetic dental treatment that redesigns tooth shape and shade using custom ceramic veneers planned from digital previews.",
-    descriptionZh: "通过数字预览设计牙齿形态和色泽，并制作个性化瓷贴面。",
-    descriptionJa: "デジタルプレビューをもとに歯の形と色を設計する審美歯科治療です。",
-    descriptionAr: "علاج أسنان تجميلي يعيد تصميم شكل ولون الأسنان بقشور خزفية مخصصة بناء على معاينة رقمية.",
+    descriptionKo:
+      "디지털 미리보기를 바탕으로 맞춤 세라믹 베니어를 제작해 치아 형태와 색상을 개선하는 심미 치과 시술입니다.",
+    descriptionZh:
+      "基于数字预览定制陶瓷贴面，改善牙齿形态和颜色的美容牙科项目。",
+    descriptionJa:
+      "デジタルプレビューをもとにカスタムセラミックベニアを作成し、歯の形と色を整える審美歯科治療です。",
+    descriptionAr:
+      "علاج أسنان تجميلي يعيد تصميم شكل الأسنان ولونها باستخدام قشور خزفية مخصصة مخططة عبر معاينة رقمية.",
     priceMin: 600000,
     priceMax: 1400000,
     currency: "KRW",
@@ -491,14 +562,20 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     slug: "hair-transplant",
     category: "hair",
     nameEn: "FUE Hair Transplant",
+    nameKo: "FUE 모발이식",
     nameZh: "FUE植发",
     nameJa: "FUE自毛植毛",
     nameAr: "زراعة الشعر FUE",
     descriptionEn:
       "Follicular unit extraction using graft planning, donor-area review, and post-travel medication guidance.",
-    descriptionZh: "通过毛囊单位提取进行植发，包括毛囊数量规划、供区评估和回国后用药指导。",
-    descriptionJa: "グラフト計画、ドナー部位確認、帰国後の薬剤案内まで含むFUE植毛です。",
-    descriptionAr: "زراعة شعر بتقنية اقتطاف الوحدات مع تخطيط البصيلات ومراجعة المنطقة المانحة وإرشادات الدواء بعد السفر.",
+    descriptionKo:
+      "모낭 단위 채취 방식으로 이식 모수 계획, 공여부 상태 검토, 귀국 후 복약 안내까지 포함해 상담합니다.",
+    descriptionZh:
+      "采用毛囊单位提取方式，包含移植单位规划、供区评估和旅行后用药指导。",
+    descriptionJa:
+      "毛包単位採取による植毛で、株数計画、ドナー部位の確認、帰国後の服薬案内まで相談します。",
+    descriptionAr:
+      "استخراج وحدات البصيلات مع تخطيط الطعوم ومراجعة منطقة التبرع وإرشاد الدواء بعد السفر.",
     priceMin: 3800000,
     priceMax: 9800000,
     currency: "KRW",
@@ -513,14 +590,20 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     slug: "executive-checkup",
     category: "wellness",
     nameEn: "Executive Checkup",
+    nameKo: "프리미엄 건강검진",
     nameZh: "高端体检",
     nameJa: "エグゼクティブ健診",
     nameAr: "فحص تنفيذي شامل",
     descriptionEn:
       "A travel-friendly preventive screening package with labs, imaging, endoscopy options, and translated physician summaries.",
-    descriptionZh: "适合旅行日程的预防筛查套餐，包括检验、影像、内镜选项和翻译版医生总结。",
-    descriptionJa: "検査、画像、内視鏡オプション、翻訳済み医師サマリーを含む旅行者向け健診です。",
-    descriptionAr: "حزمة فحوصات وقائية مناسبة للسفر تشمل التحاليل والتصوير وخيارات المنظار وملخص الطبيب المترجم.",
+    descriptionKo:
+      "혈액검사, 영상검사, 내시경 옵션, 번역된 의사 소견서를 여행 일정에 맞춰 제공하는 예방 검진 패키지입니다.",
+    descriptionZh:
+      "适合旅行日程的预防筛查套餐，包含实验室检查、影像、内镜选项和翻译后的医生摘要。",
+    descriptionJa:
+      "検体検査、画像検査、内視鏡オプション、翻訳付き医師サマリーを含む、旅行しやすい予防健診パッケージです。",
+    descriptionAr:
+      "باقة فحص وقائي مناسبة للسفر تشمل التحاليل والتصوير وخيارات المنظار وملخصات طبيب مترجمة.",
     priceMin: 1200000,
     priceMax: 3600000,
     currency: "KRW",
@@ -535,14 +618,20 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     slug: "recovery-care",
     category: "wellness",
     nameEn: "Post-Procedure Recovery Care",
+    nameKo: "시술 후 회복 케어",
     nameZh: "术后恢复护理",
-    nameJa: "術後リカバリーケア",
+    nameJa: "術後回復ケア",
     nameAr: "رعاية التعافي بعد الإجراء",
     descriptionEn:
       "Swelling care, lymphatic therapy, nutrition support, and recovery check-ins for patients staying in Korea after treatment.",
-    descriptionZh: "为术后留韩患者提供消肿、淋巴护理、营养支持和恢复跟进。",
-    descriptionJa: "韓国滞在中の術後患者向けに腫れケア、リンパケア、栄養サポート、回復確認を行います。",
-    descriptionAr: "رعاية للتورم والعلاج اللمفاوي والدعم الغذائي ومتابعة التعافي للمرضى المقيمين في كوريا بعد العلاج.",
+    descriptionKo:
+      "시술 후 한국에 체류하는 환자를 위한 부기 관리, 림프 테라피, 영양 지원, 회복 체크인 프로그램입니다.",
+    descriptionZh:
+      "面向术后留在韩国的患者，提供消肿护理、淋巴疗法、营养支持和恢复跟进。",
+    descriptionJa:
+      "施術後に韓国へ滞在する患者向けの腫れケア、リンパセラピー、栄養サポート、回復チェックインです。",
+    descriptionAr:
+      "رعاية للتورم وعلاج لمفاوي ودعم تغذوي ومتابعة تعاف للمرضى المقيمين في كوريا بعد العلاج.",
     priceMin: 120000,
     priceMax: 780000,
     currency: "KRW",
@@ -628,14 +717,15 @@ export function formatUSD(value: number) {
 }
 
 export function getLocalizedHospitalName(hospital: Hospital, lang: string) {
+  if (lang === "ko") return hospital.nameKo;
   if (lang === "zh") return hospital.nameZh;
   if (lang === "ja") return hospital.nameJa;
   if (lang === "ar") return hospital.nameAr;
-  if (lang === "ko") return hospital.nameKo;
   return hospital.nameEn;
 }
 
 export function getLocalizedTreatmentName(treatment: Treatment, lang: string) {
+  if (lang === "ko") return treatment.nameKo;
   if (lang === "zh") return treatment.nameZh;
   if (lang === "ja") return treatment.nameJa;
   if (lang === "ar") return treatment.nameAr;
@@ -643,6 +733,7 @@ export function getLocalizedTreatmentName(treatment: Treatment, lang: string) {
 }
 
 export function getLocalizedHospitalDescription(hospital: Hospital, lang: string) {
+  if (lang === "ko") return hospital.descriptionKo;
   if (lang === "zh") return hospital.descriptionZh;
   if (lang === "ja") return hospital.descriptionJa;
   if (lang === "ar") return hospital.descriptionAr;
@@ -650,6 +741,7 @@ export function getLocalizedHospitalDescription(hospital: Hospital, lang: string
 }
 
 export function getLocalizedTreatmentDescription(treatment: Treatment, lang: string) {
+  if (lang === "ko") return treatment.descriptionKo;
   if (lang === "zh") return treatment.descriptionZh;
   if (lang === "ja") return treatment.descriptionJa;
   if (lang === "ar") return treatment.descriptionAr;

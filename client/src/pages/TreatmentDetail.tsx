@@ -6,6 +6,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import {
   formatKRW,
   formatUSD,
+  getLocalizedHospitalName,
   getLocalizedTreatmentDescription,
   getLocalizedTreatmentName,
   REGION_LABELS,
@@ -13,6 +14,7 @@ import {
   SAMPLE_HOSPITAL_TREATMENTS,
   SAMPLE_TREATMENTS,
   SPECIALTY_LABELS,
+  SPECIALTY_TRANSLATION_KEYS,
 } from "@/lib/sampleData";
 import { cn } from "@/lib/utils";
 
@@ -25,9 +27,9 @@ export default function TreatmentDetail() {
     return (
       <Layout>
         <div className="container-wide py-24 text-center">
-          <h1 className="mb-4 font-serif text-4xl text-ink-950">Treatment not found</h1>
+          <h1 className="mb-4 font-serif text-4xl text-ink-950">{t("treatments.notFound")}</h1>
           <Link href="/treatments">
-            <Button variant="outline">Back to treatments</Button>
+            <Button variant="outline">{t("treatments.back")}</Button>
           </Link>
         </div>
       </Layout>
@@ -45,7 +47,7 @@ export default function TreatmentDetail() {
         <div className="container-wide py-3">
           <Link href="/treatments" className="inline-flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-950">
             <ChevronLeft className="size-4" />
-            {t("common.back")} to treatments
+            {t("treatments.back")}
           </Link>
         </div>
       </div>
@@ -54,7 +56,9 @@ export default function TreatmentDetail() {
         <div className="container-wide grid gap-8 py-10 lg:grid-cols-[1fr_420px] lg:items-start">
           <div>
             <img src={treatment.coverImage} alt={treatment.nameEn} className="mb-8 h-80 w-full rounded-lg object-cover" />
-            <span className={cn("rounded border px-2 py-1 text-xs font-bold", specialty.color)}>{specialty.en}</span>
+            <span className={cn("rounded border px-2 py-1 text-xs font-bold", specialty.color)}>
+              {t(SPECIALTY_TRANSLATION_KEYS[treatment.category])}
+            </span>
             <h1 className="mt-4 font-serif text-5xl text-ink-950">{getLocalizedTreatmentName(treatment, lang)}</h1>
             <p className="mt-5 max-w-3xl text-lg leading-8 text-ink-600">
               {getLocalizedTreatmentDescription(treatment, lang)}
@@ -64,48 +68,48 @@ export default function TreatmentDetail() {
               <div className="rounded-lg border border-ink-200 p-5">
                 <WalletCards className="mb-4 size-5 text-teal-700" />
                 <div className="font-semibold text-ink-950">{formatKRW(treatment.priceMin)}</div>
-                <p className="mt-1 text-sm text-ink-500">Starting estimate</p>
+                <p className="mt-1 text-sm text-ink-500">{t("treatments.startingEstimate")}</p>
               </div>
               <div className="rounded-lg border border-ink-200 p-5">
                 <Clock className="mb-4 size-5 text-teal-700" />
                 <div className="font-semibold text-ink-950">
-                  {treatment.recoveryDays === 0 ? "No downtime" : `${treatment.recoveryDays} days`}
+                  {treatment.recoveryDays === 0 ? t("treatments.noDowntime") : `${treatment.recoveryDays} ${t("treatments.days")}`}
                 </div>
-                <p className="mt-1 text-sm text-ink-500">Recovery</p>
+                <p className="mt-1 text-sm text-ink-500">{t("treatments.recovery")}</p>
               </div>
               <div className="rounded-lg border border-ink-200 p-5">
                 <Clock className="mb-4 size-5 text-teal-700" />
-                <div className="font-semibold text-ink-950">{treatment.durationMinutes} min</div>
-                <p className="mt-1 text-sm text-ink-500">Typical duration</p>
+                <div className="font-semibold text-ink-950">
+                  {treatment.durationMinutes} {t("treatments.minutes")}
+                </div>
+                <p className="mt-1 text-sm text-ink-500">{t("treatments.typicalDuration")}</p>
               </div>
             </div>
 
             <div className="mt-8 rounded-lg border border-coral-200 bg-coral-50 p-5">
-              <h2 className="mb-3 font-serif text-2xl text-ink-950">Aftercare notes</h2>
+              <h2 className="mb-3 font-serif text-2xl text-ink-950">{t("treatments.aftercareNotes")}</h2>
               <p className="leading-7 text-ink-700">{treatment.precautionsEn}</p>
             </div>
           </div>
 
           <aside className="sticky top-20 space-y-4">
             <div className="rounded-lg border border-ink-200 bg-ink-950 p-5 text-white">
-              <h2 className="font-serif text-2xl">Request matched quotes</h2>
-              <p className="mt-3 text-sm leading-6 text-ink-300">
-                We route your request with treatment interest, dates, language, and budget.
-              </p>
+              <h2 className="font-serif text-2xl">{t("treatments.requestQuotes")}</h2>
+              <p className="mt-3 text-sm leading-6 text-ink-300">{t("treatments.requestQuotesCopy")}</p>
               <Link href={`/consultation?treatment=${treatment.slug}`}>
-                <Button className="mt-5 w-full bg-teal-600 text-white hover:bg-teal-500">Start consultation</Button>
+                <Button className="mt-5 w-full bg-teal-600 text-white hover:bg-teal-500">{t("nav.cta")}</Button>
               </Link>
             </div>
 
             <div className="rounded-lg border border-ink-200 bg-white p-5">
-              <h2 className="mb-4 font-serif text-2xl text-ink-950">Providers</h2>
+              <h2 className="mb-4 font-serif text-2xl text-ink-950">{t("treatments.providersSection")}</h2>
               <div className="space-y-3">
                 {providers.map(({ id, hospital, priceKrw, notes }) => (
                   <Link key={id} href={`/hospitals/${hospital!.slug}`}>
                     <div className="rounded-md border border-ink-200 p-3 hover:border-teal-300">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="font-semibold text-ink-950">{hospital!.nameEn}</h3>
+                          <h3 className="font-semibold text-ink-950">{getLocalizedHospitalName(hospital!, lang)}</h3>
                           <p className="text-xs text-ink-500">{REGION_LABELS[hospital!.region]}</p>
                         </div>
                         <ArrowRight className="size-4 text-teal-700" />

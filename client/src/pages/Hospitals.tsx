@@ -8,11 +8,13 @@ import { useCompare } from "@/contexts/CompareContext";
 import { useI18n } from "@/contexts/I18nContext";
 import {
   formatUSD,
+  getLocalizedHospitalDescription,
   getLocalizedHospitalName,
   LANGUAGE_LABELS,
   REGION_LABELS,
   SAMPLE_HOSPITALS,
   SPECIALTY_LABELS,
+  SPECIALTY_TRANSLATION_KEYS,
   type LanguageCode,
   type Region,
   type Specialty,
@@ -44,7 +46,20 @@ export default function Hospitals() {
       if (langFilter.length > 0 && !langFilter.every((language) => hospital.languages.includes(language))) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
-        const haystack = [hospital.nameEn, hospital.nameKo, hospital.descriptionEn, ...hospital.specialties, ...hospital.highlights]
+        const haystack = [
+          hospital.nameEn,
+          hospital.nameKo,
+          hospital.nameZh,
+          hospital.nameJa,
+          hospital.nameAr,
+          hospital.descriptionEn,
+          hospital.descriptionKo,
+          hospital.descriptionZh,
+          hospital.descriptionJa,
+          hospital.descriptionAr,
+          ...hospital.specialties,
+          ...hospital.highlights,
+        ]
           .join(" ")
           .toLowerCase();
         if (!haystack.includes(q)) return false;
@@ -85,7 +100,7 @@ export default function Hospitals() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder={`${t("common.search")} hospitals, treatments, support`}
+                placeholder={t("hospitals.searchPlaceholder")}
                 className="h-11 border-ink-200 bg-white pl-10"
               />
             </div>
@@ -112,7 +127,7 @@ export default function Hospitals() {
                     : "border-ink-200 bg-white text-ink-600 hover:bg-ink-50",
                 )}
               >
-                {item === "all" ? t("hospitals.filter.all") : SPECIALTY_LABELS[item].en}
+                {item === "all" ? t("hospitals.filter.all") : t(SPECIALTY_TRANSLATION_KEYS[item])}
               </button>
             ))}
           </div>
@@ -134,7 +149,7 @@ export default function Hospitals() {
                           : "border-ink-200 bg-white text-ink-600",
                       )}
                     >
-                      {item === "all" ? "All regions" : REGION_LABELS[item]}
+                      {item === "all" ? t("hospitals.region.all") : REGION_LABELS[item]}
                     </button>
                   ))}
                 </div>
@@ -170,7 +185,7 @@ export default function Hospitals() {
 
           <div className="mb-6 flex items-center justify-between">
             <p className="text-sm text-ink-500">
-              <span className="font-semibold text-ink-950">{filtered.length}</span> hospitals found
+              <span className="font-semibold text-ink-950">{filtered.length}</span> {t("hospitals.found")}
             </p>
             {(search || specialty !== "all" || region !== "all" || langFilter.length > 0) && (
               <button
@@ -184,7 +199,7 @@ export default function Hospitals() {
                 className="flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-900"
               >
                 <X className="size-4" />
-                Clear filters
+                {t("common.clearFilters")}
               </button>
             )}
           </div>
@@ -207,7 +222,7 @@ export default function Hospitals() {
                         <div className="p-5">
                           <div className="mb-3 flex items-center justify-between gap-2">
                             <span className={cn("rounded border px-2 py-1 text-xs font-bold", specialtyInfo.color)}>
-                              {specialtyInfo.en}
+                              {t(SPECIALTY_TRANSLATION_KEYS[hospital.specialty])}
                             </span>
                             <div className="flex items-center gap-1 text-sm font-semibold text-ink-800">
                               <Star className="size-4 fill-coral-500 text-coral-500" />
@@ -217,9 +232,11 @@ export default function Hospitals() {
                           <h2 className="font-serif text-2xl text-ink-950">{getLocalizedHospitalName(hospital, lang)}</h2>
                           <div className="mt-2 flex items-center gap-1.5 text-sm text-ink-500">
                             <MapPin className="size-4 text-teal-700" />
-                            {REGION_LABELS[hospital.region]}, Seoul
+                            {REGION_LABELS[hospital.region]}, {t("common.seoul")}
                           </div>
-                          <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-600">{hospital.descriptionEn}</p>
+                          <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-600">
+                            {getLocalizedHospitalDescription(hospital, lang)}
+                          </p>
                           <div className="mt-4 grid gap-2 rounded-md border border-ink-200 bg-ink-50 p-3 text-xs text-ink-700">
                             <div className="flex items-center gap-2">
                               <ShieldCheck className="size-3.5 text-teal-700" />
@@ -228,7 +245,8 @@ export default function Hospitals() {
                             <div className="grid gap-2 sm:grid-cols-2">
                               <span className="flex items-center gap-1.5">
                                 <Clock className="size-3.5 text-teal-700" />
-                                SLA under {hospital.responseSlaHours}h
+                                {t("hospitals.slaUnder")} {hospital.responseSlaHours}
+                                {t("hospitals.hours")}
                               </span>
                               <span className="flex items-center gap-1.5">
                                 <WalletCards className="size-3.5 text-teal-700" />
@@ -256,7 +274,7 @@ export default function Hospitals() {
                               ))}
                             </div>
                             <span className="flex items-center gap-1 text-sm font-semibold text-teal-700">
-                              Details <ArrowRight className="size-4" />
+                              {t("hospitals.details")} <ArrowRight className="size-4" />
                             </span>
                           </div>
                         </div>
@@ -272,7 +290,7 @@ export default function Hospitals() {
                       )}
                     >
                       {inCompare ? <CheckCircle2 className="size-3.5" /> : <Scale className="size-3.5" />}
-                      {inCompare ? "Comparing" : t("compare.add")}
+                      {inCompare ? t("compare.comparing") : t("compare.add")}
                     </button>
                   </div>
                 );
