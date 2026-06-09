@@ -13,6 +13,7 @@ import Treatments from "./pages/Treatments";
 import TreatmentDetail from "./pages/TreatmentDetail";
 import Compare from "./pages/Compare";
 import Consultation from "./pages/Consultation";
+import SkinPackageLanding from "./pages/SkinPackageLanding";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/treatments/:slug" component={TreatmentDetail} />
       <Route path="/compare" component={Compare} />
       <Route path="/consultation" component={Consultation} />
+      <Route path="/:locale/:slug" component={SkinPackageLanding} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -31,6 +31,13 @@ export interface Hospital {
   specialties: string[];
   highlights: string[];
   priceTier: "$" | "$$" | "$$$";
+  registrationStatus: "verified" | "pending" | "expired";
+  registrationLabel: string;
+  insuranceVerified: boolean;
+  responseSlaHours: number;
+  packagePriceMinUsd: number;
+  packagePriceMaxUsd: number;
+  internationalPatientReady: boolean;
 }
 
 export interface Treatment {
@@ -168,6 +175,13 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     specialties: ["Rhinoplasty", "Double eyelid", "Facial contouring", "Revision surgery"],
     highlights: ["3D imaging review", "Airport pickup option", "Post-op hotel nurse visit"],
     priceTier: "$$$",
+    registrationStatus: "verified",
+    registrationLabel: "Foreign-patient registration checked",
+    insuranceVerified: true,
+    responseSlaHours: 12,
+    packagePriceMinUsd: 2800,
+    packagePriceMaxUsd: 9000,
+    internationalPatientReady: true,
   },
   {
     id: 2,
@@ -199,6 +213,13 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     specialties: ["Laser toning", "Skin booster", "Acne scar", "Botox and filler"],
     highlights: ["Same-day consult", "Low downtime plans", "Aftercare kit included"],
     priceTier: "$$",
+    registrationStatus: "verified",
+    registrationLabel: "Foreign-patient registration checked",
+    insuranceVerified: true,
+    responseSlaHours: 6,
+    packagePriceMinUsd: 700,
+    packagePriceMaxUsd: 2600,
+    internationalPatientReady: true,
   },
   {
     id: 3,
@@ -230,6 +251,13 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     specialties: ["Porcelain veneers", "Dental implants", "Whitening", "Invisalign"],
     highlights: ["Digital preview", "Multi-visit scheduling", "Warranty documentation"],
     priceTier: "$$",
+    registrationStatus: "verified",
+    registrationLabel: "Foreign-patient registration checked",
+    insuranceVerified: true,
+    responseSlaHours: 18,
+    packagePriceMinUsd: 900,
+    packagePriceMaxUsd: 4200,
+    internationalPatientReady: true,
   },
   {
     id: 4,
@@ -261,6 +289,13 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     specialties: ["FUE transplant", "DHI method", "Scalp treatment", "PRP hair program"],
     highlights: ["Graft estimate review", "Photo follow-up", "Medication guidance"],
     priceTier: "$$",
+    registrationStatus: "pending",
+    registrationLabel: "Registration evidence under review",
+    insuranceVerified: true,
+    responseSlaHours: 24,
+    packagePriceMinUsd: 2500,
+    packagePriceMaxUsd: 7800,
+    internationalPatientReady: false,
   },
   {
     id: 5,
@@ -292,6 +327,13 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     specialties: ["Executive checkup", "Digestive endoscopy", "Cancer screening", "Imaging"],
     highlights: ["One-day itinerary", "English summary", "Hotel report delivery"],
     priceTier: "$$$",
+    registrationStatus: "verified",
+    registrationLabel: "Foreign-patient registration checked",
+    insuranceVerified: true,
+    responseSlaHours: 12,
+    packagePriceMinUsd: 600,
+    packagePriceMaxUsd: 2800,
+    internationalPatientReady: true,
   },
   {
     id: 6,
@@ -323,6 +365,13 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     specialties: ["Swelling care", "Lymphatic therapy", "IV nutrition", "Scar management"],
     highlights: ["Post-op route planning", "Hotel visit option", "Daily recovery log"],
     priceTier: "$",
+    registrationStatus: "verified",
+    registrationLabel: "Foreign-patient registration checked",
+    insuranceVerified: true,
+    responseSlaHours: 8,
+    packagePriceMinUsd: 180,
+    packagePriceMaxUsd: 1200,
+    internationalPatientReady: true,
   },
 ];
 

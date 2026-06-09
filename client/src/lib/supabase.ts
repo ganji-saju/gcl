@@ -3,18 +3,35 @@ export interface InquiryInput {
   email: string;
   phone?: string;
   nationality?: string;
+  residenceCountry?: string;
   preferredLanguage: string;
   treatmentInterest?: string;
+  packageInterest?: string;
+  market?: string;
   hospitalSlug?: string;
   preferredDate?: string;
+  travelStartDate?: string;
+  travelEndDate?: string;
   budget?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  currency?: string;
   message?: string;
+  hasKoreanNationalHealthInsurance?: boolean;
+  hasKoreanAlienRegistration?: boolean;
+  hasOverseasKoreanResidenceReport?: boolean;
+  sourceLanding?: string;
   consent: boolean;
+  consentMarketing?: boolean;
 }
 
 export interface InquiryResult {
   saved: boolean;
   demoMode: boolean;
+  storage: "v1" | "inquiries" | "local";
+  caseId?: string;
+  leadId?: string;
+  eligible?: boolean;
 }
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -29,21 +46,58 @@ function clean(value?: string) {
   return trimmed ? trimmed : null;
 }
 
+function getAttribution(input: InquiryInput) {
+  const searchParams = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+  return {
+    ...Object.fromEntries(searchParams),
+    source_landing: clean(input.sourceLanding) ?? searchParams.get("source_landing"),
+    package_interest: clean(input.packageInterest),
+    market: clean(input.market),
+    current_path: typeof window === "undefined" ? null : window.location.pathname,
+  };
+}
+
+function getEligibility(input: InquiryInput) {
+  const blockedByInsurance = Boolean(input.hasKoreanNationalHealthInsurance);
+  const blockedByAlienRegistration = Boolean(input.hasKoreanAlienRegistration);
+  const blockedByOverseasKoreanReport = Boolean(input.hasOverseasKoreanResidenceReport);
+  const eligible = !blockedByInsurance && !blockedByAlienRegistration && !blockedByOverseasKoreanReport;
+  const reason = blockedByInsurance
+    ? "korean_health_insurance_holder"
+    : blockedByAlienRegistration
+      ? "korean_alien_registration_holder"
+      : blockedByOverseasKoreanReport
+        ? "overseas_korean_residence_report_holder"
+        : "foreign_patient_eligible";
+
+  return { eligible, reason };
+}
+
 function toRecord(input: InquiryInput) {
+  const validationSummary = [
+    input.packageInterest ? `Package: ${input.packageInterest}` : null,
+    input.market ? `Market: ${input.market}` : null,
+    input.residenceCountry ? `Residence: ${input.residenceCountry}` : null,
+    input.travelStartDate || input.travelEndDate ? `Travel window: ${input.travelStartDate ?? "?"} to ${input.travelEndDate ?? "?"}` : null,
+    input.budgetMin || input.budgetMax ? `Budget numeric: ${input.budgetMin ?? "?"}-${input.budgetMax ?? "?"} ${input.currency ?? "USD"}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   return {
     name: input.name.trim(),
     email: input.email.trim().toLowerCase(),
     phone: clean(input.phone),
     nationality: clean(input.nationality),
     preferred_language: input.preferredLanguage,
-    treatment_interest: clean(input.treatmentInterest),
+    treatment_interest: clean(input.packageInterest) ?? clean(input.treatmentInterest),
     hospital_slug: clean(input.hospitalSlug),
-    preferred_date: clean(input.preferredDate),
-    budget: clean(input.budget),
-    message: clean(input.message),
+    preferred_date: clean(input.preferredDate) ?? clean(input.travelStartDate),
+    budget: clean(input.budget) ?? (input.budgetMin || input.budgetMax ? `${input.budgetMin ?? "?"}-${input.budgetMax ?? "?"} ${input.currency ?? "USD"}` : null),
+    message: [validationSummary, clean(input.message)].filter(Boolean).join("\n\n") || null,
     consent: input.consent,
     source_path: typeof window === "undefined" ? null : window.location.pathname,
-    utm: typeof window === "undefined" ? {} : Object.fromEntries(new URLSearchParams(window.location.search)),
+    utm: getAttribution(input),
   };
 }
 
@@ -58,12 +112,25 @@ function saveLocalDemoInquiry(input: InquiryInput) {
   localStorage.setItem(key, JSON.stringify(previous.slice(0, 50)));
 }
 
-export async function submitInquiry(input: InquiryInput): Promise<InquiryResult> {
-  if (!isSupabaseConfigured()) {
-    saveLocalDemoInquiry(input);
-    return { saved: true, demoMode: true };
-  }
+async function insertSupabaseRecord(table: string, record: Record<string, unknown>): Promise<void> {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseAnonKey!,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify(record),
+  });
 
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    throw new Error(details || `Supabase ${table} insert failed with ${response.status}`);
+  }
+}
+
+async function insertInquiryFallback(input: InquiryInput): Promise<InquiryResult> {
   const response = await fetch(`${supabaseUrl}/rest/v1/inquiries`, {
     method: "POST",
     headers: {
@@ -80,5 +147,116 @@ export async function submitInquiry(input: InquiryInput): Promise<InquiryResult>
     throw new Error(details || `Supabase request failed with ${response.status}`);
   }
 
-  return { saved: true, demoMode: false };
+  return { saved: true, demoMode: false, storage: "inquiries" };
+}
+
+async function insertV1LeadCase(input: InquiryInput): Promise<InquiryResult> {
+  const eligibility = getEligibility(input);
+  const attribution = getAttribution(input);
+  const currency = input.currency ?? "USD";
+  const patientId = crypto.randomUUID();
+  const leadId = crypto.randomUUID();
+  const caseId = crypto.randomUUID();
+
+  await insertSupabaseRecord("patients", {
+    id: patientId,
+    nationality: clean(input.nationality),
+    residence_country: clean(input.residenceCountry),
+    preferred_language: input.preferredLanguage,
+    foreign_patient_eligible: eligibility.eligible,
+    eligibility_reason: eligibility.reason,
+    passport_required_later: true,
+    consent_medical_info: input.consent,
+    consent_marketing: Boolean(input.consentMarketing),
+  });
+
+  await insertSupabaseRecord("patient_eligibility_checks", {
+    id: crypto.randomUUID(),
+    patient_id: patientId,
+    nationality: clean(input.nationality) ?? "unknown",
+    residence_country: clean(input.residenceCountry) ?? "unknown",
+    has_korean_national_health_insurance: Boolean(input.hasKoreanNationalHealthInsurance),
+    has_korean_alien_registration: Boolean(input.hasKoreanAlienRegistration),
+    has_overseas_korean_residence_report: Boolean(input.hasOverseasKoreanResidenceReport),
+    purpose: clean(input.treatmentInterest) ?? clean(input.packageInterest) ?? "dermatology_treatment",
+    eligible: eligibility.eligible,
+    reason: eligibility.reason,
+    request_snapshot: {
+      package_interest: clean(input.packageInterest),
+      market: clean(input.market),
+      source_landing: clean(input.sourceLanding),
+    },
+  });
+
+  await insertSupabaseRecord("leads", {
+    id: leadId,
+    patient_id: patientId,
+    name: input.name.trim(),
+    email: input.email.trim().toLowerCase(),
+    phone: clean(input.phone),
+    nationality: clean(input.nationality),
+    residence_country: clean(input.residenceCountry),
+    preferred_language: input.preferredLanguage,
+    treatment_interest: clean(input.packageInterest) ?? clean(input.treatmentInterest),
+    budget_min: input.budgetMin ?? null,
+    budget_max: input.budgetMax ?? null,
+    currency,
+    status: eligibility.eligible ? "qualified" : "disqualified",
+    source: clean(input.sourceLanding) ? "landing" : "site",
+    attribution,
+    disqualified_reason: eligibility.eligible ? null : eligibility.reason,
+    consent_medical_info: input.consent,
+    consent_marketing: Boolean(input.consentMarketing),
+  });
+
+  if (!eligibility.eligible) {
+    return { saved: true, demoMode: false, storage: "v1", leadId, eligible: false };
+  }
+
+  await insertSupabaseRecord("cases", {
+    id: caseId,
+    patient_id: patientId,
+    lead_id: leadId,
+    source: clean(input.sourceLanding) ? "landing" : "site",
+    status: "qualified",
+    priority: "normal",
+  });
+
+  await insertSupabaseRecord("medical_intakes", {
+    id: crypto.randomUUID(),
+    patient_id: patientId,
+    case_id: caseId,
+    chief_request: [clean(input.packageInterest), clean(input.message)].filter(Boolean).join("\n\n") || null,
+    medical_history: {},
+    medications: [],
+    allergies: [],
+    budget_min: input.budgetMin ?? null,
+    budget_max: input.budgetMax ?? null,
+    currency,
+    travel_start_date: clean(input.travelStartDate) ?? clean(input.preferredDate),
+    travel_end_date: clean(input.travelEndDate) ?? clean(input.preferredDate),
+    risk_flags: {
+      market: clean(input.market),
+      package_interest: clean(input.packageInterest),
+      source_landing: clean(input.sourceLanding),
+    },
+    status: "submitted",
+    submitted_at: new Date().toISOString(),
+  });
+
+  return { saved: true, demoMode: false, storage: "v1", leadId, caseId, eligible: true };
+}
+
+export async function submitInquiry(input: InquiryInput): Promise<InquiryResult> {
+  if (!isSupabaseConfigured()) {
+    saveLocalDemoInquiry(input);
+    return { saved: true, demoMode: true, storage: "local", eligible: getEligibility(input).eligible };
+  }
+
+  try {
+    return await insertV1LeadCase(input);
+  } catch (error) {
+    console.warn("Falling back to inquiries table because v1 lead storage failed.", error);
+    return insertInquiryFallback(input);
+  }
 }

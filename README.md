@@ -41,6 +41,10 @@ Run `supabase/schema.sql` in the Supabase SQL editor.
 
 The policy intentionally allows public inserts only. Public reads, updates, and deletes are not granted.
 
+For the v1 international patient marketplace design pack, see `docs/product/README.md`.
+The production-grade core schema DDL is additive and lives in
+`supabase/migrations/20260609_0001_core_marketplace_schema.sql`.
+
 ## Vercel
 
 Import the GitHub repository into Vercel. `vercel.json` sets:

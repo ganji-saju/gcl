@@ -18,6 +18,22 @@
 
 The app will store demo inquiries in browser local storage until those variables are configured.
 
+## v1 Marketplace Design Pack
+
+The current public app uses `public.inquiries` as a simple lead-capture POC. The v1
+regulated marketplace design pack is documented under `docs/product/README.md`.
+Before full v1 development, follow the seven-gate validation roadmap in
+`docs/product/05-validation-roadmap-japan-taiwan-skin-wedge.md`.
+
+For backend implementation, apply the additive core schema migration after the POC schema:
+
+```powershell
+supabase/migrations/20260609_0001_core_marketplace_schema.sql
+```
+
+That migration adds the provider verification, patient eligibility, case CRM,
+matching, quote, booking, payment, compliance, settlement, and reporting tables.
+
 ## Vercel Setup
 
 Use these settings when importing the GitHub repository:

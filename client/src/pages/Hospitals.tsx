@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link, useSearch } from "wouter";
-import { ArrowRight, CheckCircle2, MapPin, Search, Scale, SlidersHorizontal, Star, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, MapPin, Search, Scale, ShieldCheck, SlidersHorizontal, Star, WalletCards, X } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCompare } from "@/contexts/CompareContext";
 import { useI18n } from "@/contexts/I18nContext";
 import {
+  formatUSD,
   getLocalizedHospitalName,
   LANGUAGE_LABELS,
   REGION_LABELS,
@@ -219,6 +220,22 @@ export default function Hospitals() {
                             {REGION_LABELS[hospital.region]}, Seoul
                           </div>
                           <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-600">{hospital.descriptionEn}</p>
+                          <div className="mt-4 grid gap-2 rounded-md border border-ink-200 bg-ink-50 p-3 text-xs text-ink-700">
+                            <div className="flex items-center gap-2">
+                              <ShieldCheck className="size-3.5 text-teal-700" />
+                              <span className="font-semibold">{hospital.registrationLabel}</span>
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="size-3.5 text-teal-700" />
+                                SLA under {hospital.responseSlaHours}h
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <WalletCards className="size-3.5 text-teal-700" />
+                                {formatUSD(hospital.packagePriceMinUsd * 1300)} - {formatUSD(hospital.packagePriceMaxUsd * 1300)}
+                              </span>
+                            </div>
+                          </div>
                           <div className="mt-4 flex flex-wrap gap-1.5">
                             {hospital.specialties.slice(0, 3).map((specialtyItem) => (
                               <span key={specialtyItem} className="rounded bg-ink-50 px-2 py-1 text-xs text-ink-600">

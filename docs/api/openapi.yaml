@@ -1,0 +1,2049 @@
+openapi: 3.1.0
+info:
+  title: Global Patient Hub API
+  version: 1.0.0
+  summary: International patient marketplace, coordinator CRM, quote and booking API.
+  description: >
+    v1 API for a compliance-first Korean international patient acquisition platform.
+    The API separates public patient flows, provider workflows, admin/coordinator operations,
+    and partner referral operations.
+servers:
+  - url: https://api.globalpatienthub.example.com
+    description: Production
+  - url: http://localhost:8787
+    description: Local development
+tags:
+  - name: Public Patient
+  - name: Provider
+  - name: Admin
+  - name: Partner
+security:
+  - bearerAuth: []
+paths:
+  /v1/procedures:
+    get:
+      tags: [Public Patient]
+      security: []
+      summary: List approved procedures
+      operationId: listProcedures
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: country
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved procedures
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProcedureListItem"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+  /v1/procedures/{slug}:
+    get:
+      tags: [Public Patient]
+      security: []
+      summary: Get approved procedure detail
+      operationId: getProcedureBySlug
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Procedure detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcedureDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/providers:
+    get:
+      tags: [Public Patient]
+      security: []
+      summary: Search verified providers
+      operationId: searchProviders
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: procedure_slug
+          in: query
+          schema:
+            type: string
+        - name: language
+          in: query
+          schema:
+            type: string
+        - name: facility_type
+          in: query
+          schema:
+            $ref: "#/components/schemas/FacilityType"
+      responses:
+        "200":
+          description: Verified public providers
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProviderListItem"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+  /v1/providers/{id}:
+    get:
+      tags: [Public Patient]
+      security: []
+      summary: Get verified provider detail
+      operationId: getProvider
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/ProviderId"
+      responses:
+        "200":
+          description: Provider detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/leads:
+    post:
+      tags: [Public Patient]
+      security: []
+      summary: Create consultation lead
+      operationId: createLead
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadCreateRequest"
+      responses:
+        "201":
+          description: Lead created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadCreateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/patients/eligibility-check:
+    post:
+      tags: [Public Patient]
+      security: []
+      summary: Check foreign-patient eligibility
+      operationId: checkPatientEligibility
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EligibilityCheckRequest"
+      responses:
+        "200":
+          description: Eligibility decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilityCheckResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/intakes:
+    post:
+      tags: [Public Patient]
+      summary: Submit medical intake
+      operationId: submitIntake
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntakeCreateRequest"
+      responses:
+        "201":
+          description: Intake submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Intake"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/cases/{id}:
+    get:
+      tags: [Public Patient]
+      summary: Get my case status
+      operationId: getCase
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      responses:
+        "200":
+          description: Case status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/cases/{id}/quotes:
+    get:
+      tags: [Public Patient]
+      summary: List quotes for my case
+      operationId: listCaseQuotes
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      responses:
+        "200":
+          description: Case quotes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Quote"
+
+  /v1/quotes/{id}/accept:
+    post:
+      tags: [Public Patient]
+      summary: Accept quote
+      operationId: acceptQuote
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      responses:
+        "200":
+          description: Quote accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteAcceptResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/bookings:
+    post:
+      tags: [Public Patient]
+      summary: Request booking
+      operationId: createBooking
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingCreateRequest"
+      responses:
+        "201":
+          description: Booking requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/payments/deposit:
+    post:
+      tags: [Public Patient]
+      summary: Create or confirm deposit payment
+      operationId: payDeposit
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentDepositRequest"
+      responses:
+        "201":
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/messages:
+    post:
+      tags: [Public Patient]
+      summary: Send patient message
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageCreateRequest"
+      responses:
+        "201":
+          description: Message stored or queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /v1/provider/cases:
+    get:
+      tags: [Provider]
+      summary: List assigned provider cases
+      operationId: providerListCases
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/CaseStatus"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Provider case list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProviderCaseSummary"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+  /v1/provider/cases/{id}:
+    get:
+      tags: [Provider]
+      summary: Get assigned provider case detail
+      operationId: providerGetCase
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      responses:
+        "200":
+          description: Provider-safe case detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderCaseDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/provider/quote-requests/{id}/quotes:
+    post:
+      tags: [Provider]
+      summary: Create quote for quote request
+      operationId: providerCreateQuote
+      parameters:
+        - $ref: "#/components/parameters/QuoteRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteCreateRequest"
+      responses:
+        "201":
+          description: Quote created and commission checked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteCreateResponse"
+        "422":
+          description: Compliance validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/provider/quotes/{id}:
+    patch:
+      tags: [Provider]
+      summary: Update draft quote
+      operationId: providerUpdateQuote
+      parameters:
+        - $ref: "#/components/parameters/QuoteId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotePatchRequest"
+      responses:
+        "200":
+          description: Quote updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/provider/availability-slots:
+    post:
+      tags: [Provider]
+      summary: Create provider availability slot
+      operationId: providerCreateAvailabilitySlot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvailabilitySlotCreateRequest"
+      responses:
+        "201":
+          description: Availability slot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilitySlot"
+
+  /v1/provider/bookings/{id}:
+    patch:
+      tags: [Provider]
+      summary: Confirm or update booking
+      operationId: providerUpdateBooking
+      parameters:
+        - $ref: "#/components/parameters/BookingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingPatchRequest"
+      responses:
+        "200":
+          description: Booking updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /v1/provider/packages:
+    post:
+      tags: [Provider]
+      summary: Submit treatment package for content review
+      operationId: providerCreatePackage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageCreateRequest"
+      responses:
+        "201":
+          description: Package created in pending review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TreatmentPackage"
+
+  /v1/provider/compliance-documents:
+    post:
+      tags: [Provider]
+      summary: Upload provider compliance document metadata
+      operationId: providerUploadComplianceDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplianceDocumentUploadRequest"
+      responses:
+        "201":
+          description: Document registered for verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceDocument"
+
+  /v1/provider/performance:
+    get:
+      tags: [Provider]
+      summary: Provider lead and revenue performance
+      operationId: providerPerformance
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Provider performance report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderPerformance"
+
+  /v1/admin/cases:
+    get:
+      tags: [Admin]
+      summary: List all cases for coordinator/admin CRM
+      operationId: adminListCases
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/CaseStatus"
+        - name: owner_coordinator_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Admin case list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AdminCaseSummary"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+  /v1/admin/cases/{id}/assign:
+    post:
+      tags: [Admin]
+      summary: Assign coordinator to case
+      operationId: adminAssignCase
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseAssignRequest"
+      responses:
+        "200":
+          description: Assignment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+
+  /v1/admin/cases/{id}/match:
+    post:
+      tags: [Admin]
+      summary: Run matching engine for case
+      operationId: adminMatchCase
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatchRequest"
+      responses:
+        "200":
+          description: Ranked matches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchResponse"
+
+  /v1/admin/compliance/providers:
+    get:
+      tags: [Admin]
+      summary: Provider registration and insurance compliance queue
+      operationId: adminProviderCompliance
+      responses:
+        "200":
+          description: Provider compliance list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProviderComplianceItem"
+
+  /v1/admin/compliance/commission-violations:
+    get:
+      tags: [Admin]
+      summary: List failed commission checks
+      operationId: adminCommissionViolations
+      responses:
+        "200":
+          description: Commission violations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CommissionViolation"
+
+  /v1/admin/content-reviews/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve content review
+      operationId: adminApproveContentReview
+      parameters:
+        - $ref: "#/components/parameters/ContentReviewId"
+      responses:
+        "200":
+          description: Content approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentReview"
+
+  /v1/admin/content-reviews/{id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject content review
+      operationId: adminRejectContentReview
+      parameters:
+        - $ref: "#/components/parameters/ContentReviewId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContentRejectRequest"
+      responses:
+        "200":
+          description: Content rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentReview"
+
+  /v1/admin/reports/annual-performance:
+    get:
+      tags: [Admin]
+      summary: Export annual performance report data
+      operationId: adminAnnualPerformanceReport
+      parameters:
+        - name: report_year
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 2000
+            maximum: 2100
+        - name: provider_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        "200":
+          description: Annual performance data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnnualPerformanceReport"
+            text/csv:
+              schema:
+                type: string
+
+  /v1/admin/attribution:
+    get:
+      tags: [Admin]
+      summary: Marketing attribution report
+      operationId: adminAttribution
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Attribution report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttributionReport"
+
+  /v1/admin/settlements:
+    get:
+      tags: [Admin]
+      summary: Settlement report
+      operationId: adminSettlements
+      parameters:
+        - name: provider_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: period
+          in: query
+          schema:
+            type: string
+            example: "2026-06"
+      responses:
+        "200":
+          description: Settlements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettlementReport"
+
+  /v1/partners/referral-links:
+    post:
+      tags: [Partner]
+      summary: Create partner referral link
+      operationId: partnerCreateReferralLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferralLinkCreateRequest"
+      responses:
+        "201":
+          description: Referral link created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralLink"
+
+  /v1/partners/leads:
+    get:
+      tags: [Partner]
+      summary: List partner-attributed leads
+      operationId: partnerListLeads
+      responses:
+        "200":
+          description: Partner leads
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PartnerLead"
+    post:
+      tags: [Partner]
+      summary: Register partner-sourced lead
+      operationId: partnerCreateLead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerLeadCreateRequest"
+      responses:
+        "201":
+          description: Partner lead created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadCreateResponse"
+
+  /v1/partners/commissions:
+    get:
+      tags: [Partner]
+      summary: List partner commissions
+      operationId: partnerListCommissions
+      responses:
+        "200":
+          description: Partner commissions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PartnerCommission"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Locale:
+      name: X-Locale
+      in: header
+      required: false
+      schema:
+        type: string
+        enum: [en, ja, zh, th, vi, ru, ko, ar]
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 160
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    CaseId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProviderId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    QuoteId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    QuoteRequestId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    BookingId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ContentReviewId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: State conflict or idempotency conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Pagination:
+      type: object
+      required: [page, page_size, total]
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+
+    LocalizedString:
+      type: object
+      additionalProperties:
+        type: string
+      example:
+        en: Rhinoplasty
+        ja: Rhinoplasty
+        zh: Rhinoplasty
+
+    FacilityType:
+      type: string
+      enum: [clinic, hospital, general_hospital, tertiary_hospital]
+
+    CaseStatus:
+      type: string
+      enum:
+        - new
+        - qualified
+        - intake_completed
+        - matching_ready
+        - matched
+        - quote_requested
+        - quote_sent
+        - deposit_pending
+        - deposit_paid
+        - booking_confirmed
+        - visited
+        - treated
+        - aftercare
+        - closed_won
+        - closed_lost
+
+    ProcedureListItem:
+      type: object
+      required: [id, slug, name, recovery_days_min, recovery_days_max]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          $ref: "#/components/schemas/LocalizedString"
+        recovery_days_min:
+          type: integer
+        recovery_days_max:
+          type: integer
+        requires_medical_review:
+          type: boolean
+
+    ProcedureDetail:
+      allOf:
+        - $ref: "#/components/schemas/ProcedureListItem"
+        - type: object
+          required: [description, content]
+          properties:
+            description:
+              $ref: "#/components/schemas/LocalizedString"
+            content:
+              type: object
+              additionalProperties: true
+            price_disclaimer:
+              type: string
+
+    ProviderListItem:
+      type: object
+      required: [id, name_display, facility_type, address, languages, average_response_minutes]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name_display:
+          $ref: "#/components/schemas/LocalizedString"
+        facility_type:
+          $ref: "#/components/schemas/FacilityType"
+        address:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        average_response_minutes:
+          type: integer
+        quality_score:
+          type: number
+        sponsored:
+          type: boolean
+          default: false
+
+    ProviderDetail:
+      allOf:
+        - $ref: "#/components/schemas/ProviderListItem"
+        - type: object
+          required: [doctors, packages, registrations]
+          properties:
+            doctors:
+              type: array
+              items:
+                $ref: "#/components/schemas/DoctorSummary"
+            packages:
+              type: array
+              items:
+                $ref: "#/components/schemas/TreatmentPackage"
+            registrations:
+              type: array
+              items:
+                $ref: "#/components/schemas/ProviderRegistrationPublic"
+
+    DoctorSummary:
+      type: object
+      required: [id, name, specialty, languages]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          $ref: "#/components/schemas/LocalizedString"
+        specialty:
+          type: string
+        years_experience:
+          type: integer
+        languages:
+          type: array
+          items:
+            type: string
+
+    ProviderRegistrationPublic:
+      type: object
+      required: [registration_type, verified_status, expires_at]
+      properties:
+        registration_type:
+          type: string
+          enum: [foreign_patient_provider, facilitator]
+        verified_status:
+          type: string
+          enum: [verified]
+        expires_at:
+          type: string
+          format: date
+
+    LeadCreateRequest:
+      type: object
+      required: [name, email, preferred_language, consent_medical_info]
+      properties:
+        name:
+          type: string
+          maxLength: 160
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        nationality:
+          type: string
+        residence_country:
+          type: string
+        preferred_language:
+          type: string
+          enum: [en, ja, zh, th, vi, ru, ko, ar]
+        desired_procedure_id:
+          type: string
+          format: uuid
+        treatment_interest:
+          type: string
+        budget_min:
+          type: number
+        budget_max:
+          type: number
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        source:
+          type: string
+        referral_code:
+          type: string
+        attribution:
+          type: object
+          additionalProperties: true
+        consent_medical_info:
+          type: boolean
+        consent_marketing:
+          type: boolean
+          default: false
+
+    LeadCreateResponse:
+      type: object
+      required: [lead_id, status, next_step]
+      properties:
+        lead_id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [new, qualified, disqualified, converted, closed]
+        next_step:
+          type: string
+          enum: [eligibility_check, create_intake, coordinator_review]
+
+    EligibilityCheckRequest:
+      type: object
+      required:
+        - nationality
+        - residence_country
+        - has_korean_national_health_insurance
+        - has_korean_alien_registration
+        - has_overseas_korean_residence_report
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        nationality:
+          type: string
+        residence_country:
+          type: string
+        has_korean_national_health_insurance:
+          type: boolean
+        has_korean_alien_registration:
+          type: boolean
+        has_overseas_korean_residence_report:
+          type: boolean
+        purpose:
+          type: string
+
+    EligibilityCheckResponse:
+      type: object
+      required: [eligible, reason, next_step]
+      properties:
+        eligible:
+          type: boolean
+        reason:
+          type: string
+          enum:
+            - foreign_patient_eligible
+            - korean_health_insurance_holder
+            - korean_alien_registration_holder
+            - overseas_korean_residence_report_holder
+            - insufficient_information
+        next_step:
+          type: string
+          enum: [create_intake, coordinator_review, reject]
+
+    IntakeCreateRequest:
+      type: object
+      required: [patient_id, case_id, desired_procedure_id, consent_medical_info]
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        desired_procedure_id:
+          type: string
+          format: uuid
+        chief_request:
+          type: string
+        medical_history:
+          type: object
+          additionalProperties: true
+        medications:
+          type: array
+          items:
+            type: string
+        allergies:
+          type: array
+          items:
+            type: string
+        budget_min:
+          type: number
+        budget_max:
+          type: number
+        currency:
+          type: string
+        travel_start_date:
+          type: string
+          format: date
+        travel_end_date:
+          type: string
+          format: date
+        consent_medical_info:
+          type: boolean
+
+    Intake:
+      allOf:
+        - $ref: "#/components/schemas/IntakeCreateRequest"
+        - type: object
+          required: [id, status, created_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [draft, submitted, reviewed]
+            risk_flags:
+              type: object
+              additionalProperties: true
+            created_at:
+              type: string
+              format: date-time
+
+    Case:
+      type: object
+      required: [id, patient_id, status, priority, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        desired_procedure_id:
+          type: string
+          format: uuid
+        owner_coordinator_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/CaseStatus"
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        last_contacted_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    Quote:
+      type: object
+      required:
+        - id
+        - case_id
+        - provider_id
+        - medical_fee
+        - nonmedical_fee
+        - currency
+        - commission_rate
+        - commission_cap_rate
+        - deposit_amount
+        - valid_until
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        provider_id:
+          type: string
+          format: uuid
+        medical_fee:
+          type: number
+        nonmedical_fee:
+          type: number
+        currency:
+          type: string
+        commission_rate:
+          type: number
+        commission_amount:
+          type: number
+        commission_cap_rate:
+          type: number
+        deposit_amount:
+          type: number
+        valid_until:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, sent, accepted, expired, cancelled]
+        notes:
+          type: string
+
+    QuoteAcceptResponse:
+      type: object
+      required: [quote_id, case_id, status, next_step]
+      properties:
+        quote_id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [accepted]
+        next_step:
+          type: string
+          enum: [deposit_payment, booking_request]
+
+    BookingCreateRequest:
+      type: object
+      required: [case_id, quote_id, provider_id, scheduled_at, visit_type]
+      properties:
+        case_id:
+          type: string
+          format: uuid
+        quote_id:
+          type: string
+          format: uuid
+        provider_id:
+          type: string
+          format: uuid
+        scheduled_at:
+          type: string
+          format: date-time
+        visit_type:
+          type: string
+          enum: [consultation, procedure, surgery, checkup]
+
+    BookingPatchRequest:
+      type: object
+      required: [status]
+      properties:
+        scheduled_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [confirmed, rescheduled, completed, cancelled, no_show]
+        cancellation_reason:
+          type: string
+
+    Booking:
+      allOf:
+        - $ref: "#/components/schemas/BookingCreateRequest"
+        - type: object
+          required: [id, status, created_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [requested, confirmed, rescheduled, completed, cancelled, no_show]
+            created_at:
+              type: string
+              format: date-time
+
+    PaymentDepositRequest:
+      type: object
+      required: [case_id, booking_id, amount, currency, provider]
+      properties:
+        case_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        currency:
+          type: string
+        provider:
+          type: string
+          example: stripe
+        transaction_ref:
+          type: string
+
+    Payment:
+      type: object
+      required: [id, case_id, payment_type, amount, currency, provider, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        payment_type:
+          type: string
+          enum: [deposit, balance, refund]
+        amount:
+          type: number
+        currency:
+          type: string
+        provider:
+          type: string
+        status:
+          type: string
+          enum: [pending, authorized, paid, failed, refunded]
+        transaction_ref:
+          type: string
+
+    MessageCreateRequest:
+      type: object
+      required: [case_id, channel, body]
+      properties:
+        case_id:
+          type: string
+          format: uuid
+        channel:
+          type: string
+          enum: [whatsapp, line, wechat, email, sms, in_app, phone]
+        body:
+          type: string
+        attachments:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    Message:
+      allOf:
+        - $ref: "#/components/schemas/MessageCreateRequest"
+        - type: object
+          required: [id, direction, sent_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            direction:
+              type: string
+              enum: [inbound, outbound, internal_note]
+            sent_at:
+              type: string
+              format: date-time
+
+    ProviderCaseSummary:
+      type: object
+      required: [case_id, status, procedure_name, preferred_language, travel_window]
+      properties:
+        case_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/CaseStatus"
+        procedure_name:
+          type: string
+        preferred_language:
+          type: string
+        travel_window:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        quote_due_at:
+          type: string
+          format: date-time
+
+    ProviderCaseDetail:
+      allOf:
+        - $ref: "#/components/schemas/ProviderCaseSummary"
+        - type: object
+          properties:
+            deidentified_intake:
+              type: object
+              additionalProperties: true
+            quote_requests:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+
+    QuoteCreateRequest:
+      type: object
+      required: [medical_fee, nonmedical_fee, currency, commission_rate, deposit_amount, valid_until]
+      properties:
+        medical_fee:
+          type: number
+          minimum: 0
+        nonmedical_fee:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        commission_rate:
+          type: number
+          minimum: 0
+          maximum: 0.3
+        deposit_amount:
+          type: number
+          minimum: 0
+        valid_until:
+          type: string
+          format: date-time
+        notes:
+          type: string
+
+    QuotePatchRequest:
+      allOf:
+        - $ref: "#/components/schemas/QuoteCreateRequest"
+
+    QuoteCreateResponse:
+      type: object
+      required: [quote_id, status, commission_check]
+      properties:
+        quote_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [sent, draft]
+        commission_check:
+          type: object
+          required: [cap_rate, requested_rate, passed]
+          properties:
+            cap_rate:
+              type: number
+            requested_rate:
+              type: number
+            passed:
+              type: boolean
+
+    AvailabilitySlotCreateRequest:
+      type: object
+      required: [provider_id, starts_at, ends_at]
+      properties:
+        provider_id:
+          type: string
+          format: uuid
+        doctor_id:
+          type: string
+          format: uuid
+        procedure_id:
+          type: string
+          format: uuid
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        language_support:
+          type: array
+          items:
+            type: string
+
+    AvailabilitySlot:
+      allOf:
+        - $ref: "#/components/schemas/AvailabilitySlotCreateRequest"
+        - type: object
+          required: [id, status]
+          properties:
+            id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [available, held, booked, unavailable]
+
+    PackageCreateRequest:
+      type: object
+      required: [provider_id, procedure_id, package_name, medical_fee_min, medical_fee_max, currency, duration_days]
+      properties:
+        provider_id:
+          type: string
+          format: uuid
+        procedure_id:
+          type: string
+          format: uuid
+        package_name:
+          $ref: "#/components/schemas/LocalizedString"
+        medical_fee_min:
+          type: number
+        medical_fee_max:
+          type: number
+        nonmedical_fee_min:
+          type: number
+          default: 0
+        nonmedical_fee_max:
+          type: number
+          default: 0
+        currency:
+          type: string
+        duration_days:
+          type: integer
+        included_items:
+          type: array
+          items:
+            type: string
+        excluded_items:
+          type: array
+          items:
+            type: string
+
+    TreatmentPackage:
+      allOf:
+        - $ref: "#/components/schemas/PackageCreateRequest"
+        - type: object
+          required: [id, content_review_status, active]
+          properties:
+            id:
+              type: string
+              format: uuid
+            content_review_status:
+              type: string
+              enum: [draft, pending, approved, rejected, revision_required]
+            active:
+              type: boolean
+
+    ComplianceDocumentUploadRequest:
+      type: object
+      required: [provider_id, document_type, document_url]
+      properties:
+        provider_id:
+          type: string
+          format: uuid
+        document_type:
+          type: string
+          enum: [provider_registration, insurance_certificate, specialist_certificate, business_registration, other]
+        document_url:
+          type: string
+        expires_at:
+          type: string
+          format: date
+
+    ComplianceDocument:
+      allOf:
+        - $ref: "#/components/schemas/ComplianceDocumentUploadRequest"
+        - type: object
+          required: [id, verified_status]
+          properties:
+            id:
+              type: string
+              format: uuid
+            verified_status:
+              type: string
+              enum: [pending, verified, expired, rejected]
+
+    ProviderPerformance:
+      type: object
+      required: [lead_count, quote_count, booking_count, paid_case_count, gross_medical_revenue]
+      properties:
+        lead_count:
+          type: integer
+        quote_count:
+          type: integer
+        booking_count:
+          type: integer
+        paid_case_count:
+          type: integer
+        gross_medical_revenue:
+          type: number
+        average_response_minutes:
+          type: integer
+
+    AdminCaseSummary:
+      allOf:
+        - $ref: "#/components/schemas/Case"
+        - type: object
+          properties:
+            patient_country:
+              type: string
+            preferred_language:
+              type: string
+            source:
+              type: string
+            sla_minutes_open:
+              type: integer
+
+    CaseAssignRequest:
+      type: object
+      required: [owner_coordinator_id]
+      properties:
+        owner_coordinator_id:
+          type: string
+          format: uuid
+
+    MatchRequest:
+      type: object
+      required: [procedure_id, preferred_languages, travel_start_date, travel_end_date]
+      properties:
+        procedure_id:
+          type: string
+          format: uuid
+        budget_min:
+          type: number
+        budget_max:
+          type: number
+        currency:
+          type: string
+        preferred_languages:
+          type: array
+          items:
+            type: string
+        travel_start_date:
+          type: string
+          format: date
+        travel_end_date:
+          type: string
+          format: date
+
+    MatchResponse:
+      type: object
+      required: [case_id, matches]
+      properties:
+        case_id:
+          type: string
+          format: uuid
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchItem"
+
+    MatchItem:
+      type: object
+      required: [provider_id, rank, match_score, is_promoted, score_breakdown]
+      properties:
+        provider_id:
+          type: string
+          format: uuid
+        doctor_id:
+          type: string
+          format: uuid
+        rank:
+          type: integer
+        match_score:
+          type: number
+        is_promoted:
+          type: boolean
+        excluded_reason:
+          type: string
+        score_breakdown:
+          type: object
+          properties:
+            clinical_fit:
+              type: number
+            availability:
+              type: number
+            language:
+              type: number
+            price_fit:
+              type: number
+            quality:
+              type: number
+            response_sla:
+              type: number
+            compliance_penalty:
+              type: number
+            over_commission_penalty:
+              type: number
+
+    ProviderComplianceItem:
+      type: object
+      required: [provider_id, provider_name, verified_status]
+      properties:
+        provider_id:
+          type: string
+          format: uuid
+        provider_name:
+          type: string
+        facility_type:
+          $ref: "#/components/schemas/FacilityType"
+        verified_status:
+          type: string
+          enum: [pending, verified, expired, rejected]
+        expires_at:
+          type: string
+          format: date
+        days_until_expiry:
+          type: integer
+
+    CommissionViolation:
+      type: object
+      required: [id, provider_id, requested_rate, cap_rate, violation_code, checked_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        quote_id:
+          type: string
+          format: uuid
+        provider_id:
+          type: string
+          format: uuid
+        requested_rate:
+          type: number
+        cap_rate:
+          type: number
+        violation_code:
+          type: string
+          example: ERR_COMMISSION_CAP_EXCEEDED
+        checked_at:
+          type: string
+          format: date-time
+
+    ContentReview:
+      type: object
+      required: [id, content_type, content_id, review_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        content_type:
+          type: string
+          enum: [procedure_page, package, doctor_profile, review, ad]
+        content_id:
+          type: string
+          format: uuid
+        review_status:
+          type: string
+          enum: [pending, approved, rejected, revision_required]
+        risk_flags:
+          type: object
+          additionalProperties: true
+        reviewer_notes:
+          type: string
+
+    ContentRejectRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+        risk_flags:
+          type: object
+          additionalProperties: true
+
+    AnnualPerformanceReport:
+      type: object
+      required: [report_year, rows]
+      properties:
+        report_year:
+          type: integer
+        rows:
+          type: array
+          items:
+            type: object
+            required: [provider_id, patient_count, gross_medical_revenue, commission_paid]
+            properties:
+              provider_id:
+                type: string
+                format: uuid
+              patient_count:
+                type: integer
+              gross_medical_revenue:
+                type: number
+              commission_paid:
+                type: number
+              submission_status:
+                type: string
+                enum: [draft, submitted, accepted, correction_required]
+
+    AttributionReport:
+      type: object
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+              campaign:
+                type: string
+              sessions:
+                type: integer
+              leads:
+                type: integer
+              qualified_cases:
+                type: integer
+              deposits:
+                type: integer
+              paid_cases:
+                type: integer
+
+    SettlementReport:
+      type: object
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              provider_id:
+                type: string
+                format: uuid
+              period_start:
+                type: string
+                format: date
+              period_end:
+                type: string
+                format: date
+              gross_medical_revenue:
+                type: number
+              commission_amount:
+                type: number
+              nonmedical_margin:
+                type: number
+              status:
+                type: string
+                enum: [draft, approved, paid, disputed, void]
+
+    ReferralLinkCreateRequest:
+      type: object
+      required: [partner_id, landing_path]
+      properties:
+        partner_id:
+          type: string
+          format: uuid
+        landing_path:
+          type: string
+        campaign:
+          type: string
+
+    ReferralLink:
+      allOf:
+        - $ref: "#/components/schemas/ReferralLinkCreateRequest"
+        - type: object
+          required: [id, code, active]
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            active:
+              type: boolean
+
+    PartnerLead:
+      type: object
+      required: [lead_id, status, created_at]
+      properties:
+        lead_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [new, qualified, disqualified, converted, closed]
+        case_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    PartnerLeadCreateRequest:
+      allOf:
+        - $ref: "#/components/schemas/LeadCreateRequest"
+        - type: object
+          required: [partner_id]
+          properties:
+            partner_id:
+              type: string
+              format: uuid
+
+    PartnerCommission:
+      type: object
+      required: [id, case_id, base_platform_revenue, revenue_share_rate, commission_amount, currency, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        base_platform_revenue:
+          type: number
+        revenue_share_rate:
+          type: number
+        commission_amount:
+          type: number
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, paid, void]
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - ERR_BAD_REQUEST
+            - ERR_UNAUTHORIZED
+            - ERR_FORBIDDEN
+            - ERR_NOT_FOUND
+            - ERR_STATE_CONFLICT
+            - ERR_IDEMPOTENCY_CONFLICT
+            - ERR_COMMISSION_CAP_EXCEEDED
+            - ERR_PROVIDER_NOT_VERIFIED
+            - ERR_CONTENT_NOT_APPROVED
+            - ERR_PATIENT_NOT_ELIGIBLE
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true

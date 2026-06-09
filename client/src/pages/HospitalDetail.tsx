@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "wouter";
-import { ArrowRight, CheckCircle2, ChevronLeft, Globe2, MapPin, Phone, Scale, Star } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronLeft, Clock, Globe2, MapPin, Phone, Scale, ShieldCheck, Star, WalletCards } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useCompare } from "@/contexts/CompareContext";
@@ -130,6 +130,31 @@ export default function HospitalDetail() {
               </div>
             </div>
 
+            <section className="mt-8 rounded-lg border border-teal-200 bg-teal-50 p-5">
+              <h2 className="mb-4 font-serif text-3xl text-ink-950">International patient trust signals</h2>
+              <div className="grid gap-3 md:grid-cols-4">
+                <TrustSignal
+                  icon={ShieldCheck}
+                  title="Registration"
+                  text={hospital.registrationLabel}
+                  active={hospital.registrationStatus === "verified"}
+                />
+                <TrustSignal
+                  icon={CheckCircle2}
+                  title="Insurance"
+                  text={hospital.insuranceVerified ? "Insurance evidence checked" : "Insurance review pending"}
+                  active={hospital.insuranceVerified}
+                />
+                <TrustSignal icon={Clock} title="Quote SLA" text={`Target under ${hospital.responseSlaHours}h`} active />
+                <TrustSignal
+                  icon={WalletCards}
+                  title="Package range"
+                  text={`${formatUSD(hospital.packagePriceMinUsd * 1300)} - ${formatUSD(hospital.packagePriceMaxUsd * 1300)}`}
+                  active
+                />
+              </div>
+            </section>
+
             <section className="mt-10">
               <h2 className="mb-4 font-serif text-3xl text-ink-950">Care strengths</h2>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -228,5 +253,25 @@ export default function HospitalDetail() {
         </div>
       </section>
     </Layout>
+  );
+}
+
+function TrustSignal({
+  icon: Icon,
+  title,
+  text,
+  active,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  text: string;
+  active: boolean;
+}) {
+  return (
+    <div className="rounded-md border border-white bg-white p-4">
+      <Icon className={cn("mb-3 size-5", active ? "text-teal-700" : "text-coral-700")} />
+      <div className="text-sm font-semibold text-ink-950">{title}</div>
+      <p className="mt-1 text-xs leading-5 text-ink-600">{text}</p>
+    </div>
   );
 }
