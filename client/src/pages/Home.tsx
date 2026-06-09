@@ -59,13 +59,13 @@ function HeroSection() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/jp/korea-skin-clinic-gangnam">
               <Button size="lg" className="btn-scale h-12 bg-teal-700 px-6 text-white hover:bg-teal-800">
-                Test Japan landing
+                Test JP Japan landing
                 <ArrowRight className="size-4" />
               </Button>
             </Link>
             <Link href="/en/korea-skin-booster-package">
               <Button size="lg" variant="outline" className="h-12 border-ink-300 px-6 text-ink-800 hover:bg-ink-50">
-                Test Taiwan landing
+                Test EN Taiwan landing
                 <Scale className="size-4" />
               </Button>
             </Link>
@@ -137,7 +137,7 @@ function HeroSection() {
                         {hospital.rating}
                       </span>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-500">{hospital.highlights.join(" · ")}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-500">{hospital.highlights.join(" / ")}</p>
                   </div>
                 </div>
               </Link>

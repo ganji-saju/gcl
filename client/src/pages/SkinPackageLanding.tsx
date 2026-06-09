@@ -15,7 +15,6 @@ import {
   formatUsdRange,
   getSkinLandingPage,
   getSkinPackageById,
-  SKIN_PACKAGE_SKUS,
   type SkinPackageSku,
 } from "@/lib/wedgeData";
 import { SAMPLE_HOSPITALS } from "@/lib/sampleData";
@@ -29,12 +28,19 @@ const processCopy = {
     ["Confirm booking", "If the quote works, pay a deposit and lock the visit schedule before travel."],
   ],
   jp: [
-    ["適格性を確認", "渡航患者としての条件、日程、基本情報を先に確認します。"],
-    ["医療機関を選定", "登録確認、言語対応、返信速度、予算、希望日で候補を絞ります。"],
-    ["見積もりを分けて提示", "医療費、非医療費、予約金、キャンセル条件を分けて確認します。"],
-    ["予約を確定", "条件が合えば予約金を支払い、渡航前に日程を確定します。"],
+    ["適格性を確認", "外国人患者として相談可能か、渡航時期や基本条件を先に確認します。"],
+    ["認証済み医院を選定", "登録状況、対応言語、返信SLA、予算、日程をもとに候補を整理します。"],
+    ["分離された見積もり", "医療費、非医療費、予約金、キャンセル条件を分けて確認できます。"],
+    ["予約を確定", "見積もり条件に同意した後、予約金を支払い訪問日程を確定します。"],
   ],
 } as const;
+
+const jpTrustCopy = {
+  registration: ["登録確認", "外国人患者対応の登録状況を確認した医院のみ候補化します。"],
+  language: ["言語対応", "日本語または英語で相談内容を整理し、医院へ伝達します。"],
+  price: ["価格範囲", "医療費と非医療費を分け、予約前に見積もり条件を確認します。"],
+  schedule: ["日程調整", "渡航可能日と医院の空き枠を照合してから予約へ進みます。"],
+};
 
 export default function SkinPackageLanding() {
   const { locale, slug } = useParams<{ locale: string; slug: string }>();
@@ -56,12 +62,36 @@ export default function SkinPackageLanding() {
   const packages = page.packageIds
     .map((id) => getSkinPackageById(id))
     .filter((item): item is SkinPackageSku => Boolean(item));
-  const dermatologyProviders = SAMPLE_HOSPITALS.filter((hospital) => hospital.specialty === "dermatology" || hospital.specialty === "wellness")
-    .slice(0, 3);
-  const copy = page.locale === "jp" ? processCopy.jp : processCopy.en;
+  const dermatologyProviders = SAMPLE_HOSPITALS.filter(
+    (hospital) => hospital.specialty === "dermatology" || hospital.specialty === "wellness",
+  ).slice(0, 3);
   const isJp = page.locale === "jp";
+  const copy = isJp ? processCopy.jp : processCopy.en;
   const marketLabel = page.market === "japan" ? (isJp ? "日本" : "Japan") : isJp ? "台湾" : "Taiwan";
   const consultationUrl = `/consultation?package=${packages[0]?.id ?? ""}&market=${page.market}&source_landing=/${page.locale}/${page.slug}`;
+
+  const trustItems = [
+    {
+      icon: ShieldCheck,
+      title: isJp ? jpTrustCopy.registration[0] : "Registration",
+      text: isJp ? jpTrustCopy.registration[1] : "Verified-provider exposure gate",
+    },
+    {
+      icon: Languages,
+      title: isJp ? jpTrustCopy.language[0] : "Language",
+      text: isJp ? jpTrustCopy.language[1] : "Japanese / English coordinator routing",
+    },
+    {
+      icon: WalletCards,
+      title: isJp ? jpTrustCopy.price[0] : "Price",
+      text: isJp ? jpTrustCopy.price[1] : "Medical and non-medical fee split",
+    },
+    {
+      icon: CalendarCheck,
+      title: isJp ? jpTrustCopy.schedule[0] : "Schedule",
+      text: isJp ? jpTrustCopy.schedule[1] : "Travel-window matching before deposit",
+    },
+  ];
 
   return (
     <Layout>
@@ -70,7 +100,7 @@ export default function SkinPackageLanding() {
           <div className="max-w-3xl">
             <div className="mb-5 flex flex-wrap gap-2 text-xs font-semibold">
               <span className="rounded-md border border-teal-200 bg-teal-50 px-2.5 py-1 text-teal-800">
-                {isJp ? `${marketLabel}向けスキンパッケージ` : `${marketLabel} skin package wedge`}
+                {isJp ? `${marketLabel}向け皮膚科パッケージ` : `${marketLabel} skin package wedge`}
               </span>
               <span className="rounded-md border border-ink-200 bg-white px-2.5 py-1 text-ink-600">
                 {page.searchTheme}
@@ -93,7 +123,7 @@ export default function SkinPackageLanding() {
             </div>
             <div className="mt-9 grid gap-3 sm:grid-cols-3">
               {[
-                ["10", isJp ? "江南エリア医療機関目標" : "Gangnam provider target"],
+                ["10", isJp ? "EN/JPランディング" : "EN/JP landing routes"],
                 ["24h", isJp ? "見積もり返信SLA" : "provider quote SLA"],
                 ["0", isJp ? "規制違反目標" : "compliance incidents target"],
               ].map(([value, label]) => (
@@ -108,28 +138,7 @@ export default function SkinPackageLanding() {
           <div className="soft-shadow rounded-lg border border-ink-200 bg-white p-5">
             <h2 className="font-serif text-2xl text-ink-950">{isJp ? "見積もり準備チェック" : "Quote readiness check"}</h2>
             <div className="mt-5 grid gap-3">
-              {[
-                {
-                  icon: ShieldCheck,
-                  title: isJp ? "登録確認" : "Registration",
-                  text: isJp ? "確認済み医療機関のみを候補化" : "Verified-provider exposure gate",
-                },
-                {
-                  icon: Languages,
-                  title: isJp ? "言語対応" : "Language",
-                  text: isJp ? "日本語 / 英語コーディネーター対応" : "Japanese / English coordinator routing",
-                },
-                {
-                  icon: WalletCards,
-                  title: isJp ? "料金" : "Price",
-                  text: isJp ? "医療費と非医療費を分けて提示" : "Medical and non-medical fee split",
-                },
-                {
-                  icon: CalendarCheck,
-                  title: isJp ? "日程" : "Schedule",
-                  text: isJp ? "予約金前に渡航日程を確認" : "Travel-window matching before deposit",
-                },
-              ].map((item) => (
+              {trustItems.map((item) => (
                 <div key={item.title} className="flex gap-3 rounded-md border border-ink-200 p-3">
                   <item.icon className="mt-0.5 size-5 text-teal-700" />
                   <div>
@@ -152,7 +161,7 @@ export default function SkinPackageLanding() {
               </h2>
               <p className="mt-3 max-w-2xl text-ink-600">
                 {isJp
-                  ? "まずリード検証を目的としたパッケージです。最終的な適応と料金は医療機関の相談後に確定します。"
+                  ? "まずはリード検証用の価格帯です。最終的な適合性と価格は医療機関の確認後に確定します。"
                   : "These packages are designed for lead testing first. Final treatment suitability and price are confirmed by providers."}
               </p>
             </div>
@@ -174,16 +183,16 @@ export default function SkinPackageLanding() {
         <div className="container-wide grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div>
             <h2 className="font-serif text-4xl text-ink-950">
-              {isJp ? "自動化前にコーディネーターが手動でマッチング" : "Manual matching before full automation"}
+              {isJp ? "自動化前にコーディネーターが手動で確認" : "Manual matching before full automation"}
             </h2>
             <p className="mt-4 text-lg leading-8 text-ink-600">
               {isJp
-                ? "最初の100件は手動で対応し、医療機関の返信、予算、渡航日、見積もり承諾率を確認します。"
+                ? "最初の100件は、実際の返信速度、予算、渡航日程、見積もり受諾率を見ながら手動でマッチングします。"
                 : "The first 100 leads should be routed manually so the matching formula learns from real provider response, patient budget, travel dates, and quote acceptance."}
             </p>
             <div className="mt-6 rounded-lg border border-coral-200 bg-coral-50 p-5 text-sm leading-6 text-ink-700">
               {isJp
-                ? "治療効果を保証するものではありません。予約金の前に、適格性、医療機関の準備状況、見積もりの明確さを確認します。"
+                ? "治療効果は保証しません。予約金の前に、適格性、医院の対応状況、見積もりの明確性を確認します。"
                 : "No treatment outcome is guaranteed. The platform validates eligibility, provider readiness, and quote clarity before a patient pays a deposit."}
             </div>
           </div>
@@ -207,11 +216,11 @@ export default function SkinPackageLanding() {
         <div className="container-wide">
           <div className="mb-8 max-w-2xl">
             <h2 className="font-serif text-4xl">
-              {isJp ? "マッチング前に確認できる医療機関の信頼情報" : "Provider trust signals shown before matching"}
+              {isJp ? "マッチング前に確認できる医院の信頼要素" : "Provider trust signals shown before matching"}
             </h2>
             <p className="mt-3 text-ink-300">
               {isJp
-                ? "登録確認、保険確認、対応言語、返信SLA、パッケージ価格帯を公開ページで確認できます。"
+                ? "登録確認、保険情報、対応言語、返信SLA、価格範囲を公開ページで見せ、広告表示がある場合は明示します。"
                 : "Public pages should highlight verification status, insurance evidence, language coverage, SLA, and package range."}
             </p>
           </div>
@@ -224,9 +233,17 @@ export default function SkinPackageLanding() {
                 </div>
                 <h3 className="font-serif text-2xl">{hospital.nameEn}</h3>
                 <div className="mt-4 grid gap-2 text-sm text-ink-300">
-                  <div>{isJp ? "対応言語" : "Languages"}: {hospital.languages.slice(0, 4).join(", ").toUpperCase()}</div>
-                  <div>{isJp ? "返信SLA" : "SLA"}: {isJp ? `${hospital.responseSlaHours}時間以内目標` : `quote reply target under ${hospital.responseSlaHours}h`}</div>
-                  <div>{isJp ? "価格帯" : "Package range"}: {formatUsdRange(hospital.packagePriceMinUsd, hospital.packagePriceMaxUsd)}</div>
+                  <div>
+                    {isJp ? "対応言語" : "Languages"}: {hospital.languages.slice(0, 4).join(", ").toUpperCase()}
+                  </div>
+                  <div>
+                    {isJp ? "返信SLA" : "SLA"}:{" "}
+                    {isJp ? `${hospital.responseSlaHours}時間以内目標` : `quote reply target under ${hospital.responseSlaHours}h`}
+                  </div>
+                  <div>
+                    {isJp ? "価格範囲" : "Package range"}:{" "}
+                    {formatUsdRange(hospital.packagePriceMinUsd, hospital.packagePriceMaxUsd)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -242,11 +259,11 @@ export default function SkinPackageLanding() {
               {isJp ? "コーディネーターCRM検証" : "Coordinator CRM validation"}
             </div>
             <h2 className="mt-2 font-serif text-3xl text-ink-950">
-              {isJp ? "この導線でリード検証を開始" : "Ready to test this landing path?"}
+              {isJp ? "このランディング経路でリードを検証" : "Ready to test this landing path?"}
             </h2>
             <p className="mt-2 text-ink-600">
               {isJp
-                ? "フォームではパッケージ、市場、適格性、予算、渡航日程、流入ページを保存します。"
+                ? "フォームではパッケージ、対象市場、適格性、予算、渡航時期、流入元を保存します。"
                 : "The form captures package, market, eligibility, budget, travel window, and source landing."}
             </p>
           </div>
@@ -275,7 +292,9 @@ export function PackageCard({ pkg, selected = false }: { pkg: SkinPackageSku; se
           <div className="text-xs font-bold uppercase tracking-normal text-teal-700">{pkg.id}</div>
           <h3 className="mt-1 font-serif text-2xl text-ink-950">{pkg.title}</h3>
         </div>
-        <span className="rounded-md bg-ink-50 px-2 py-1 text-xs font-semibold text-ink-700">{pkg.durationDays} day</span>
+        <span className="rounded-md bg-ink-50 px-2 py-1 text-xs font-semibold text-ink-700">
+          {pkg.durationDays} day
+        </span>
       </div>
       <p className="text-sm leading-6 text-ink-600">{pkg.bestFor}</p>
       <div className="mt-5 grid gap-2 text-sm">
@@ -286,6 +305,10 @@ export function PackageCard({ pkg, selected = false }: { pkg: SkinPackageSku; se
         <div className="flex items-center justify-between rounded-md bg-ink-50 px-3 py-2">
           <span className="font-semibold text-ink-700">Recovery</span>
           <span className="text-ink-700">{pkg.recoveryWindow}</span>
+        </div>
+        <div className="flex items-center justify-between rounded-md bg-ink-50 px-3 py-2">
+          <span className="font-semibold text-ink-700">Coordinator</span>
+          <span className="text-ink-700">{pkg.coordinatorLanguages.join(", ").toUpperCase()}</span>
         </div>
       </div>
       <div className="mt-5 space-y-2">
