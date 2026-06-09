@@ -31,6 +31,14 @@ Closed Beta Master Sheet, 5-provider SLA gate, coordinator playbook, 300-lead
 test, 15-deposit target, settlement ledger validation, and provider/channel
 ranking rules.
 
+Closed beta operating artifacts:
+
+- Workbook source copy: `docs/operations/closed-beta-master-sheet.xlsx`
+- Public workbook download: `/beta/closed-beta-master-sheet.xlsx`
+- Beta command center: `/admin/beta`
+- Case dashboard: `/admin/cases`
+- Quote/deposit/booking MVP: `/admin/quote-booking`
+
 For backend implementation, apply the additive core schema migration after the POC schema:
 
 ```powershell

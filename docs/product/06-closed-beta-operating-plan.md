@@ -38,6 +38,11 @@ Primary success criteria:
 
 Use one workbook as the operating source of truth until the admin dashboard fully replaces it.
 
+Generated workbook:
+
+- `../../docs/operations/closed-beta-master-sheet.xlsx`
+- Public app download path: `/beta/closed-beta-master-sheet.xlsx`
+
 Recommended tabs:
 
 | Tab | Purpose | Key Columns |
@@ -169,6 +174,10 @@ Hard API rules:
 
 Daily operating board views:
 
+Implemented MVP route:
+
+- `/admin/cases`
+
 | View | Filter | Purpose |
 |---|---|---|
 | `New Leads` | status = new | First response and eligibility |
@@ -236,6 +245,11 @@ If the beta produces fewer than 10 deposits, do not scale paid traffic. Fix offe
 ## 8. Settlement Ledger
 
 Ledger must reconcile four numbers for every paid case:
+
+Implemented MVP routes:
+
+- `/admin/beta`
+- `/admin/quote-booking`
 
 ```text
 platform_net =

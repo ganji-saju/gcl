@@ -14,6 +14,9 @@ import TreatmentDetail from "./pages/TreatmentDetail";
 import Compare from "./pages/Compare";
 import Consultation from "./pages/Consultation";
 import SkinPackageLanding from "./pages/SkinPackageLanding";
+import ClosedBetaOps from "./pages/ClosedBetaOps";
+import CaseDashboard from "./pages/CaseDashboard";
+import QuoteBookingMvp from "./pages/QuoteBookingMvp";
 
 function Router() {
   return (
@@ -25,6 +28,9 @@ function Router() {
       <Route path="/treatments/:slug" component={TreatmentDetail} />
       <Route path="/compare" component={Compare} />
       <Route path="/consultation" component={Consultation} />
+      <Route path="/admin/beta" component={ClosedBetaOps} />
+      <Route path="/admin/cases" component={CaseDashboard} />
+      <Route path="/admin/quote-booking" component={QuoteBookingMvp} />
       <Route path="/:locale/:slug" component={SkinPackageLanding} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
