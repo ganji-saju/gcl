@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ScrollManager from "./components/ScrollManager";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { I18nProvider } from "./contexts/I18nContext";
 import { CompareProvider } from "./contexts/CompareContext";
@@ -47,6 +48,7 @@ function App() {
         <I18nProvider>
           <CompareProvider>
             <TooltipProvider>
+              <ScrollManager />
               <Toaster richColors position="top-right" />
               <Router />
             </TooltipProvider>

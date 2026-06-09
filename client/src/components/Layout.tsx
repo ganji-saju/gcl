@@ -1,5 +1,6 @@
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import FloatingActionDock from "./FloatingActionDock";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ export default function Layout({ children, className }: LayoutProps) {
         {children}
       </main>
       <Footer />
+      <FloatingActionDock />
     </div>
   );
 }
