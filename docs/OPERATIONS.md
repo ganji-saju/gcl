@@ -25,6 +25,12 @@ regulated marketplace design pack is documented under `docs/product/README.md`.
 Before full v1 development, follow the seven-gate validation roadmap in
 `docs/product/05-validation-roadmap-japan-taiwan-skin-wedge.md`.
 
+After the landing-page validation setup is live, run the closed beta operating
+plan in `docs/product/06-closed-beta-operating-plan.md`. That plan defines the
+Closed Beta Master Sheet, 5-provider SLA gate, coordinator playbook, 300-lead
+test, 15-deposit target, settlement ledger validation, and provider/channel
+ranking rules.
+
 For backend implementation, apply the additive core schema migration after the POC schema:
 
 ```powershell
