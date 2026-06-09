@@ -1,0 +1,48 @@
+# Global Patient Hub Operations
+
+## Recommended Architecture
+
+- Frontend: React + Vite static app deployed on Vercel.
+- Database: Supabase Postgres table `public.inquiries` for patient leads.
+- Security: browser uses only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; RLS allows anonymous inserts only.
+- Source control: push this folder as a fresh GitHub repository, then import that repository in Vercel.
+
+## Supabase Setup
+
+1. Create a new Supabase project.
+2. Open SQL Editor and run `supabase/schema.sql`.
+3. Copy the project URL and publishable/anon key.
+4. Set Vercel environment variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+
+The app will store demo inquiries in browser local storage until those variables are configured.
+
+## Vercel Setup
+
+Use these settings when importing the GitHub repository:
+
+- Framework Preset: Vite
+- Install Command: `npm install`
+- Build Command: `npm run build`
+- Output Directory: `dist/public`
+
+`vercel.json` already includes SPA rewrites so routes like `/hospitals/aura-facial-institute` work after refresh.
+
+## GitHub Publish
+
+```powershell
+git init
+git add .
+git commit -m "Create global patient hub"
+gh repo create global-patient-hub --private --source . --remote origin --push
+```
+
+Change `--private` to `--public` only when you are ready to expose the code.
+
+## Operating Notes
+
+- Treat listed prices as estimates; final quotes must be confirmed by licensed providers.
+- Add spam protection before heavy traffic. Recommended next step: Vercel serverless function or Supabase Edge Function with Turnstile verification before insert.
+- Keep the anon key public only with RLS enabled and tested.
+- Do not store medical documents in this frontend. Use a private Supabase Storage bucket or CRM workflow for sensitive files.

@@ -1,0 +1,33 @@
+{
+  "include": ["client/src/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "client/src/_core/**/*",
+    "client/src/const.ts",
+    "client/src/lib/trpc.ts",
+    "client/src/components/AIChatBox.tsx",
+    "client/src/components/DashboardLayout.tsx",
+    "client/src/components/DashboardLayoutSkeleton.tsx",
+    "client/src/components/ManusDialog.tsx",
+    "client/src/pages/ComponentShowcase.tsx"
+  ],
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
+    "noEmit": true,
+    "module": "ESNext",
+    "strict": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@/*": ["./client/src/*"]
+    }
+  }
+}
