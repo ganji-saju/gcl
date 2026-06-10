@@ -37,6 +37,33 @@ const goals = [
   { key: "wellness", labelKey: "home.goals.wellness", icon: ClipboardList },
 ];
 
+const liveInquiries = [
+  { country: "Japan", name: "Mika T.", product: "Laser toning package" },
+  { country: "Taiwan", name: "Wei L.", product: "Skin booster weekend" },
+  { country: "USA", name: "Sarah K.", product: "Facial contour consult" },
+  { country: "Singapore", name: "Mei L.", product: "Dental veneer quote" },
+  { country: "UAE", name: "Noor A.", product: "Premium checkup plan" },
+  { country: "Canada", name: "Daniel P.", product: "Hair transplant package" },
+];
+
+const rollingLiveInquiries = [...liveInquiries, ...liveInquiries.slice(0, 3)];
+
+function LiveInquiryTicker() {
+  return (
+    <div className="live-inquiry-feed" aria-label="Recent patient inquiries">
+      <div className="live-inquiry-track">
+        {rollingLiveInquiries.map((inquiry, index) => (
+          <div key={`${inquiry.country}-${inquiry.name}-${index}`} className="live-inquiry-row">
+            <span className="live-inquiry-country">{inquiry.country}</span>
+            <span className="live-inquiry-name">{inquiry.name}</span>
+            <span className="live-inquiry-product">{inquiry.product}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HeroSection() {
   const { lang, t } = useI18n();
   const [goal, setGoal] = useState("dermatology");
@@ -46,7 +73,7 @@ function HeroSection() {
   }, [goal]);
 
   return (
-    <section className="clinical-grid border-b border-ink-200 bg-white">
+    <section className="hero-atlas border-b border-ink-200">
       <div className="container-wide grid min-h-[680px] gap-12 py-10 lg:grid-cols-[1fr_480px] lg:items-center">
         <div className="max-w-3xl">
           <h1 className="text-balance font-serif text-5xl text-ink-950 sm:text-6xl lg:text-7xl">
@@ -93,7 +120,9 @@ function HeroSection() {
             </div>
           </div>
 
-          <div className="grid gap-3">
+          <LiveInquiryTicker />
+
+          <div className="mt-5 grid gap-3">
             <label className="grid gap-1.5 text-sm font-medium text-ink-700">
               {t("home.match.treatmentGoal")}
               <select
