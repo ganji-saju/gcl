@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ChevronDown, Languages, Menu, Scale, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,10 @@ export default function Navbar() {
     { href: "/admin/landing-routes", label: "랜딩 경로" },
   ];
   const navLinks = internalMode ? internalNavLinks : publicNavLinks;
+
+  useEffect(() => {
+    document.title = internalMode ? "글로벌 환자 허브 | 내부 운영" : "Global Patient Hub | Korea Medical Tourism Network";
+  }, [internalMode]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink-200 bg-white/95 backdrop-blur">
