@@ -22,6 +22,20 @@ import {
   type PartnerMvpSnapshot,
   type ProviderQuoteRequest,
 } from "@/lib/partnerMvpApi";
+import {
+  actorLabel,
+  caseStatusLabel,
+  eventLabel,
+  languageLabel,
+  languageListLabel,
+  marketLabel,
+  nextActionLabel,
+  partnerModeLabel,
+  partnerServiceLabel,
+  partnerTypeLabel,
+  riskFlagLabel,
+  statusLabel,
+} from "@/lib/adminLabels";
 import { cn } from "@/lib/utils";
 
 const statusOrder: BetaCaseStatus[] = [
@@ -56,7 +70,7 @@ function statusClass(status: BetaCaseStatus) {
 }
 
 function StatusPill({ status }: { status: BetaCaseStatus }) {
-  return <span className={cn("rounded-md border px-2 py-1 text-xs font-semibold", statusClass(status))}>{status.replace("_", " ")}</span>;
+  return <span className={cn("rounded-md border px-2 py-1 text-xs font-semibold", statusClass(status))}>{caseStatusLabel(status)}</span>;
 }
 
 function nextStatus(status: BetaCaseStatus): BetaCaseStatus {
@@ -100,19 +114,19 @@ function CaseRow({
       </div>
       <div>
         <div className="text-sm font-semibold text-ink-950">{row.procedure}</div>
-        <div className="text-xs text-ink-500">{row.market} / {row.locale.toUpperCase()} / {row.language.toUpperCase()}</div>
+        <div className="text-xs text-ink-500">{marketLabel(row.market)} / {languageLabel(row.locale)} / {languageLabel(row.language)}</div>
       </div>
       <div>
-        <div className="text-sm font-semibold text-ink-950">{provider?.name ?? "Unmatched"}</div>
-        <div className="text-xs text-ink-500">{partnerRequested ? partner?.name ?? "Partner requested" : row.source} / {row.campaign}</div>
+        <div className="text-sm font-semibold text-ink-950">{provider?.name ?? "미매칭"}</div>
+        <div className="text-xs text-ink-500">{partnerRequested ? partner?.name ?? "파트너 요청" : row.source} / {row.campaign}</div>
       </div>
       <div>
         <div className="text-sm font-semibold text-ink-950">{formatUsd(row.budgetMinUsd)} - {formatUsd(row.budgetMaxUsd)}</div>
-        <div className="text-xs text-ink-500">{row.travelStart} to {row.travelEnd}</div>
+        <div className="text-xs text-ink-500">{row.travelStart} ~ {row.travelEnd}</div>
       </div>
       <div>
         <div className={cn("text-sm font-semibold", slaRisk ? "text-coral-700" : "text-teal-700")}>
-          {slaRisk ? "SLA watch" : "On track"}
+          {slaRisk ? "응답 지연 확인" : "정상 진행"}
         </div>
         <div className="text-xs text-ink-500">{row.nextActionAt}</div>
       </div>
@@ -132,7 +146,7 @@ export default function CaseDashboard() {
   const [adminToken, setAdminToken] = useState(() => readAdminApiToken());
   const [adminTokenInput, setAdminTokenInput] = useState(() => readAdminApiToken());
   const [apiStatus, setApiStatus] = useState<"demo" | "loading" | "live" | "saving" | "error">(adminToken ? "loading" : "demo");
-  const [apiMessage, setApiMessage] = useState(adminToken ? "Connecting to Supabase operations..." : "Demo board");
+  const [apiMessage, setApiMessage] = useState(adminToken ? "Supabase 운영 데이터에 연결 중..." : "데모 보드");
 
   const owners = useMemo(() => Array.from(new Set(cases.map((row) => row.owner))), [cases]);
   const providersById = useMemo(() => new Map(providers.map((provider) => [provider.id, provider])), [providers]);
@@ -159,20 +173,20 @@ export default function CaseDashboard() {
     setActivities(snapshot.activities ?? []);
     setApiStatus("live");
     setApiMessage(
-      `Supabase ops connected: ${snapshot.meta?.partnerRequestCount ?? snapshot.cases.length} partner requests / ${snapshot.meta?.quoteRequestCount ?? 0} quote requests`,
+      `Supabase 운영 연결됨: 파트너 요청 ${snapshot.meta?.partnerRequestCount ?? snapshot.cases.length}건 / 견적 요청 ${snapshot.meta?.quoteRequestCount ?? 0}건`,
     );
   }
 
   async function refreshOps(token = adminToken) {
     if (!token) return;
     setApiStatus("loading");
-    setApiMessage("Loading Supabase partner requests...");
+    setApiMessage("Supabase 파트너 요청을 불러오는 중...");
     try {
       const snapshot = await fetchPartnerMvpSnapshot(token);
       applySnapshot(snapshot);
     } catch (error) {
       setApiStatus("error");
-      setApiMessage(error instanceof Error ? error.message : "Could not load Supabase operations.");
+      setApiMessage("운영 데이터 로드 실패: 연결 설정을 확인하세요.");
     }
   }
 
@@ -191,13 +205,13 @@ export default function CaseDashboard() {
       setQuoteRequests([]);
       setActivities([]);
       setApiStatus("demo");
-      setApiMessage("Demo board");
+      setApiMessage("데모 보드");
     }
   }
 
   function applySnapshotAfterSave(snapshot: PartnerMvpSnapshot) {
     applySnapshot(snapshot);
-    setApiMessage("Supabase operation saved");
+    setApiMessage("Supabase에 저장되었습니다");
   }
 
   function advanceSelected() {
@@ -231,7 +245,7 @@ export default function CaseDashboard() {
       applySnapshotAfterSave(await assignPartnerMvp(adminToken, selected.id, partnerId));
     } catch (error) {
       setApiStatus("error");
-      setApiMessage(error instanceof Error ? error.message : "Partner assignment failed.");
+      setApiMessage("파트너 배정 실패: 저장 권한 또는 연결 설정을 확인하세요.");
     }
   }
 
@@ -255,7 +269,7 @@ export default function CaseDashboard() {
       applySnapshotAfterSave(await setPartnerShortlistMvp(adminToken, selected.id, selected.assignedPartnerId, nextShortlist));
     } catch (error) {
       setApiStatus("error");
-      setApiMessage(error instanceof Error ? error.message : "Provider shortlist save failed.");
+      setApiMessage("병원 후보 저장 실패: 저장 권한 또는 연결 설정을 확인하세요.");
     }
   }
 
@@ -283,7 +297,7 @@ export default function CaseDashboard() {
       applySnapshotAfterSave(await requestPartnerQuoteMvp(adminToken, selected.id, selected.assignedPartnerId, shortlist));
     } catch (error) {
       setApiStatus("error");
-      setApiMessage(error instanceof Error ? error.message : "Quote request failed.");
+      setApiMessage("견적 요청 실패: 저장 권한 또는 연결 설정을 확인하세요.");
     }
   }
 
@@ -302,27 +316,27 @@ export default function CaseDashboard() {
             <div>
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-teal-700">
                 <ClipboardList className="size-4" />
-                Coordinator case dashboard
+                코디네이터 케이스 관리
               </div>
-              <h1 className="font-serif text-5xl text-ink-950">Closed beta case board</h1>
-              <p className="mt-3 max-w-2xl text-ink-600">Live operating surface for lead qualification, partner assignment, provider shortlisting, quote SLA, deposit follow-up, and booking readiness.</p>
+              <h1 className="font-serif text-5xl text-ink-950">운영 케이스 보드</h1>
+              <p className="mt-3 max-w-2xl text-ink-600">상담 적격성 확인, 파트너 배정, 병원 후보 선택, 견적 응답 기준, 예약금 후속조치, 예약 확정을 한 화면에서 관리합니다.</p>
             </div>
             <div className="grid gap-3 sm:min-w-[360px]">
               <div className="rounded-md border border-ink-200 bg-ink-50 p-3">
                 <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase text-ink-500">
                   <Database className="size-3.5" />
-                  Operations data
+                  운영 데이터
                 </div>
                 <div className="flex gap-2">
                   <input
                     type="password"
                     value={adminTokenInput}
                     onChange={(event) => setAdminTokenInput(event.target.value)}
-                    placeholder="Admin API token"
+                    placeholder="관리자 연결 토큰"
                     className="h-10 min-w-0 flex-1 rounded-md border border-ink-200 bg-white px-3 text-sm"
                   />
                   <Button type="button" variant="outline" onClick={connectOps} className="border-ink-300 text-ink-800">
-                    {adminTokenInput.trim() ? "Connect" : "Demo"}
+                    {adminTokenInput.trim() ? "연결" : "데모"}
                   </Button>
                 </div>
                 <div className={cn("mt-2 text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
@@ -332,19 +346,19 @@ export default function CaseDashboard() {
               <div className="flex flex-wrap gap-3">
               <Link href="/partner/cases">
                 <Button variant="outline" className="border-ink-300 text-ink-800">
-                  Partner view
+                  파트너 화면
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
               <Link href="/admin/quote-booking">
                 <Button className="bg-teal-700 text-white hover:bg-teal-800">
-                  Quote / Deposit / Booking
+                  견적/예약금/예약
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
               <Link href="/provider/quotes">
                 <Button variant="outline" className="border-ink-300 text-ink-800">
-                  Provider quotes
+                  병원 견적
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
@@ -355,11 +369,11 @@ export default function CaseDashboard() {
           <div className="mt-6 grid gap-3 md:grid-cols-4 xl:grid-cols-6">
             <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 text-left">
               <div className="font-serif text-2xl text-ink-950">{partnerRequestedCount}</div>
-              <div className="text-xs font-semibold text-teal-700">partner requested</div>
+              <div className="text-xs font-semibold text-teal-700">파트너 요청</div>
             </div>
             <div className="rounded-lg border border-ink-200 bg-white p-3 text-left">
               <div className="font-serif text-2xl text-ink-950">{partnerAssignedCount}</div>
-              <div className="text-xs font-semibold text-ink-500">partner assigned</div>
+              <div className="text-xs font-semibold text-ink-500">파트너 배정</div>
             </div>
             {counts.filter((item) => item.count > 0 || visibleStatuses.includes(item.status)).slice(0, 6).map((item) => (
               <button
@@ -372,7 +386,7 @@ export default function CaseDashboard() {
                 )}
               >
                 <div className="font-serif text-2xl text-ink-950">{item.count}</div>
-                <div className="text-xs font-semibold text-ink-500">{item.status.replace("_", " ")}</div>
+                <div className="text-xs font-semibold text-ink-500">{caseStatusLabel(item.status)}</div>
               </button>
             ))}
           </div>
@@ -385,7 +399,7 @@ export default function CaseDashboard() {
             <div className="flex flex-col gap-3 border-b border-ink-100 p-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-2 font-semibold text-ink-950">
                 <Filter className="size-4 text-teal-700" />
-                Case queue
+                케이스 목록
               </div>
               <div className="flex flex-wrap gap-2">
                 <select
@@ -393,10 +407,10 @@ export default function CaseDashboard() {
                   onChange={(event) => setStatusFilter(event.target.value as BetaCaseStatus | "all")}
                   className="h-10 rounded-md border border-ink-200 bg-white px-3 text-sm"
                 >
-                  <option value="all">All statuses</option>
+                  <option value="all">전체 상태</option>
                   {statusOrder.map((status) => (
                     <option key={status} value={status}>
-                      {status.replace("_", " ")}
+                      {caseStatusLabel(status)}
                     </option>
                   ))}
                 </select>
@@ -405,7 +419,7 @@ export default function CaseDashboard() {
                   onChange={(event) => setOwnerFilter(event.target.value)}
                   className="h-10 rounded-md border border-ink-200 bg-white px-3 text-sm"
                 >
-                  <option value="all">All owners</option>
+                  <option value="all">전체 담당자</option>
                   {owners.map((owner) => (
                     <option key={owner} value={owner}>
                       {owner}
@@ -417,11 +431,11 @@ export default function CaseDashboard() {
             <div className="overflow-x-auto">
               <div className="min-w-[920px]">
                 <div className="grid gap-4 border-b border-ink-100 bg-ink-50 px-4 py-3 text-xs font-bold uppercase text-ink-500 md:grid-cols-[1.05fr_0.75fr_0.8fr_0.7fr_0.9fr]">
-                  <div>Case</div>
-                  <div>Request</div>
-                  <div>Provider / source</div>
-                  <div>Budget / travel</div>
-                  <div>SLA / next</div>
+                  <div>케이스</div>
+                  <div>요청 내용</div>
+                  <div>병원 / 유입</div>
+                  <div>예산 / 일정</div>
+                  <div>응답 기준 / 다음 작업</div>
                 </div>
                 {filtered.map((row) => (
                   <CaseRow key={row.id} row={row} selected={selected?.id === row.id} onSelect={() => setSelectedId(row.id)} providersById={providersById} partnersById={partnersById} />
@@ -444,63 +458,63 @@ export default function CaseDashboard() {
                 <div className="rounded-md bg-ink-50 p-3">
                   <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
                     <Languages className="size-3.5" />
-                    Language / market
+                    언어 / 시장
                   </div>
-                  <div className="font-semibold text-ink-950">{selected.market} / {selected.language.toUpperCase()} / {selected.locale.toUpperCase()}</div>
+                  <div className="font-semibold text-ink-950">{marketLabel(selected.market)} / {languageLabel(selected.language)} / {languageLabel(selected.locale)}</div>
                 </div>
                 <div className="rounded-md bg-ink-50 p-3">
                   <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
                     <CalendarClock className="size-3.5" />
-                    Travel window
+                    방문 희망 일정
                   </div>
-                  <div className="font-semibold text-ink-950">{selected.travelStart} to {selected.travelEnd}</div>
+                  <div className="font-semibold text-ink-950">{selected.travelStart} ~ {selected.travelEnd}</div>
                 </div>
                 <div className="rounded-md bg-ink-50 p-3">
                   <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
                     <UserRoundCheck className="size-3.5" />
-                    Matched provider
+                    매칭 병원
                   </div>
-                  <div className="font-semibold text-ink-950">{selectedProvider?.name ?? "Not matched"}</div>
+                  <div className="font-semibold text-ink-950">{selectedProvider?.name ?? "미매칭"}</div>
                 </div>
               </div>
 
               <div className="mt-5 rounded-md border border-teal-200 bg-teal-50 p-4">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-teal-900">
                   <Handshake className="size-4" />
-                  Partner service request
+                  파트너 서비스 요청
                 </div>
                 <div className="grid gap-2 text-sm text-ink-700">
                   <div className="flex justify-between gap-3">
-                    <span className="text-ink-500">Mode</span>
-                    <span className="font-semibold text-ink-950">{selected.partnerAssistanceMode ?? "platform_direct"}</span>
+                    <span className="text-ink-500">요청 방식</span>
+                    <span className="font-semibold text-ink-950">{partnerModeLabel(selected.partnerAssistanceMode)}</span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-ink-500">Consent</span>
+                    <span className="text-ink-500">공유 동의</span>
                     <span className={cn("font-semibold", selected.partnerShareConsent ? "text-teal-700" : "text-coral-700")}>
-                      {selected.partnerShareConsent ? "shared scope approved" : "needs consent"}
+                      {selected.partnerShareConsent ? "동의 완료" : "동의 필요"}
                     </span>
                   </div>
                   <div>
-                    <div className="mb-1 text-ink-500">Requested services</div>
+                    <div className="mb-1 text-ink-500">요청 서비스</div>
                     <div className="flex flex-wrap gap-1.5">
                       {(selected.requestedPartnerServices?.length ? selected.requestedPartnerServices : ["none"]).map((service) => (
                         <span key={service} className="rounded bg-white px-2 py-1 text-xs font-semibold text-ink-700">
-                          {service.replaceAll("_", " ")}
+                          {partnerServiceLabel(service)}
                         </span>
                       ))}
                     </div>
                   </div>
                   <label className="mt-2 grid gap-1.5 font-medium text-ink-800">
-                    Assign partner
+                    파트너 배정
                     <select
                       value={selected.assignedPartnerId ?? ""}
                       onChange={(event) => assignPartner(event.target.value)}
                       className="h-11 rounded-md border border-teal-200 bg-white px-3 text-sm text-ink-900"
                     >
-                      <option value="">Unassigned</option>
+                      <option value="">미배정</option>
                       {partners.filter((partner) => partner.active).map((partner) => (
                         <option key={partner.id} value={partner.id}>
-                          {partner.name} / {partner.type.replaceAll("_", " ")}
+                          {partner.name} / {partnerTypeLabel(partner.type)}
                         </option>
                       ))}
                     </select>
@@ -508,7 +522,7 @@ export default function CaseDashboard() {
                 </div>
                 {liveMode && !selected.assignedPartnerId && (
                   <div className="mt-3 rounded-md border border-coral-200 bg-coral-50 p-3 text-xs font-semibold text-coral-800">
-                    Assign a partner before saving provider candidates to Supabase.
+                    Supabase에 병원 후보를 저장하려면 먼저 파트너를 배정해야 합니다.
                   </div>
                 )}
               </div>
@@ -516,7 +530,7 @@ export default function CaseDashboard() {
               <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
                   <Building2 className="size-4 text-teal-700" />
-                  Partner provider shortlist
+                  파트너 병원 후보
                 </div>
                 <div className="grid gap-2">
                   {providers.filter((provider) => provider.active).map((provider) => {
@@ -535,11 +549,11 @@ export default function CaseDashboard() {
                         <div className="flex items-center justify-between gap-3">
                           <span className="font-semibold text-ink-950">{provider.name}</span>
                           <span className={cn("text-xs font-bold", requested ? "text-teal-700" : "text-ink-400")}>
-                            {requested ? "quote requested" : `${provider.betaScore} fit`}
+                            {requested ? "견적 요청됨" : `적합도 ${provider.betaScore}`}
                           </span>
                         </div>
                         <div className="mt-1 text-xs text-ink-500">
-                          {provider.languages.join(", ").toUpperCase()} / {provider.slaHours}h SLA
+                          {languageListLabel(provider.languages)} / 응답 {provider.slaHours}시간
                         </div>
                       </button>
                     );
@@ -551,14 +565,14 @@ export default function CaseDashboard() {
                   className="mt-3 w-full bg-teal-700 text-white hover:bg-teal-800 disabled:bg-ink-300"
                 >
                   <Send className="size-4" />
-                  Coordinator request quote
+                  코디네이터 견적 요청
                 </Button>
               </div>
 
               <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
                   <Send className="size-4 text-teal-700" />
-                  Provider quote responses
+                  병원 견적 응답
                 </div>
                 <div className="grid gap-2">
                   {selectedQuoteRequests.length ? (
@@ -567,21 +581,21 @@ export default function CaseDashboard() {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="font-semibold text-ink-950">{request.providerName}</div>
-                            <div className="mt-1 text-xs text-ink-500">{request.status} / due {request.dueAt ?? "not set"}</div>
+                            <div className="mt-1 text-xs text-ink-500">{statusLabel(request.status)} / 기한 {request.dueAt ?? "미설정"}</div>
                           </div>
                           <span className={cn("rounded-md border px-2 py-1 text-xs font-bold", request.quote ? "border-teal-200 bg-teal-50 text-teal-800" : "border-coral-200 bg-coral-50 text-coral-800")}>
-                            {request.quote ? "responded" : "waiting"}
+                            {request.quote ? "응답 완료" : "응답 대기"}
                           </span>
                         </div>
                         {request.quote && (
                           <div className="mt-2 text-xs font-semibold text-teal-800">
-                            Quote {formatUsd(request.quote.medicalFeeUsd + request.quote.nonmedicalFeeUsd)} / deposit {formatUsd(request.quote.depositAmountUsd)}
+                            견적 {formatUsd(request.quote.medicalFeeUsd + request.quote.nonmedicalFeeUsd)} / 예약금 {formatUsd(request.quote.depositAmountUsd)}
                           </div>
                         )}
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">No provider quote requests for this case yet.</div>
+                    <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">아직 이 케이스에 병원 견적 요청이 없습니다.</div>
                   )}
                 </div>
               </div>
@@ -589,38 +603,38 @@ export default function CaseDashboard() {
               <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
                   <Activity className="size-4 text-teal-700" />
-                  Case activity
+                  케이스 활동 기록
                 </div>
                 <div className="grid gap-2">
                   {selectedActivities.length ? (
                     selectedActivities.map((event) => (
                       <div key={event.id} className="rounded-md bg-ink-50 p-3 text-sm">
-                        <div className="font-semibold text-ink-950">{event.eventType.replaceAll("_", " ")}</div>
-                        <div className="mt-1 text-xs text-ink-500">{event.actorLabel ?? event.actorRole} / {event.createdAt?.slice(0, 16).replace("T", " ")}</div>
+                        <div className="font-semibold text-ink-950">{eventLabel(event.eventType)}</div>
+                        <div className="mt-1 text-xs text-ink-500">{event.actorLabel ?? actorLabel(event.actorRole)} / {event.createdAt?.slice(0, 16).replace("T", " ")}</div>
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">No activity events yet.</div>
+                    <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">아직 활동 기록이 없습니다.</div>
                   )}
                 </div>
               </div>
 
               <div className="mt-5 rounded-md border border-coral-200 bg-coral-50 p-4">
-                <div className="text-sm font-semibold text-coral-900">Next action</div>
-                <p className="mt-1 text-sm leading-6 text-ink-700">{selected.nextAction}</p>
+                <div className="text-sm font-semibold text-coral-900">다음 작업</div>
+                <p className="mt-1 text-sm leading-6 text-ink-700">{nextActionLabel(selected.nextAction)}</p>
                 <div className="mt-2 text-xs font-semibold text-coral-800">{selected.nextActionAt}</div>
               </div>
 
               <div className="mt-5 grid gap-2">
                 <Button onClick={advanceSelected} className="w-full bg-teal-700 text-white hover:bg-teal-800">
-                  Advance state
+                  다음 상태로 이동
                 </Button>
                 <select
                   value={selected.matchedProviderId ?? ""}
                   onChange={(event) => assignProvider(event.target.value)}
                   className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900"
                 >
-                  <option value="">Assign provider</option>
+                  <option value="">병원 배정</option>
                   {providers.filter((provider) => provider.active).map((provider) => (
                     <option key={provider.id} value={provider.id}>
                       {provider.name}
@@ -631,7 +645,7 @@ export default function CaseDashboard() {
 
               {selected.riskFlags.length > 0 && (
                 <div className="mt-5 rounded-md border border-coral-200 p-3 text-sm text-coral-800">
-                  Risk flags: {selected.riskFlags.join(", ")}
+                  위험 플래그: {selected.riskFlags.map(riskFlagLabel).join(", ")}
                 </div>
               )}
             </aside>

@@ -27,6 +27,7 @@ import {
   providerDepositRate,
   providerQuoteRate,
 } from "@/lib/betaData";
+import { languageListLabel, providerNextStepLabel, statusLabel } from "@/lib/adminLabels";
 import { cn } from "@/lib/utils";
 
 function StatusPill({ value }: { value: string }) {
@@ -37,7 +38,7 @@ function StatusPill({ value }: { value: string }) {
         ? "border-coral-200 bg-coral-50 text-coral-800"
         : "border-ink-200 bg-ink-50 text-ink-700";
 
-  return <span className={cn("rounded-md border px-2 py-1 text-xs font-semibold", style)}>{value.replace("_", " ")}</span>;
+  return <span className={cn("rounded-md border px-2 py-1 text-xs font-semibold", style)}>{statusLabel(value)}</span>;
 }
 
 function MetricCard({
@@ -57,7 +58,7 @@ function MetricCard({
         <div className="grid size-9 place-items-center rounded-md bg-teal-50 text-teal-700">
           <Icon className="size-5" />
         </div>
-        {target !== undefined && <span className="text-xs font-semibold text-ink-500">Target {target}</span>}
+        {target !== undefined && <span className="text-xs font-semibold text-ink-500">목표 {target}</span>}
       </div>
       <div className="font-serif text-3xl text-ink-950">{value}</div>
       <div className="mt-1 text-sm text-ink-500">{label}</div>
@@ -90,29 +91,29 @@ export default function ClosedBetaOps() {
             <div>
               <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-teal-700">
                 <ShieldCheck className="size-4" />
-                Closed beta command center
+                비공개 베타 운영센터
               </div>
-              <h1 className="font-serif text-5xl text-ink-950">Japan/Taiwan skin package beta ops</h1>
+              <h1 className="font-serif text-5xl text-ink-950">일본/대만 피부 패키지 베타 운영</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-600">
-                5-provider SLA gate, 300-lead test, 15-deposit target, settlement ledger, and provider/channel budget focus in one operating view.
+                5개 병원 응답 기준, 300개 리드 테스트, 예약금 15건 목표, 정산 장부, 병원/채널 예산 판단을 한 화면에서 확인합니다.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <a href="/beta/closed-beta-master-sheet.xlsx" download>
                 <Button className="bg-teal-700 text-white hover:bg-teal-800">
                   <Download className="size-4" />
-                  Master Sheet
+                  운영 시트
                 </Button>
               </a>
               <Link href="/admin/cases">
                 <Button variant="outline" className="border-ink-300 text-ink-800">
-                  Case Dashboard
+                  케이스 보드
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
               <Link href="/admin/landing-routes">
                 <Button variant="outline" className="border-ink-300 text-ink-800">
-                  Landing Routes
+                  랜딩 경로
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
@@ -120,11 +121,11 @@ export default function ClosedBetaOps() {
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <MetricCard icon={Target} label="Leads captured" value={totalLeads} target={betaTargets.leads} />
-            <MetricCard icon={ClipboardCheck} label="Qualified cases" value={qualifiedCases} target={betaTargets.qualifiedCases} />
-            <MetricCard icon={WalletCards} label="Quote requests" value={quoteRequests} target={betaTargets.quoteRequests} />
-            <MetricCard icon={Scale} label="Deposits paid" value={depositsPaid} target={betaTargets.depositsPaid} />
-            <MetricCard icon={Building2} label="Signed provider SLAs" value={signedProviders} target={5} />
+            <MetricCard icon={Target} label="수집 리드" value={totalLeads} target={betaTargets.leads} />
+            <MetricCard icon={ClipboardCheck} label="상담 가능 케이스" value={qualifiedCases} target={betaTargets.qualifiedCases} />
+            <MetricCard icon={WalletCards} label="견적 요청" value={quoteRequests} target={betaTargets.quoteRequests} />
+            <MetricCard icon={Scale} label="예약금 결제" value={depositsPaid} target={betaTargets.depositsPaid} />
+            <MetricCard icon={Building2} label="응답 기준 계약 병원" value={signedProviders} target={5} />
           </div>
         </div>
       </section>
@@ -134,20 +135,20 @@ export default function ClosedBetaOps() {
           <div>
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <h2 className="font-serif text-3xl text-ink-950">Core provider SLA tracker</h2>
-                <p className="mt-1 text-sm text-ink-500">Providers are candidates until signed SLA and document gates are complete.</p>
+                <h2 className="font-serif text-3xl text-ink-950">핵심 병원 응답 기준 추적</h2>
+                <p className="mt-1 text-sm text-ink-500">응답 기준 계약과 필수 서류 검증이 완료되기 전까지는 후보 병원으로 관리합니다.</p>
               </div>
-              <span className="rounded-md bg-ink-950 px-3 py-1.5 text-sm font-semibold text-white">{signedProviders}/5 signed</span>
+              <span className="rounded-md bg-ink-950 px-3 py-1.5 text-sm font-semibold text-white">{signedProviders}/5 계약 완료</span>
             </div>
             <div className="overflow-hidden rounded-lg border border-ink-200">
               <table className="w-full min-w-[860px] text-left text-sm">
                 <thead className="bg-ink-50 text-xs uppercase text-ink-500">
                   <tr>
-                    <th className="px-4 py-3">Provider</th>
-                    <th className="px-4 py-3">Docs</th>
-                    <th className="px-4 py-3">SLA</th>
-                    <th className="px-4 py-3">Score</th>
-                    <th className="px-4 py-3">Next step</th>
+                    <th className="px-4 py-3">병원</th>
+                    <th className="px-4 py-3">서류</th>
+                    <th className="px-4 py-3">응답 기준</th>
+                    <th className="px-4 py-3">점수</th>
+                    <th className="px-4 py-3">다음 작업</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100 bg-white">
@@ -156,7 +157,7 @@ export default function ClosedBetaOps() {
                       <td className="px-4 py-3">
                         <div className="font-semibold text-ink-950">{provider.name}</div>
                         <div className="text-xs text-ink-500">
-                          {provider.region} / {provider.languages.join(", ").toUpperCase()}
+                          {provider.region} / {languageListLabel(provider.languages)}
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -167,13 +168,13 @@ export default function ClosedBetaOps() {
                       </td>
                       <td className="px-4 py-3">
                         <StatusPill value={provider.slaStatus} />
-                        <div className="mt-1 text-xs text-ink-500">{provider.slaHours}h quote SLA</div>
+                        <div className="mt-1 text-xs text-ink-500">견적 응답 {provider.slaHours}시간</div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-ink-950">{provider.betaScore}</div>
-                        <div className="text-xs text-ink-500">{provider.active ? "assignable" : "blocked"}</div>
+                        <div className="text-xs text-ink-500">{provider.active ? "배정 가능" : "배정 중지"}</div>
                       </td>
-                      <td className="px-4 py-3 text-ink-600">{provider.nextStep}</td>
+                      <td className="px-4 py-3 text-ink-600">{providerNextStepLabel(provider.nextStep)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -184,7 +185,7 @@ export default function ClosedBetaOps() {
           <div className="rounded-lg border border-ink-200 bg-ink-50 p-5">
             <div className="mb-4 flex items-center gap-2">
               <Gauge className="size-5 text-teal-700" />
-              <h2 className="font-serif text-3xl text-ink-950">Ledger validation</h2>
+              <h2 className="font-serif text-3xl text-ink-950">정산 검증</h2>
             </div>
             <div className="grid gap-3">
               {betaLedger.map((row) => (
@@ -198,18 +199,18 @@ export default function ClosedBetaOps() {
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <div className="text-xs text-ink-500">Commission</div>
+                      <div className="text-xs text-ink-500">수수료</div>
                       <div className="font-semibold text-ink-950">{formatUsd(row.commissionAmountUsd)}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-ink-500">Platform net</div>
+                      <div className="text-xs text-ink-500">플랫폼 순액</div>
                       <div className="font-semibold text-ink-950">{formatUsd(ledgerNet(row))}</div>
                     </div>
                   </div>
                 </div>
               ))}
               <div className="rounded-md border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900">
-                {reconciledRows}/{betaLedger.length} paid ledger rows reconciled. Every paid case must tie to quote, booking, payment, provider, and commission cap.
+                결제된 정산 행 {betaLedger.length}건 중 {reconciledRows}건이 확인되었습니다. 결제 케이스는 견적, 예약, 결제, 병원, 수수료 상한이 모두 연결되어야 합니다.
               </div>
             </div>
           </div>
@@ -220,11 +221,11 @@ export default function ClosedBetaOps() {
         <div className="container-wide">
           <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <h2 className="font-serif text-3xl text-ink-950">300-lead test plan</h2>
-              <p className="mt-1 text-sm text-ink-500">Current values are seed/test rows. Real counts update when campaigns run.</p>
+              <h2 className="font-serif text-3xl text-ink-950">300개 리드 테스트 계획</h2>
+              <p className="mt-1 text-sm text-ink-500">현재 값은 시드/테스트 데이터입니다. 실제 캠페인이 시작되면 실제 수치로 갱신됩니다.</p>
             </div>
             <Link href="/admin/quote-booking">
-              <Button className="bg-ink-950 text-white hover:bg-ink-800">Open Quote MVP</Button>
+              <Button className="bg-ink-950 text-white hover:bg-ink-800">견적 예약 화면 열기</Button>
             </Link>
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
@@ -243,8 +244,8 @@ export default function ClosedBetaOps() {
                     <div className="h-full bg-teal-600" style={{ width: `${progress}%` }} />
                   </div>
                   <div className="mt-3 flex items-center justify-between text-sm">
-                    <span className="font-semibold text-ink-950">{segment.currentLeads}/{segment.targetLeads} leads</span>
-                    <span className="text-ink-500">{formatPercent(segment.targetDepositRate)} deposit target</span>
+                    <span className="font-semibold text-ink-950">{segment.currentLeads}/{segment.targetLeads} 리드</span>
+                    <span className="text-ink-500">예약금 목표 {formatPercent(segment.targetDepositRate)}</span>
                   </div>
                 </div>
               );
@@ -258,17 +259,17 @@ export default function ClosedBetaOps() {
           <div>
             <div className="mb-5 flex items-center gap-2">
               <LineChart className="size-5 text-teal-700" />
-              <h2 className="font-serif text-3xl text-ink-950">Provider conversion ranking</h2>
+              <h2 className="font-serif text-3xl text-ink-950">병원 전환 순위</h2>
             </div>
             <div className="overflow-hidden rounded-lg border border-ink-200">
               <table className="w-full text-left text-sm">
                 <thead className="bg-ink-50 text-xs uppercase text-ink-500">
                   <tr>
-                    <th className="px-4 py-3">Rank</th>
-                    <th className="px-4 py-3">Provider</th>
-                    <th className="px-4 py-3">Quote</th>
-                    <th className="px-4 py-3">Deposit</th>
-                    <th className="px-4 py-3">Action</th>
+                    <th className="px-4 py-3">순위</th>
+                    <th className="px-4 py-3">병원</th>
+                    <th className="px-4 py-3">견적</th>
+                    <th className="px-4 py-3">예약금</th>
+                    <th className="px-4 py-3">조치</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100">
@@ -277,7 +278,7 @@ export default function ClosedBetaOps() {
                       <td className="px-4 py-3 font-serif text-xl text-ink-950">{index + 1}</td>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-ink-950">{provider.name}</div>
-                        <div className="text-xs text-ink-500">{provider.slaBreaches} SLA breaches</div>
+                        <div className="text-xs text-ink-500">응답 지연 {provider.slaBreaches}건</div>
                       </td>
                       <td className="px-4 py-3">{formatPercent(providerQuoteRate(provider))}</td>
                       <td className="px-4 py-3">{formatPercent(providerDepositRate(provider))}</td>
@@ -294,17 +295,17 @@ export default function ClosedBetaOps() {
           <div>
             <div className="mb-5 flex items-center gap-2">
               <Target className="size-5 text-teal-700" />
-              <h2 className="font-serif text-3xl text-ink-950">Channel budget focus</h2>
+              <h2 className="font-serif text-3xl text-ink-950">채널 예산 판단</h2>
             </div>
             <div className="overflow-hidden rounded-lg border border-ink-200">
               <table className="w-full text-left text-sm">
                 <thead className="bg-ink-50 text-xs uppercase text-ink-500">
                   <tr>
-                    <th className="px-4 py-3">Campaign</th>
-                    <th className="px-4 py-3">CAC</th>
-                    <th className="px-4 py-3">Deposit</th>
-                    <th className="px-4 py-3">Profit</th>
-                    <th className="px-4 py-3">Budget</th>
+                    <th className="px-4 py-3">캠페인</th>
+                    <th className="px-4 py-3">리드 획득비</th>
+                    <th className="px-4 py-3">예약금</th>
+                    <th className="px-4 py-3">수익</th>
+                    <th className="px-4 py-3">예산</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100">

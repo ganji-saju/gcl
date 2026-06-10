@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SKIN_LANDING_PAGES, SKIN_PACKAGE_SKUS, type LandingLocale, type SkinLandingPage, type WedgeMarket } from "@/lib/wedgeData";
+import { languageLabel, marketLabel, statusLabel } from "@/lib/adminLabels";
 import { cn } from "@/lib/utils";
 
 type RouteStatus = "published" | "draft";
@@ -34,7 +35,7 @@ function StatusBadge({ status }: { status: RouteStatus }) {
         status === "published" ? "border-teal-200 bg-teal-50 text-teal-800" : "border-ink-200 bg-ink-50 text-ink-700",
       )}
     >
-      {status}
+      {statusLabel(status)}
     </span>
   );
 }
@@ -88,24 +89,23 @@ export default function AdminLandingRoutes() {
             <div>
               <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-teal-700">
                 <ShieldCheck className="size-4" />
-                Internal admin
+                내부 관리자
               </div>
-              <h1 className="font-serif text-5xl text-ink-950">Landing route manager</h1>
+              <h1 className="font-serif text-5xl text-ink-950">랜딩 경로 관리</h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-600">
-                Manage EN/JP skin package landing routes away from the public home page. Published rows reflect current
-                static routes; draft rows are local admin entries until persistence is connected.
+                공개 홈과 별도로 영어/일본어 피부 패키지 랜딩 경로를 관리합니다. 게시된 행은 현재 정적 경로이고, 초안 행은 저장 기능 연결 전까지 로컬 관리자 입력으로 유지됩니다.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Link href="/admin/beta">
                 <Button variant="outline" className="border-ink-300 text-ink-800">
-                  Beta ops
+                  베타 운영
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
               <Link href="/admin/cases">
                 <Button className="bg-teal-700 text-white hover:bg-teal-800">
-                  Case dashboard
+                  케이스 보드
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
@@ -114,10 +114,10 @@ export default function AdminLandingRoutes() {
 
           <div className="mt-8 grid gap-4 md:grid-cols-4">
             {[
-              ["Total routes", routes.length],
-              ["EN / JP", `${enCount} / ${jpCount}`],
-              ["Japan / Taiwan", `${japanCount} / ${taiwanCount}`],
-              ["Local drafts", localDrafts.length],
+              ["전체 경로", routes.length],
+              ["영어 / 일본어", `${enCount} / ${jpCount}`],
+              ["일본 / 대만", `${japanCount} / ${taiwanCount}`],
+              ["로컬 초안", localDrafts.length],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-ink-200 bg-white p-4">
                 <div className="text-sm font-semibold text-ink-500">{label}</div>
@@ -133,18 +133,18 @@ export default function AdminLandingRoutes() {
           <div>
             <div className="mb-5 flex items-center gap-2">
               <ListChecks className="size-5 text-teal-700" />
-              <h2 className="font-serif text-3xl text-ink-950">Route inventory</h2>
+              <h2 className="font-serif text-3xl text-ink-950">경로 목록</h2>
             </div>
             <div className="overflow-hidden rounded-lg border border-ink-200">
               <table className="w-full min-w-[920px] text-left text-sm">
                 <thead className="bg-ink-50 text-xs uppercase text-ink-500">
                   <tr>
-                    <th className="px-4 py-3">Route</th>
-                    <th className="px-4 py-3">Market</th>
-                    <th className="px-4 py-3">Intent</th>
-                    <th className="px-4 py-3">Packages</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Open</th>
+                    <th className="px-4 py-3">경로</th>
+                    <th className="px-4 py-3">시장</th>
+                    <th className="px-4 py-3">검색 의도</th>
+                    <th className="px-4 py-3">패키지</th>
+                    <th className="px-4 py-3">상태</th>
+                    <th className="px-4 py-3">열기</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100 bg-white">
@@ -152,16 +152,16 @@ export default function AdminLandingRoutes() {
                     <tr key={`${route.status}-${route.locale}-${route.slug}`}>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-ink-950">
-                          /{route.locale}/{route.slug || "draft-slug"}
+                          {languageLabel(route.locale)} / {route.slug || "초안 경로"}
                         </div>
-                        <div className="mt-1 line-clamp-1 text-xs text-ink-500">{route.title || "Untitled route"}</div>
+                        <div className="mt-1 line-clamp-1 text-xs text-ink-500">{route.title || "제목 없는 경로"}</div>
                       </td>
                       <td className="px-4 py-3">
                         <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800">
-                          {route.market}
+                          {marketLabel(route.market)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-ink-600">{route.intent || "No intent yet"}</td>
+                      <td className="px-4 py-3 text-ink-600">{route.intent || "검색 의도 미입력"}</td>
                       <td className="px-4 py-3 text-ink-600">{route.packageIds.join(", ") || "-"}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={route.status} />
@@ -169,7 +169,7 @@ export default function AdminLandingRoutes() {
                       <td className="px-4 py-3">
                         {route.slug ? (
                           <Link href={`/${route.locale}/${route.slug}`} className="inline-flex items-center gap-1 text-sm font-semibold text-teal-700">
-                            View
+                            보기
                             <ExternalLink className="size-3.5" />
                           </Link>
                         ) : (
@@ -186,57 +186,57 @@ export default function AdminLandingRoutes() {
           <aside className="rounded-lg border border-ink-200 bg-ink-50 p-5">
             <div className="mb-5 flex items-center gap-2">
               <FilePlus2 className="size-5 text-teal-700" />
-              <h2 className="font-serif text-3xl text-ink-950">Add route draft</h2>
+              <h2 className="font-serif text-3xl text-ink-950">경로 초안 추가</h2>
             </div>
             <form onSubmit={submitDraft} className="grid gap-4">
               <div className="grid gap-1.5">
-                <label className="text-sm font-semibold text-ink-800">Locale</label>
+                <label className="text-sm font-semibold text-ink-800">언어</label>
                 <select
                   value={draft.locale}
                   onChange={(event) => updateDraft("locale", event.target.value as LandingLocale)}
                   className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                 >
-                  <option value="en">EN</option>
-                  <option value="jp">JP</option>
+                  <option value="en">영어</option>
+                  <option value="jp">일본어</option>
                 </select>
               </div>
 
               <div className="grid gap-1.5">
-                <label className="text-sm font-semibold text-ink-800">Market</label>
+                <label className="text-sm font-semibold text-ink-800">시장</label>
                 <select
                   value={draft.market}
                   onChange={(event) => updateDraft("market", event.target.value as WedgeMarket)}
                   className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                 >
-                  <option value="japan">Japan</option>
-                  <option value="taiwan">Taiwan</option>
+                  <option value="japan">일본</option>
+                  <option value="taiwan">대만</option>
                 </select>
               </div>
 
-              <Field label="Slug">
+              <Field label="슬러그">
                 <Input value={draft.slug} onChange={(event) => updateDraft("slug", event.target.value)} placeholder="korea-skin-package" />
               </Field>
-              <Field label="Search intent">
-                <Input value={draft.intent} onChange={(event) => updateDraft("intent", event.target.value)} placeholder="Korea skin package" />
+              <Field label="검색 의도">
+                <Input value={draft.intent} onChange={(event) => updateDraft("intent", event.target.value)} placeholder="한국 피부 패키지" />
               </Field>
-              <Field label="Title">
-                <Input value={draft.title} onChange={(event) => updateDraft("title", event.target.value)} placeholder="Landing page title" />
+              <Field label="제목">
+                <Input value={draft.title} onChange={(event) => updateDraft("title", event.target.value)} placeholder="랜딩 페이지 제목" />
               </Field>
-              <Field label="Subtitle">
+              <Field label="부제목">
                 <textarea
                   value={draft.subtitle}
                   onChange={(event) => updateDraft("subtitle", event.target.value)}
                   rows={3}
                   className="w-full resize-none rounded-md border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                  placeholder="Short patient-facing value proposition"
+                  placeholder="환자에게 보여줄 짧은 가치 제안"
                 />
               </Field>
-              <Field label="Primary CTA">
-                <Input value={draft.cta} onChange={(event) => updateDraft("cta", event.target.value)} placeholder="Request quote" />
+              <Field label="주요 버튼 문구">
+                <Input value={draft.cta} onChange={(event) => updateDraft("cta", event.target.value)} placeholder="견적 요청" />
               </Field>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-ink-800">Package SKUs</label>
+                <label className="mb-2 block text-sm font-semibold text-ink-800">패키지 코드</label>
                 <div className="grid gap-2">
                   {SKIN_PACKAGE_SKUS.map((pkg) => (
                     <label key={pkg.id} className="flex gap-2 rounded-md border border-ink-200 bg-white p-3 text-sm text-ink-700">
@@ -257,11 +257,10 @@ export default function AdminLandingRoutes() {
 
               <Button type="submit" className="h-11 bg-teal-700 text-white hover:bg-teal-800">
                 <Save className="size-4" />
-                Save draft locally
+                초안 로컬 저장
               </Button>
               <p className="rounded-md bg-white p-3 text-xs leading-5 text-ink-500">
-                v1 note: this form keeps drafts in local UI state. Persisting routes should write to the admin route table
-                or CMS before publishing.
+                v1 메모: 이 폼은 초안을 로컬 UI 상태에만 보관합니다. 실제 게시 전에는 관리자 경로 테이블이나 CMS에 저장하도록 연결해야 합니다.
               </p>
             </form>
           </aside>
