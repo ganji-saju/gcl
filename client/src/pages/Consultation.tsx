@@ -110,6 +110,14 @@ export default function Consultation() {
   const selectedPartnerServices = watch("partnerServices") ?? [];
   const selectedPackage = useMemo(() => getSkinPackageById(selectedPackageId ?? ""), [selectedPackageId]);
   const partnerSupportRequested = partnerAssistanceMode !== "platform_direct" || selectedPartnerServices.length > 0;
+  const hasFormErrors = Object.keys(errors).length > 0;
+
+  const onInvalid = () => {
+    toast.error(t("consult.requiredCheck"));
+    window.setTimeout(() => {
+      document.querySelector('[data-field-error="true"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  };
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
@@ -220,13 +228,13 @@ export default function Consultation() {
       <section className="bg-ink-50 py-10">
         <div className="container-wide grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="rounded-lg border border-ink-200 bg-white p-6">
-            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-7">
+            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="grid gap-7">
               <div>
                 <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("consult.patientDetails")}</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={`${t("consult.name")} *`} error={errors.name?.message}>
                     <Input
-                      {...register("name", { required: "Name is required" })}
+                      {...register("name", { required: t("consult.nameRequired") })}
                       placeholder="Jane Smith"
                       className={cn("h-11", errors.name && "border-destructive")}
                     />
@@ -234,7 +242,7 @@ export default function Consultation() {
                   <Field label={`${t("consult.email")} *`} error={errors.email?.message}>
                     <Input
                       type="email"
-                      {...register("email", { required: "Email is required" })}
+                      {...register("email", { required: t("consult.emailRequired") })}
                       placeholder="jane@example.com"
                       className={cn("h-11", errors.email && "border-destructive")}
                     />
@@ -247,7 +255,7 @@ export default function Consultation() {
                   </Field>
                   <Field label={`${t("consult.residenceCountry")} *`} error={errors.residenceCountry?.message}>
                     <Input
-                      {...register("residenceCountry", { required: "Residence country is required" })}
+                      {...register("residenceCountry", { required: t("consult.residenceRequired") })}
                       placeholder="Japan"
                       className={cn("h-11", errors.residenceCountry && "border-destructive")}
                     />
@@ -458,6 +466,12 @@ export default function Consultation() {
                 {t("consult.marketingConsent")}
               </label>
 
+              {hasFormErrors && (
+                <div role="alert" className="rounded-md border border-coral-200 bg-coral-50 p-3 text-sm font-semibold text-coral-800">
+                  {t("consult.requiredCheck")}
+                </div>
+              )}
+
               <Button type="submit" disabled={isSubmitting} className="h-12 bg-teal-700 text-white hover:bg-teal-800">
                 {isSubmitting ? t("consult.saving") : t("consult.submit")}
               </Button>
@@ -498,7 +512,7 @@ export default function Consultation() {
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
-    <label className="grid gap-1.5">
+    <label className="grid gap-1.5" data-field-error={error ? "true" : undefined}>
       <span className="text-sm font-semibold text-ink-800">{label}</span>
       {children}
       {error && <span className="text-xs text-destructive">{error}</span>}

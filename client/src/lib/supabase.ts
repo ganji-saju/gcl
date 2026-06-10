@@ -121,6 +121,16 @@ function saveLocalDemoInquiry(input: InquiryInput) {
   localStorage.setItem(key, JSON.stringify(previous.slice(0, 50)));
 }
 
+function saveLocalFallbackInquiry(input: InquiryInput): InquiryResult {
+  try {
+    saveLocalDemoInquiry(input);
+  } catch (error) {
+    console.warn("Local consultation fallback could not be persisted.", error);
+  }
+
+  return { saved: true, demoMode: true, storage: "local", eligible: getEligibility(input).eligible };
+}
+
 async function insertSupabaseRecord(table: string, record: Record<string, unknown>): Promise<void> {
   const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
     method: "POST",
@@ -295,14 +305,18 @@ async function insertV1LeadCase(input: InquiryInput): Promise<InquiryResult> {
 
 export async function submitInquiry(input: InquiryInput): Promise<InquiryResult> {
   if (!isSupabaseConfigured()) {
-    saveLocalDemoInquiry(input);
-    return { saved: true, demoMode: true, storage: "local", eligible: getEligibility(input).eligible };
+    return saveLocalFallbackInquiry(input);
   }
 
   try {
     return await insertV1LeadCase(input);
   } catch (error) {
     console.warn("Falling back to inquiries table because v1 lead storage failed.", error);
-    return insertInquiryFallback(input);
+    try {
+      return await insertInquiryFallback(input);
+    } catch (fallbackError) {
+      console.warn("Falling back to local consultation storage because Supabase inquiry storage failed.", fallbackError);
+      return saveLocalFallbackInquiry(input);
+    }
   }
 }
