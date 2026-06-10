@@ -32,6 +32,7 @@ Internal/admin surfaces currently include:
 - `/admin/quote-booking`: quote/deposit/booking MVP.
 - `/admin/landing-routes`: internal landing route inventory and draft input UI.
 - `/partner/cases`: partner-safe assigned case and provider-shortlist MVP.
+- `/provider/quotes`: provider quote desk for responding to coordinator quote requests.
 - `/api/admin/partner-mvp`: server-side Vercel API for protected partner-assisted operations.
 
 Important: `/admin/*` routes are hidden from public navigation, but they are not yet protected by full authentication or RBAC. Real Supabase operations are gated by the server-side `ADMIN_API_TOKEN`; keep confidential medical documents out of the frontend until proper auth/role policies are added.
@@ -92,6 +93,20 @@ Current MVP behavior:
 - Supabase operations mode is available through `/api/admin/partner-mvp` when `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_API_TOKEN` are configured in Vercel.
 - Admin and partner boards can stay in demo mode without a token, or connect to Supabase operations with an internal admin token.
 
+### Phase 2 Provider Quote Workflow
+
+Phase 2 extends the partner-assisted MVP after coordinator quote request:
+
+`coordinator quote request -> provider quote desk -> provider quote response -> admin quote response review -> case activity timeline`
+
+Current Phase 2 behavior:
+
+- `/provider/quotes` shows provider-scoped quote requests and lets a provider submit medical fee, non-medical fee, deposit, validity, commission rate, and notes.
+- Provider quote submission writes to the existing `quotes` table, marks `quote_requests` as `responded`, and moves the case to `quote_sent`.
+- Commission checks are inserted into `commission_checks` when provider quotes are saved.
+- `case_activity_events` captures partner assignment, shortlist updates, quote requests, and provider quote submissions.
+- `/admin/cases` shows provider quote response status and recent case activity in the selected case panel.
+
 Relevant files:
 
 - `api/admin/partner-mvp.js`
@@ -100,9 +115,11 @@ Relevant files:
 - `client/src/lib/partnerMvpApi.ts`
 - `client/src/pages/CaseDashboard.tsx`
 - `client/src/pages/PartnerCaseBoard.tsx`
+- `client/src/pages/ProviderQuoteDesk.tsx`
 - `client/src/lib/betaData.ts`
 - `supabase/migrations/20260610_0003_partner_assisted_mvp.sql`
 - `supabase/migrations/20260610_0004_partner_mvp_seed.sql`
+- `supabase/migrations/20260610_0005_phase2_case_activity_events.sql`
 
 ### Japan/Taiwan Skin Package Wedge
 

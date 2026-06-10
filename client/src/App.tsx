@@ -20,6 +20,7 @@ import CaseDashboard from "./pages/CaseDashboard";
 import QuoteBookingMvp from "./pages/QuoteBookingMvp";
 import AdminLandingRoutes from "./pages/AdminLandingRoutes";
 import PartnerCaseBoard from "./pages/PartnerCaseBoard";
+import ProviderQuoteDesk from "./pages/ProviderQuoteDesk";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/admin/quote-booking" component={QuoteBookingMvp} />
       <Route path="/admin/landing-routes" component={AdminLandingRoutes} />
       <Route path="/partner/cases" component={PartnerCaseBoard} />
+      <Route path="/provider/quotes" component={ProviderQuoteDesk} />
       <Route path="/:locale/:slug" component={SkinPackageLanding} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

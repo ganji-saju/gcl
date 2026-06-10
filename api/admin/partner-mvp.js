@@ -89,6 +89,34 @@ async function list(config, table, query) {
   return supabaseFetch(config, `${table}?${query}`);
 }
 
+async function safeList(config, table, query) {
+  try {
+    return await list(config, table, query);
+  } catch (error) {
+    console.warn(`Optional Supabase list skipped for ${table}.`, error);
+    return [];
+  }
+}
+
+async function logActivity(config, { caseId, actorRole = "admin", actorLabel = "Operations", eventType, eventPayload = {} }) {
+  if (!caseId || !eventType) return;
+  try {
+    await supabaseFetch(config, "case_activity_events", {
+      method: "POST",
+      body: JSON.stringify({
+        case_id: caseId,
+        actor_role: actorRole,
+        actor_label: actorLabel,
+        event_type: eventType,
+        event_payload: eventPayload,
+      }),
+      prefer: "return=minimal",
+    });
+  } catch (error) {
+    console.warn("Optional case activity insert skipped.", error);
+  }
+}
+
 function displayName(value, fallback) {
   if (!value) return fallback;
   if (typeof value === "string") return value;
@@ -234,6 +262,61 @@ function normalizeProvider(row) {
   };
 }
 
+function normalizeQuote(row) {
+  return {
+    id: row.id,
+    quoteRequestId: row.quote_request_id,
+    caseId: row.case_id,
+    providerId: row.provider_id,
+    medicalFeeUsd: Number(row.medical_fee || 0),
+    nonmedicalFeeUsd: Number(row.nonmedical_fee || 0),
+    commissionRate: Number(row.commission_rate || 0),
+    capRate: Number(row.commission_cap_rate || 0),
+    depositAmountUsd: Number(row.deposit_amount || 0),
+    currency: row.currency || "USD",
+    validUntil: row.valid_until,
+    status: row.status,
+    sentAt: row.sent_at,
+    notes: row.notes || "",
+    createdAt: row.created_at,
+  };
+}
+
+function normalizeProviderQuoteRequest({ quoteRequest, caseRow, lead, intake, provider, quote }) {
+  return {
+    id: quoteRequest.id,
+    caseId: quoteRequest.case_id,
+    providerId: quoteRequest.provider_id,
+    providerName: provider ? displayName(provider.name_display, provider.name_legal) : "Provider",
+    patientAlias: lead?.name || `Case ${quoteRequest.case_id.slice(0, 8)}`,
+    procedure: lead?.treatment_interest || lead?.attribution?.package_interest || "Consultation request",
+    market: marketFromLead(lead),
+    language: lead?.preferred_language || "en",
+    budgetMinUsd: Number(lead?.budget_min || intake?.budget_min || 0),
+    budgetMaxUsd: Number(lead?.budget_max || intake?.budget_max || 0),
+    travelStart: intake?.travel_start_date || "TBD",
+    travelEnd: intake?.travel_end_date || "TBD",
+    status: quoteRequest.status,
+    dueAt: quoteRequest.due_at,
+    requestedAt: quoteRequest.requested_at,
+    notes: quoteRequest.notes || "",
+    caseStatus: normalizeStatus(caseRow?.status),
+    quote: quote ? normalizeQuote(quote) : null,
+  };
+}
+
+function normalizeActivity(row) {
+  return {
+    id: row.id,
+    caseId: row.case_id,
+    actorRole: row.actor_role,
+    actorLabel: row.actor_label,
+    eventType: row.event_type,
+    eventPayload: row.event_payload || {},
+    createdAt: row.created_at,
+  };
+}
+
 async function getSnapshot(config) {
   const requests = await list(
     config,
@@ -244,13 +327,27 @@ async function getSnapshot(config) {
   const caseIds = Array.from(new Set(requests.map((row) => row.case_id).filter(Boolean)));
   const leadIds = Array.from(new Set(requests.map((row) => row.lead_id).filter(Boolean)));
 
-  const [cases, leads, intakes, assignments, shortlists, quoteRequests, partnersRaw, providersRaw, relationships] = await Promise.all([
+  const [cases, leads, intakes, assignments, shortlists, quoteRequests, quotes, activities, partnersRaw, providersRaw, relationships] = await Promise.all([
     caseIds.length ? list(config, "cases", `select=id,lead_id,patient_id,status,priority,source,created_at,updated_at&id=${inFilter(caseIds)}`) : [],
     leadIds.length ? list(config, "leads", `select=id,name,nationality,residence_country,preferred_language,treatment_interest,budget_min,budget_max,currency,source,attribution,created_at,updated_at&id=${inFilter(leadIds)}`) : [],
     caseIds.length ? list(config, "medical_intakes", `select=case_id,budget_min,budget_max,currency,travel_start_date,travel_end_date,risk_flags,chief_request,submitted_at&case_id=${inFilter(caseIds)}`) : [],
     caseIds.length ? list(config, "case_partner_assignments", `select=case_id,partner_id,assignment_role,status,assigned_at&status=in.(assigned,accepted)&case_id=${inFilter(caseIds)}`) : [],
     caseIds.length ? list(config, "partner_provider_shortlists", `select=case_id,partner_id,provider_id,selection_status,rank,quote_request_ready,created_at&case_id=${inFilter(caseIds)}`) : [],
-    caseIds.length ? list(config, "quote_requests", `select=case_id,provider_id,status,requested_at&case_id=${inFilter(caseIds)}`) : [],
+    caseIds.length ? list(config, "quote_requests", `select=id,case_id,provider_id,status,due_at,notes,requested_at&case_id=${inFilter(caseIds)}`) : [],
+    caseIds.length
+      ? list(
+          config,
+          "quotes",
+          `select=id,quote_request_id,case_id,provider_id,medical_fee,nonmedical_fee,currency,commission_rate,commission_cap_rate,deposit_amount,valid_until,status,notes,sent_at,created_at,updated_at&case_id=${inFilter(caseIds)}&order=created_at.desc`,
+        )
+      : [],
+    caseIds.length
+      ? safeList(
+          config,
+          "case_activity_events",
+          `select=id,case_id,actor_role,actor_label,event_type,event_payload,created_at&case_id=${inFilter(caseIds)}&order=created_at.desc&limit=120`,
+        )
+      : [],
     list(config, "partners", "select=id,name,partner_type,active&active=eq.true&order=name.asc"),
     list(config, "providers", "select=id,name_legal,name_display,facility_type,city,district,medical_korea_registered,active,average_response_minutes,quality_score&active=eq.true&order=quality_score.desc"),
     list(config, "partner_provider_relationships", "select=partner_id,provider_id,relationship_status,allowed_services,active&active=eq.true"),
@@ -260,8 +357,18 @@ async function getSnapshot(config) {
   const leadMap = new Map(leads.map((row) => [row.id, row]));
   const intakeMap = new Map(intakes.map((row) => [row.case_id, row]));
   const assignmentMap = new Map(assignments.map((row) => [row.case_id, row]));
+  const providerMap = new Map(providersRaw.map((row) => [row.id, row]));
+  const quoteByRequest = new Map();
+  const quotesByCase = new Map();
   const shortlistsByCase = new Map();
   const quoteRequestsByCase = new Map();
+
+  for (const row of quotes) {
+    if (row.quote_request_id && !quoteByRequest.has(row.quote_request_id)) quoteByRequest.set(row.quote_request_id, row);
+    const listRows = quotesByCase.get(row.case_id) || [];
+    listRows.push(row);
+    quotesByCase.set(row.case_id, listRows);
+  }
 
   for (const row of shortlists) {
     const listRows = shortlistsByCase.get(row.case_id) || [];
@@ -298,14 +405,29 @@ async function getSnapshot(config) {
 
   const partners = partnersRaw.map((row) => normalizePartner({ ...row, preferred_provider_ids: relationshipsByPartner.get(row.id) || [] }));
   const providers = providersRaw.map(normalizeProvider);
+  const providerQuoteRequests = quoteRequests.map((quoteRequest) =>
+    normalizeProviderQuoteRequest({
+      quoteRequest,
+      caseRow: caseMap.get(quoteRequest.case_id),
+      lead: leadMap.get(caseMap.get(quoteRequest.case_id)?.lead_id),
+      intake: intakeMap.get(quoteRequest.case_id),
+      provider: providerMap.get(quoteRequest.provider_id),
+      quote: quoteByRequest.get(quoteRequest.id),
+    }),
+  );
 
   return {
     cases: casesNormalized,
     partners,
     providers,
+    providerQuoteRequests,
+    quotes: quotes.map(normalizeQuote),
+    activities: activities.map(normalizeActivity),
     meta: {
       mode: "supabase",
       partnerRequestCount: requests.length,
+      quoteRequestCount: quoteRequests.length,
+      quoteResponseCount: quotes.length,
       generatedAt: new Date().toISOString(),
       hasDbPartners: partners.length > 0,
       hasDbProviders: providers.length > 0,
@@ -342,6 +464,12 @@ async function assignPartner(config, body) {
     method: "PATCH",
     body: JSON.stringify({ status: partnerId ? "assigned" : "reviewing", updated_at: new Date().toISOString() }),
     prefer: "return=minimal",
+  });
+
+  await logActivity(config, {
+    caseId,
+    eventType: partnerId ? "partner_assigned" : "partner_removed",
+    eventPayload: { partner_id: partnerId || null },
   });
 }
 
@@ -387,6 +515,14 @@ async function setShortlist(config, body) {
       prefer: "resolution=merge-duplicates,return=minimal",
     });
   }
+
+  await logActivity(config, {
+    caseId,
+    actorRole: "partner",
+    actorLabel: "Partner operator",
+    eventType: "partner_shortlist_updated",
+    eventPayload: { partner_id: partnerId, provider_ids: cleanProviderIds },
+  });
 }
 
 async function requestQuotes(config, body) {
@@ -429,6 +565,114 @@ async function requestQuotes(config, body) {
     body: JSON.stringify({ status: "quote_requested", updated_at: new Date().toISOString() }),
     prefer: "return=minimal",
   });
+
+  await logActivity(config, {
+    caseId,
+    eventType: "quote_requested",
+    eventPayload: { partner_id: partnerId, provider_ids: cleanProviderIds },
+  });
+}
+
+function numberOrDefault(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+async function submitProviderQuote(config, body) {
+  const {
+    quoteRequestId,
+    caseId,
+    providerId,
+    medicalFee,
+    nonmedicalFee = 0,
+    currency = "USD",
+    commissionRate = 0.15,
+    depositAmount = 0,
+    validUntil,
+    notes,
+  } = body;
+
+  if (!isUuid(quoteRequestId) || !isUuid(caseId) || !isUuid(providerId)) {
+    throw new Error("Valid quoteRequestId, caseId, and providerId are required.");
+  }
+
+  const providerRows = await list(config, "providers", `select=id,default_commission_cap_rate&id=eq.${providerId}&limit=1`);
+  const provider = providerRows[0];
+  if (!provider) throw new Error("Provider not found.");
+
+  const medical = numberOrDefault(medicalFee, -1);
+  const nonmedical = numberOrDefault(nonmedicalFee, 0);
+  const commission = numberOrDefault(commissionRate, 0.15);
+  const deposit = numberOrDefault(depositAmount, 0);
+  const capRate = Number(provider.default_commission_cap_rate || 0.3);
+
+  if (medical < 0 || nonmedical < 0 || deposit < 0) throw new Error("Fees and deposit must be zero or greater.");
+  if (deposit > medical + nonmedical) throw new Error("Deposit cannot exceed the total quote amount.");
+  if (commission < 0 || commission > capRate) throw new Error("Commission rate exceeds the provider cap.");
+
+  const quoteRows = await supabaseFetch(config, "quotes", {
+    method: "POST",
+    body: JSON.stringify({
+      quote_request_id: quoteRequestId,
+      case_id: caseId,
+      provider_id: providerId,
+      medical_fee: medical,
+      nonmedical_fee: nonmedical,
+      currency: String(currency).slice(0, 3).toUpperCase(),
+      commission_rate: commission,
+      commission_cap_rate: capRate,
+      deposit_amount: deposit,
+      valid_until: validUntil || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      status: "sent",
+      notes: notes || "Provider quote submitted through Phase 2 quote desk.",
+      sent_at: new Date().toISOString(),
+    }),
+    prefer: "return=representation",
+  });
+
+  const quote = Array.isArray(quoteRows) ? quoteRows[0] : null;
+
+  await supabaseFetch(config, `quote_requests?id=eq.${quoteRequestId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "responded", updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+
+  await supabaseFetch(config, `cases?id=eq.${caseId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "quote_sent", updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+
+  if (quote?.id) {
+    await supabaseFetch(config, "commission_checks", {
+      method: "POST",
+      body: JSON.stringify({
+        quote_id: quote.id,
+        case_id: caseId,
+        provider_id: providerId,
+        requested_rate: commission,
+        cap_rate: capRate,
+        passed: true,
+      }),
+      prefer: "return=minimal",
+    });
+  }
+
+  await logActivity(config, {
+    caseId,
+    actorRole: "provider",
+    actorLabel: "Provider quote desk",
+    eventType: "provider_quote_submitted",
+    eventPayload: {
+      quote_request_id: quoteRequestId,
+      provider_id: providerId,
+      quote_id: quote?.id,
+      medical_fee: medical,
+      nonmedical_fee: nonmedical,
+      currency: String(currency).slice(0, 3).toUpperCase(),
+    },
+  });
 }
 
 export default async function handler(req, res) {
@@ -445,6 +689,7 @@ export default async function handler(req, res) {
       if (body.action === "assignPartner") await assignPartner(config, body);
       else if (body.action === "setShortlist") await setShortlist(config, body);
       else if (body.action === "requestQuotes") await requestQuotes(config, body);
+      else if (body.action === "submitProviderQuote") await submitProviderQuote(config, body);
       else return json(res, 400, { error: "Unsupported action." });
 
       return json(res, 200, await getSnapshot(config));

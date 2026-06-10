@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, Building2, CalendarClock, ClipboardList, Database, Filter, Handshake, Languages, Send, UserRoundCheck } from "lucide-react";
+import { Activity, ArrowRight, Building2, CalendarClock, ClipboardList, Database, Filter, Handshake, Languages, Send, UserRoundCheck } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,9 @@ import {
   requestPartnerQuoteMvp,
   saveAdminApiToken,
   setPartnerShortlistMvp,
+  type CaseActivityEvent,
   type PartnerMvpSnapshot,
+  type ProviderQuoteRequest,
 } from "@/lib/partnerMvpApi";
 import { cn } from "@/lib/utils";
 
@@ -122,6 +124,8 @@ export default function CaseDashboard() {
   const [cases, setCases] = useState(betaCases);
   const [partners, setPartners] = useState(betaPartners);
   const [providers, setProviders] = useState(betaProviders);
+  const [quoteRequests, setQuoteRequests] = useState<ProviderQuoteRequest[]>([]);
+  const [activities, setActivities] = useState<CaseActivityEvent[]>([]);
   const [statusFilter, setStatusFilter] = useState<BetaCaseStatus | "all">("all");
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(cases[0]?.id ?? "");
@@ -140,6 +144,8 @@ export default function CaseDashboard() {
   });
   const selected = cases.find((row) => row.id === selectedId) ?? filtered[0] ?? cases[0];
   const selectedProvider = selected?.matchedProviderId ? providersById.get(selected.matchedProviderId) : undefined;
+  const selectedQuoteRequests = quoteRequests.filter((row) => row.caseId === selected?.id);
+  const selectedActivities = activities.filter((row) => row.caseId === selected?.id).slice(0, 6);
   const liveMode = Boolean(adminToken && apiStatus !== "demo");
 
   function applySnapshot(snapshot: PartnerMvpSnapshot) {
@@ -149,8 +155,12 @@ export default function CaseDashboard() {
     }
     if (snapshot.partners.length) setPartners(snapshot.partners);
     if (snapshot.providers.length) setProviders(snapshot.providers);
+    setQuoteRequests(snapshot.providerQuoteRequests ?? []);
+    setActivities(snapshot.activities ?? []);
     setApiStatus("live");
-    setApiMessage(`Supabase ops connected: ${snapshot.meta?.partnerRequestCount ?? snapshot.cases.length} partner requests`);
+    setApiMessage(
+      `Supabase ops connected: ${snapshot.meta?.partnerRequestCount ?? snapshot.cases.length} partner requests / ${snapshot.meta?.quoteRequestCount ?? 0} quote requests`,
+    );
   }
 
   async function refreshOps(token = adminToken) {
@@ -178,6 +188,8 @@ export default function CaseDashboard() {
       setCases(betaCases);
       setPartners(betaPartners);
       setProviders(betaProviders);
+      setQuoteRequests([]);
+      setActivities([]);
       setApiStatus("demo");
       setApiMessage("Demo board");
     }
@@ -327,6 +339,12 @@ export default function CaseDashboard() {
               <Link href="/admin/quote-booking">
                 <Button className="bg-teal-700 text-white hover:bg-teal-800">
                   Quote / Deposit / Booking
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+              <Link href="/provider/quotes">
+                <Button variant="outline" className="border-ink-300 text-ink-800">
+                  Provider quotes
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
@@ -535,6 +553,56 @@ export default function CaseDashboard() {
                   <Send className="size-4" />
                   Coordinator request quote
                 </Button>
+              </div>
+
+              <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
+                  <Send className="size-4 text-teal-700" />
+                  Provider quote responses
+                </div>
+                <div className="grid gap-2">
+                  {selectedQuoteRequests.length ? (
+                    selectedQuoteRequests.map((request) => (
+                      <div key={request.id} className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-ink-950">{request.providerName}</div>
+                            <div className="mt-1 text-xs text-ink-500">{request.status} / due {request.dueAt ?? "not set"}</div>
+                          </div>
+                          <span className={cn("rounded-md border px-2 py-1 text-xs font-bold", request.quote ? "border-teal-200 bg-teal-50 text-teal-800" : "border-coral-200 bg-coral-50 text-coral-800")}>
+                            {request.quote ? "responded" : "waiting"}
+                          </span>
+                        </div>
+                        {request.quote && (
+                          <div className="mt-2 text-xs font-semibold text-teal-800">
+                            Quote {formatUsd(request.quote.medicalFeeUsd + request.quote.nonmedicalFeeUsd)} / deposit {formatUsd(request.quote.depositAmountUsd)}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">No provider quote requests for this case yet.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
+                  <Activity className="size-4 text-teal-700" />
+                  Case activity
+                </div>
+                <div className="grid gap-2">
+                  {selectedActivities.length ? (
+                    selectedActivities.map((event) => (
+                      <div key={event.id} className="rounded-md bg-ink-50 p-3 text-sm">
+                        <div className="font-semibold text-ink-950">{event.eventType.replaceAll("_", " ")}</div>
+                        <div className="mt-1 text-xs text-ink-500">{event.actorLabel ?? event.actorRole} / {event.createdAt?.slice(0, 16).replace("T", " ")}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">No activity events yet.</div>
+                  )}
+                </div>
               </div>
 
               <div className="mt-5 rounded-md border border-coral-200 bg-coral-50 p-4">

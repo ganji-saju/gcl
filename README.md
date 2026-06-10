@@ -56,8 +56,10 @@ For the partner-assisted MVP, apply:
 
 - `supabase/migrations/20260610_0003_partner_assisted_mvp.sql`
 - `supabase/migrations/20260610_0004_partner_mvp_seed.sql`
+- `supabase/migrations/20260610_0005_phase2_case_activity_events.sql`
 
 The seed migration creates starter partner operators, provider candidates, and partner-provider relationships for the first operating test.
+The Phase 2 migration adds the case activity timeline used by partner/provider operating actions.
 
 ## Vercel
 

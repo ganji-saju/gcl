@@ -4,9 +4,14 @@ export interface PartnerMvpSnapshot {
   cases: BetaCase[];
   partners: BetaPartner[];
   providers: BetaProviderCandidate[];
+  providerQuoteRequests?: ProviderQuoteRequest[];
+  quotes?: ProviderQuote[];
+  activities?: CaseActivityEvent[];
   meta?: {
     mode: "supabase";
     partnerRequestCount: number;
+    quoteRequestCount?: number;
+    quoteResponseCount?: number;
     generatedAt: string;
     hasDbPartners: boolean;
     hasDbProviders: boolean;
@@ -14,6 +19,68 @@ export interface PartnerMvpSnapshot {
 }
 
 export type PartnerMvpActionSnapshot = PartnerMvpSnapshot;
+
+export interface ProviderQuote {
+  id: string;
+  quoteRequestId?: string;
+  caseId: string;
+  providerId: string;
+  medicalFeeUsd: number;
+  nonmedicalFeeUsd: number;
+  commissionRate: number;
+  capRate: number;
+  depositAmountUsd: number;
+  currency: string;
+  validUntil: string;
+  status: string;
+  sentAt?: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface ProviderQuoteRequest {
+  id: string;
+  caseId: string;
+  providerId: string;
+  providerName: string;
+  patientAlias: string;
+  procedure: string;
+  market: string;
+  language: string;
+  budgetMinUsd: number;
+  budgetMaxUsd: number;
+  travelStart: string;
+  travelEnd: string;
+  status: string;
+  dueAt?: string;
+  requestedAt: string;
+  notes: string;
+  caseStatus: string;
+  quote: ProviderQuote | null;
+}
+
+export interface CaseActivityEvent {
+  id: string;
+  caseId: string;
+  actorRole: string;
+  actorLabel?: string;
+  eventType: string;
+  eventPayload: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface ProviderQuoteInput {
+  quoteRequestId: string;
+  caseId: string;
+  providerId: string;
+  medicalFee: number;
+  nonmedicalFee: number;
+  currency: string;
+  commissionRate: number;
+  depositAmount: number;
+  validUntil: string;
+  notes: string;
+}
 
 const ADMIN_TOKEN_KEY = "gph_admin_api_token";
 
@@ -69,5 +136,12 @@ export function requestPartnerQuoteMvp(token: string, caseId: string, partnerId:
   return requestPartnerMvp(token, {
     method: "POST",
     body: JSON.stringify({ action: "requestQuotes", caseId, partnerId, providerIds }),
+  });
+}
+
+export function submitProviderQuoteMvp(token: string, input: ProviderQuoteInput) {
+  return requestPartnerMvp(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "submitProviderQuote", ...input }),
   });
 }
