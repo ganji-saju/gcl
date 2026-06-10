@@ -2,6 +2,8 @@ const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
   "Cache-Control": "no-store",
 };
+const SUPABASE_TIMEOUT_MS = 10000;
+const ACTIVITY_LOG_TIMEOUT_MS = 3000;
 
 const CASE_STATUS_FALLBACK = {
   matched: "matching_ready",
@@ -81,16 +83,31 @@ function isUuid(value) {
 }
 
 async function supabaseFetch(config, path, init = {}) {
-  const response = await fetch(`${config.supabaseUrl}/rest/v1/${path}`, {
-    ...init,
-    headers: {
-      apikey: config.serviceRoleKey,
-      Authorization: `Bearer ${config.serviceRoleKey}`,
-      "Content-Type": "application/json",
-      ...(init.prefer ? { Prefer: init.prefer } : {}),
-      ...(init.headers || {}),
-    },
-  });
+  const { headers, prefer, timeoutMs = SUPABASE_TIMEOUT_MS, ...fetchInit } = init;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response;
+  try {
+    response = await fetch(`${config.supabaseUrl}/rest/v1/${path}`, {
+      ...fetchInit,
+      signal: controller.signal,
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+        "Content-Type": "application/json",
+        ...(prefer ? { Prefer: prefer } : {}),
+        ...(headers || {}),
+      },
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`Supabase request timed out: ${path}`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const text = await response.text();
   const body = text ? JSON.parse(text) : null;
@@ -129,6 +146,7 @@ async function logActivity(config, { caseId, actorRole = "admin", actorLabel = "
         event_payload: eventPayload,
       }),
       prefer: "return=minimal",
+      timeoutMs: ACTIVITY_LOG_TIMEOUT_MS,
     });
   } catch (error) {
     console.warn("Optional case activity insert skipped.", error);

@@ -83,6 +83,7 @@ export interface ProviderQuoteInput {
 }
 
 const ADMIN_TOKEN_KEY = "gph_admin_api_token";
+const ADMIN_API_TIMEOUT_MS = 15000;
 
 export function readAdminApiToken() {
   if (typeof window === "undefined") return "";
@@ -95,8 +96,27 @@ export function saveAdminApiToken(token: string) {
   else localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
+async function fetchAdminApi(init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ADMIN_API_TIMEOUT_MS);
+
+  try {
+    return await fetch("/api/admin/partner-mvp", { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("관리자 API 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요.");
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("관리자 API 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function requestPartnerMvp(token: string, init?: RequestInit): Promise<PartnerMvpSnapshot> {
-  const response = await fetch("/api/admin/partner-mvp", {
+  const response = await fetchAdminApi({
     ...init,
     headers: {
       "Content-Type": "application/json",

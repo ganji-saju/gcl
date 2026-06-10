@@ -39,6 +39,17 @@ export interface InquiryResult {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const SUPABASE_REQUEST_TIMEOUT_MS = 6000;
+
+class SupabaseRequestError extends Error {
+  timedOut: boolean;
+
+  constructor(message: string, timedOut = false) {
+    super(message);
+    this.name = "SupabaseRequestError";
+    this.timedOut = timedOut;
+  }
+}
 
 export function isSupabaseConfigured() {
   return Boolean(supabaseUrl && supabaseAnonKey);
@@ -131,8 +142,31 @@ function saveLocalFallbackInquiry(input: InquiryInput): InquiryResult {
   return { saved: true, demoMode: true, storage: "local", eligible: getEligibility(input).eligible };
 }
 
+function isSupabaseTimeout(error: unknown) {
+  return error instanceof SupabaseRequestError && error.timedOut;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SUPABASE_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new SupabaseRequestError("Supabase request timed out.", true);
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new SupabaseRequestError("Supabase request timed out.", true);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function insertSupabaseRecord(table: string, record: Record<string, unknown>): Promise<void> {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+  const response = await fetchWithTimeout(`${supabaseUrl}/rest/v1/${table}`, {
     method: "POST",
     headers: {
       apikey: supabaseAnonKey!,
@@ -145,7 +179,7 @@ async function insertSupabaseRecord(table: string, record: Record<string, unknow
 
   if (!response.ok) {
     const details = await response.text().catch(() => "");
-    throw new Error(details || `Supabase ${table} insert failed with ${response.status}`);
+    throw new SupabaseRequestError(details || `Supabase ${table} insert failed with ${response.status}`);
   }
 }
 
@@ -158,7 +192,7 @@ async function tryInsertSupabaseRecord(table: string, record: Record<string, unk
 }
 
 async function insertInquiryFallback(input: InquiryInput): Promise<InquiryResult> {
-  const response = await fetch(`${supabaseUrl}/rest/v1/inquiries`, {
+  const response = await fetchWithTimeout(`${supabaseUrl}/rest/v1/inquiries`, {
     method: "POST",
     headers: {
       apikey: supabaseAnonKey!,
@@ -171,7 +205,7 @@ async function insertInquiryFallback(input: InquiryInput): Promise<InquiryResult
 
   if (!response.ok) {
     const details = await response.text().catch(() => "");
-    throw new Error(details || `Supabase request failed with ${response.status}`);
+    throw new SupabaseRequestError(details || `Supabase request failed with ${response.status}`);
   }
 
   return { saved: true, demoMode: false, storage: "inquiries" };
@@ -312,6 +346,10 @@ export async function submitInquiry(input: InquiryInput): Promise<InquiryResult>
     return await insertV1LeadCase(input);
   } catch (error) {
     console.warn("Falling back to inquiries table because v1 lead storage failed.", error);
+    if (isSupabaseTimeout(error)) {
+      return saveLocalFallbackInquiry(input);
+    }
+
     try {
       return await insertInquiryFallback(input);
     } catch (fallbackError) {

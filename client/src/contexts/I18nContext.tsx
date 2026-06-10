@@ -1612,11 +1612,11 @@ export const T: TranslationMap = {
     ar: "مسار التخزين:",
   },
   "consult.demoStorage": {
-    en: "Supabase environment variables are not set yet, so this was stored in local demo storage.",
-    ko: "Supabase 환경 변수가 아직 설정되지 않아 로컬 데모 저장소에 저장되었습니다.",
-    zh: "尚未设置 Supabase 环境变量，因此已保存到本地演示存储。",
-    ja: "Supabase環境変数が未設定のため、ローカルのデモストレージに保存しました。",
-    ar: "لم يتم إعداد متغيرات Supabase بعد، لذلك تم التخزين في وضع العرض المحلي.",
+    en: "The live database was not available quickly enough, so this request was completed with temporary local storage.",
+    ko: "운영 데이터베이스 응답이 지연되어 임시 로컬 저장으로 완료 처리되었습니다.",
+    zh: "在线数据库未能及时响应，因此已使用临时本地存储完成此请求。",
+    ja: "本番データベースの応答が遅れたため、一時ローカル保存で完了処理しました。",
+    ar: "لم تستجب قاعدة البيانات المباشرة بالسرعة الكافية، لذلك تم إكمال الطلب بتخزين محلي مؤقت.",
   },
   "consult.submitAnother": {
     en: "Submit another",
@@ -1724,11 +1724,11 @@ export const T: TranslationMap = {
     ar: "يتم حفظ تفضيل اللغة والجنسية ومصدر UTM للتقسيم ومتابعة الشركاء.",
   },
   "consult.localSaved": {
-    en: "Saved locally in demo mode.",
-    ko: "데모 모드로 로컬 저장되었습니다.",
-    zh: "已在演示模式本地保存。",
-    ja: "デモモードでローカル保存しました。",
-    ar: "تم الحفظ محليا في وضع العرض.",
+    en: "Completed with temporary local storage.",
+    ko: "임시 로컬 저장으로 완료 처리되었습니다.",
+    zh: "已使用临时本地存储完成。",
+    ja: "一時ローカル保存で完了しました。",
+    ar: "تم الإكمال بتخزين محلي مؤقت.",
   },
   "consult.v1Saved": {
     en: "Saved to v1 lead/case flow.",
