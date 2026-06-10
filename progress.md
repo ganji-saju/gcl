@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-10  
 Current production URL: https://global-patient-hub.vercel.app  
-Latest verified app commit before partner-assisted MVP work: `ba002b9`
+Latest verified app commit before Supabase operations API work: `705d85e`
 
 ## 1. Current Product State
 
@@ -32,8 +32,9 @@ Internal/admin surfaces currently include:
 - `/admin/quote-booking`: quote/deposit/booking MVP.
 - `/admin/landing-routes`: internal landing route inventory and draft input UI.
 - `/partner/cases`: partner-safe assigned case and provider-shortlist MVP.
+- `/api/admin/partner-mvp`: server-side Vercel API for protected partner-assisted operations.
 
-Important: `/admin/*` routes are hidden from public navigation, but they are not yet protected by authentication or RBAC. Do not put real confidential data there before adding route protection.
+Important: `/admin/*` routes are hidden from public navigation, but they are not yet protected by full authentication or RBAC. Real Supabase operations are gated by the server-side `ADMIN_API_TOKEN`; keep confidential medical documents out of the frontend until proper auth/role policies are added.
 
 ## 2. Work Completed
 
@@ -88,15 +89,20 @@ Current MVP behavior:
 - New additive Supabase migration adds partner service request, partner verification, case assignment, partner-provider relationship, shortlist, and partner service quote tables.
 - Admin case dashboard shows partner request counts, requested services, consent status, partner assignment, provider shortlist, and coordinator quote-request action.
 - Partner case board shows only assigned cases using a partner-safe summary and lets partners select hospital candidates.
+- Supabase operations mode is available through `/api/admin/partner-mvp` when `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_API_TOKEN` are configured in Vercel.
+- Admin and partner boards can stay in demo mode without a token, or connect to Supabase operations with an internal admin token.
 
 Relevant files:
 
+- `api/admin/partner-mvp.js`
 - `client/src/pages/Consultation.tsx`
 - `client/src/lib/supabase.ts`
+- `client/src/lib/partnerMvpApi.ts`
 - `client/src/pages/CaseDashboard.tsx`
 - `client/src/pages/PartnerCaseBoard.tsx`
 - `client/src/lib/betaData.ts`
 - `supabase/migrations/20260610_0003_partner_assisted_mvp.sql`
+- `supabase/migrations/20260610_0004_partner_mvp_seed.sql`
 
 ### Japan/Taiwan Skin Package Wedge
 

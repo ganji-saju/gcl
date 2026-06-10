@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, Building2, CalendarClock, ClipboardList, Filter, Handshake, Languages, Send, UserRoundCheck } from "lucide-react";
+import { ArrowRight, Building2, CalendarClock, ClipboardList, Database, Filter, Handshake, Languages, Send, UserRoundCheck } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +10,16 @@ import {
   type BetaCase,
   type BetaCaseStatus,
   formatUsd,
-  getPartner,
-  getProvider,
 } from "@/lib/betaData";
+import {
+  assignPartnerMvp,
+  fetchPartnerMvpSnapshot,
+  readAdminApiToken,
+  requestPartnerQuoteMvp,
+  saveAdminApiToken,
+  setPartnerShortlistMvp,
+  type PartnerMvpSnapshot,
+} from "@/lib/partnerMvpApi";
 import { cn } from "@/lib/utils";
 
 const statusOrder: BetaCaseStatus[] = [
@@ -55,9 +62,21 @@ function nextStatus(status: BetaCaseStatus): BetaCaseStatus {
   return statusOrder[Math.min(index + 1, statusOrder.length - 1)];
 }
 
-function CaseRow({ row, selected, onSelect }: { row: BetaCase; selected: boolean; onSelect: () => void }) {
-  const provider = getProvider(row.matchedProviderId);
-  const partner = getPartner(row.assignedPartnerId);
+function CaseRow({
+  row,
+  selected,
+  onSelect,
+  providersById,
+  partnersById,
+}: {
+  row: BetaCase;
+  selected: boolean;
+  onSelect: () => void;
+  providersById: Map<string, { name: string }>;
+  partnersById: Map<string, { name: string }>;
+}) {
+  const provider = row.matchedProviderId ? providersById.get(row.matchedProviderId) : undefined;
+  const partner = row.assignedPartnerId ? partnersById.get(row.assignedPartnerId) : undefined;
   const slaRisk = row.status === "quote_requested" || row.firstResponseMinutes > 5 || row.riskFlags.length > 0;
   const partnerRequested = row.partnerAssistanceMode && row.partnerAssistanceMode !== "platform_direct";
 
@@ -101,18 +120,73 @@ function CaseRow({ row, selected, onSelect }: { row: BetaCase; selected: boolean
 
 export default function CaseDashboard() {
   const [cases, setCases] = useState(betaCases);
+  const [partners, setPartners] = useState(betaPartners);
+  const [providers, setProviders] = useState(betaProviders);
   const [statusFilter, setStatusFilter] = useState<BetaCaseStatus | "all">("all");
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(cases[0]?.id ?? "");
+  const [adminToken, setAdminToken] = useState(() => readAdminApiToken());
+  const [adminTokenInput, setAdminTokenInput] = useState(() => readAdminApiToken());
+  const [apiStatus, setApiStatus] = useState<"demo" | "loading" | "live" | "saving" | "error">(adminToken ? "loading" : "demo");
+  const [apiMessage, setApiMessage] = useState(adminToken ? "Connecting to Supabase operations..." : "Demo board");
 
   const owners = useMemo(() => Array.from(new Set(cases.map((row) => row.owner))), [cases]);
+  const providersById = useMemo(() => new Map(providers.map((provider) => [provider.id, provider])), [providers]);
+  const partnersById = useMemo(() => new Map(partners.map((partner) => [partner.id, partner])), [partners]);
   const filtered = cases.filter((row) => {
     const statusMatch = statusFilter === "all" || row.status === statusFilter;
     const ownerMatch = ownerFilter === "all" || row.owner === ownerFilter;
     return statusMatch && ownerMatch;
   });
   const selected = cases.find((row) => row.id === selectedId) ?? filtered[0] ?? cases[0];
-  const selectedProvider = getProvider(selected?.matchedProviderId);
+  const selectedProvider = selected?.matchedProviderId ? providersById.get(selected.matchedProviderId) : undefined;
+  const liveMode = Boolean(adminToken && apiStatus !== "demo");
+
+  function applySnapshot(snapshot: PartnerMvpSnapshot) {
+    if (snapshot.cases.length) {
+      setCases(snapshot.cases);
+      setSelectedId((current) => (snapshot.cases.some((row) => row.id === current) ? current : snapshot.cases[0]?.id ?? ""));
+    }
+    if (snapshot.partners.length) setPartners(snapshot.partners);
+    if (snapshot.providers.length) setProviders(snapshot.providers);
+    setApiStatus("live");
+    setApiMessage(`Supabase ops connected: ${snapshot.meta?.partnerRequestCount ?? snapshot.cases.length} partner requests`);
+  }
+
+  async function refreshOps(token = adminToken) {
+    if (!token) return;
+    setApiStatus("loading");
+    setApiMessage("Loading Supabase partner requests...");
+    try {
+      const snapshot = await fetchPartnerMvpSnapshot(token);
+      applySnapshot(snapshot);
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage(error instanceof Error ? error.message : "Could not load Supabase operations.");
+    }
+  }
+
+  useEffect(() => {
+    if (adminToken) void refreshOps(adminToken);
+  }, [adminToken]);
+
+  function connectOps() {
+    const token = adminTokenInput.trim();
+    saveAdminApiToken(token);
+    setAdminToken(token);
+    if (!token) {
+      setCases(betaCases);
+      setPartners(betaPartners);
+      setProviders(betaProviders);
+      setApiStatus("demo");
+      setApiMessage("Demo board");
+    }
+  }
+
+  function applySnapshotAfterSave(snapshot: PartnerMvpSnapshot) {
+    applySnapshot(snapshot);
+    setApiMessage("Supabase operation saved");
+  }
 
   function advanceSelected() {
     if (!selected) return;
@@ -125,7 +199,7 @@ export default function CaseDashboard() {
     setCases((current) => current.map((row) => (row.id === selected.id ? { ...row, matchedProviderId: providerId, status: "quote_requested" } : row)));
   }
 
-  function assignPartner(partnerId: string) {
+  async function assignPartner(partnerId: string) {
     if (!selected) return;
     setCases((current) =>
       current.map((row) =>
@@ -139,15 +213,23 @@ export default function CaseDashboard() {
           : row,
       ),
     );
+    if (!adminToken) return;
+    setApiStatus("saving");
+    try {
+      applySnapshotAfterSave(await assignPartnerMvp(adminToken, selected.id, partnerId));
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage(error instanceof Error ? error.message : "Partner assignment failed.");
+    }
   }
 
-  function togglePartnerShortlist(providerId: string) {
+  async function togglePartnerShortlist(providerId: string) {
     if (!selected) return;
+    const existing = selected.partnerShortlistedProviderIds ?? [];
+    const nextShortlist = existing.includes(providerId) ? existing.filter((id) => id !== providerId) : [...existing, providerId];
     setCases((current) =>
       current.map((row) => {
         if (row.id !== selected.id) return row;
-        const existing = row.partnerShortlistedProviderIds ?? [];
-        const nextShortlist = existing.includes(providerId) ? existing.filter((id) => id !== providerId) : [...existing, providerId];
         return {
           ...row,
           partnerShortlistedProviderIds: nextShortlist,
@@ -155,9 +237,17 @@ export default function CaseDashboard() {
         };
       }),
     );
+    if (!adminToken || !selected.assignedPartnerId) return;
+    setApiStatus("saving");
+    try {
+      applySnapshotAfterSave(await setPartnerShortlistMvp(adminToken, selected.id, selected.assignedPartnerId, nextShortlist));
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage(error instanceof Error ? error.message : "Provider shortlist save failed.");
+    }
   }
 
-  function requestQuotesFromShortlist() {
+  async function requestQuotesFromShortlist() {
     if (!selected) return;
     const shortlist = selected.partnerShortlistedProviderIds ?? [];
     if (!shortlist.length) return;
@@ -175,6 +265,14 @@ export default function CaseDashboard() {
           : row,
       ),
     );
+    if (!adminToken || !selected.assignedPartnerId) return;
+    setApiStatus("saving");
+    try {
+      applySnapshotAfterSave(await requestPartnerQuoteMvp(adminToken, selected.id, selected.assignedPartnerId, shortlist));
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage(error instanceof Error ? error.message : "Quote request failed.");
+    }
   }
 
   const counts = statusOrder.map((status) => ({
@@ -197,7 +295,29 @@ export default function CaseDashboard() {
               <h1 className="font-serif text-5xl text-ink-950">Closed beta case board</h1>
               <p className="mt-3 max-w-2xl text-ink-600">Live operating surface for lead qualification, partner assignment, provider shortlisting, quote SLA, deposit follow-up, and booking readiness.</p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="grid gap-3 sm:min-w-[360px]">
+              <div className="rounded-md border border-ink-200 bg-ink-50 p-3">
+                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase text-ink-500">
+                  <Database className="size-3.5" />
+                  Operations data
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={adminTokenInput}
+                    onChange={(event) => setAdminTokenInput(event.target.value)}
+                    placeholder="Admin API token"
+                    className="h-10 min-w-0 flex-1 rounded-md border border-ink-200 bg-white px-3 text-sm"
+                  />
+                  <Button type="button" variant="outline" onClick={connectOps} className="border-ink-300 text-ink-800">
+                    {adminTokenInput.trim() ? "Connect" : "Demo"}
+                  </Button>
+                </div>
+                <div className={cn("mt-2 text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
+                  {apiMessage}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
               <Link href="/partner/cases">
                 <Button variant="outline" className="border-ink-300 text-ink-800">
                   Partner view
@@ -210,6 +330,7 @@ export default function CaseDashboard() {
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
+              </div>
             </div>
           </div>
 
@@ -285,7 +406,7 @@ export default function CaseDashboard() {
                   <div>SLA / next</div>
                 </div>
                 {filtered.map((row) => (
-                  <CaseRow key={row.id} row={row} selected={selected?.id === row.id} onSelect={() => setSelectedId(row.id)} />
+                  <CaseRow key={row.id} row={row} selected={selected?.id === row.id} onSelect={() => setSelectedId(row.id)} providersById={providersById} partnersById={partnersById} />
                 ))}
               </div>
             </div>
@@ -359,7 +480,7 @@ export default function CaseDashboard() {
                       className="h-11 rounded-md border border-teal-200 bg-white px-3 text-sm text-ink-900"
                     >
                       <option value="">Unassigned</option>
-                      {betaPartners.filter((partner) => partner.active).map((partner) => (
+                      {partners.filter((partner) => partner.active).map((partner) => (
                         <option key={partner.id} value={partner.id}>
                           {partner.name} / {partner.type.replaceAll("_", " ")}
                         </option>
@@ -367,6 +488,11 @@ export default function CaseDashboard() {
                     </select>
                   </label>
                 </div>
+                {liveMode && !selected.assignedPartnerId && (
+                  <div className="mt-3 rounded-md border border-coral-200 bg-coral-50 p-3 text-xs font-semibold text-coral-800">
+                    Assign a partner before saving provider candidates to Supabase.
+                  </div>
+                )}
               </div>
 
               <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
@@ -375,7 +501,7 @@ export default function CaseDashboard() {
                   Partner provider shortlist
                 </div>
                 <div className="grid gap-2">
-                  {betaProviders.filter((provider) => provider.active).map((provider) => {
+                  {providers.filter((provider) => provider.active).map((provider) => {
                     const selectedForShortlist = Boolean(selected.partnerShortlistedProviderIds?.includes(provider.id));
                     const requested = Boolean(selected.quoteRequestedProviderIds?.includes(provider.id));
                     return (
@@ -427,7 +553,7 @@ export default function CaseDashboard() {
                   className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900"
                 >
                   <option value="">Assign provider</option>
-                  {betaProviders.filter((provider) => provider.active).map((provider) => (
+                  {providers.filter((provider) => provider.active).map((provider) => (
                     <option key={provider.id} value={provider.id}>
                       {provider.name}
                     </option>

@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Building2, Handshake, Languages, Send } from "lucide-react";
+import { ArrowLeft, Building2, Database, Handshake, Languages, Send } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { betaCases, betaPartners, betaProviders, formatUsd, getPartner, type BetaCase } from "@/lib/betaData";
+import { betaCases, betaPartners, betaProviders, formatUsd, type BetaCase } from "@/lib/betaData";
+import { fetchPartnerMvpSnapshot, readAdminApiToken, saveAdminApiToken, setPartnerShortlistMvp } from "@/lib/partnerMvpApi";
 import { cn } from "@/lib/utils";
 
 function serviceLabel(value: string) {
@@ -38,19 +39,73 @@ function PartnerCaseRow({ row, selected, onSelect }: { row: BetaCase; selected: 
 
 export default function PartnerCaseBoard() {
   const [cases, setCases] = useState(betaCases);
+  const [partners, setPartners] = useState(betaPartners);
+  const [providers, setProviders] = useState(betaProviders);
   const [partnerId, setPartnerId] = useState(betaPartners[0]?.id ?? "");
-  const partner = getPartner(partnerId) ?? betaPartners[0];
+  const [adminToken, setAdminToken] = useState(() => readAdminApiToken());
+  const [adminTokenInput, setAdminTokenInput] = useState(() => readAdminApiToken());
+  const [apiStatus, setApiStatus] = useState<"demo" | "loading" | "live" | "saving" | "error">(adminToken ? "loading" : "demo");
+  const [apiMessage, setApiMessage] = useState(adminToken ? "Connecting to Supabase operations..." : "Demo board");
+  const partner = partners.find((item) => item.id === partnerId) ?? partners[0];
   const visibleCases = useMemo(() => cases.filter((row) => row.assignedPartnerId === partner?.id), [cases, partner?.id]);
   const [selectedId, setSelectedId] = useState(visibleCases[0]?.id ?? "");
   const selected = visibleCases.find((row) => row.id === selectedId) ?? visibleCases[0];
+  const liveMode = Boolean(adminToken && apiStatus !== "demo");
 
-  function toggleShortlist(providerId: string) {
+  function applySnapshot(snapshot: Awaited<ReturnType<typeof fetchPartnerMvpSnapshot>>) {
+    if (snapshot.cases.length) setCases(snapshot.cases);
+    if (snapshot.partners.length) {
+      setPartners(snapshot.partners);
+      setPartnerId((current) => (snapshot.partners.some((item) => item.id === current) ? current : snapshot.partners[0]?.id ?? ""));
+    }
+    if (snapshot.providers.length) setProviders(snapshot.providers);
+    setApiStatus("live");
+    setApiMessage(`Supabase ops connected: ${snapshot.meta?.partnerRequestCount ?? snapshot.cases.length} partner requests`);
+  }
+
+  async function refreshOps(token = adminToken) {
+    if (!token) return;
+    setApiStatus("loading");
+    setApiMessage("Loading assigned partner cases...");
+    try {
+      applySnapshot(await fetchPartnerMvpSnapshot(token));
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage(error instanceof Error ? error.message : "Could not load Supabase operations.");
+    }
+  }
+
+  useEffect(() => {
+    if (adminToken) void refreshOps(adminToken);
+  }, [adminToken]);
+
+  useEffect(() => {
+    if (visibleCases.length && !visibleCases.some((row) => row.id === selectedId)) {
+      setSelectedId(visibleCases[0].id);
+    }
+  }, [visibleCases, selectedId]);
+
+  function connectOps() {
+    const token = adminTokenInput.trim();
+    saveAdminApiToken(token);
+    setAdminToken(token);
+    if (!token) {
+      setCases(betaCases);
+      setPartners(betaPartners);
+      setProviders(betaProviders);
+      setPartnerId(betaPartners[0]?.id ?? "");
+      setApiStatus("demo");
+      setApiMessage("Demo board");
+    }
+  }
+
+  async function toggleShortlist(providerId: string) {
     if (!selected) return;
+    const existing = selected.partnerShortlistedProviderIds ?? [];
+    const nextShortlist = existing.includes(providerId) ? existing.filter((id) => id !== providerId) : [...existing, providerId];
     setCases((current) =>
       current.map((row) => {
         if (row.id !== selected.id) return row;
-        const existing = row.partnerShortlistedProviderIds ?? [];
-        const nextShortlist = existing.includes(providerId) ? existing.filter((id) => id !== providerId) : [...existing, providerId];
         return {
           ...row,
           partnerShortlistedProviderIds: nextShortlist,
@@ -58,9 +113,18 @@ export default function PartnerCaseBoard() {
         };
       }),
     );
+    if (!adminToken || !partner?.id) return;
+    setApiStatus("saving");
+    try {
+      applySnapshot(await setPartnerShortlistMvp(adminToken, selected.id, partner.id, nextShortlist));
+      setApiMessage("Partner shortlist saved");
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage(error instanceof Error ? error.message : "Provider shortlist save failed.");
+    }
   }
 
-  const recommendedProviders = betaProviders.filter((provider) => provider.active);
+  const recommendedProviders = providers.filter((provider) => provider.active);
 
   return (
     <Layout>
@@ -88,13 +152,35 @@ export default function PartnerCaseBoard() {
                 onChange={(event) => setPartnerId(event.target.value)}
                 className="h-11 min-w-72 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900"
               >
-                {betaPartners.filter((item) => item.active).map((item) => (
+                {partners.filter((item) => item.active).map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
                 ))}
               </select>
             </label>
+          </div>
+
+          <div className="mt-5 max-w-xl rounded-md border border-ink-200 bg-white p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase text-ink-500">
+              <Database className="size-3.5" />
+              Operations data
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={adminTokenInput}
+                onChange={(event) => setAdminTokenInput(event.target.value)}
+                placeholder="Admin API token"
+                className="h-10 min-w-0 flex-1 rounded-md border border-ink-200 bg-white px-3 text-sm"
+              />
+              <Button type="button" variant="outline" onClick={connectOps} className="border-ink-300 text-ink-800">
+                {adminTokenInput.trim() ? "Connect" : "Demo"}
+              </Button>
+            </div>
+            <div className={cn("mt-2 text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
+              {apiMessage}
+            </div>
           </div>
 
           {partner && (

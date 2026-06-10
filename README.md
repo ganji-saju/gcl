@@ -35,6 +35,13 @@ Then set:
 
 Without these values, the consultation form saves locally in demo mode.
 
+For the internal partner-assisted operations API, also set these only in Vercel project environment variables:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ADMIN_API_TOKEN`
+
+Do not prefix `SUPABASE_SERVICE_ROLE_KEY` with `VITE_`. It must stay server-only and is used by `/api/admin/partner-mvp`.
+
 ## Supabase
 
 Run `supabase/schema.sql` in the Supabase SQL editor.
@@ -44,6 +51,13 @@ The policy intentionally allows public inserts only. Public reads, updates, and 
 For the v1 international patient marketplace design pack, see `docs/product/README.md`.
 The production-grade core schema DDL is additive and lives in
 `supabase/migrations/20260609_0001_core_marketplace_schema.sql`.
+
+For the partner-assisted MVP, apply:
+
+- `supabase/migrations/20260610_0003_partner_assisted_mvp.sql`
+- `supabase/migrations/20260610_0004_partner_mvp_seed.sql`
+
+The seed migration creates starter partner operators, provider candidates, and partner-provider relationships for the first operating test.
 
 ## Vercel
 
