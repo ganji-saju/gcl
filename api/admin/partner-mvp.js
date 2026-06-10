@@ -10,6 +10,24 @@ const CASE_STATUS_FALLBACK = {
   closed_won: "booking_confirmed",
 };
 
+const CASE_STATUSES = new Set([
+  "new",
+  "qualified",
+  "intake_completed",
+  "matching_ready",
+  "matched",
+  "quote_requested",
+  "quote_sent",
+  "deposit_pending",
+  "deposit_paid",
+  "booking_confirmed",
+  "visited",
+  "treated",
+  "aftercare",
+  "closed_won",
+  "closed_lost",
+]);
+
 function json(res, status, payload) {
   res.writeHead(status, JSON_HEADERS);
   res.end(JSON.stringify(payload));
@@ -473,6 +491,30 @@ async function assignPartner(config, body) {
   });
 }
 
+async function advanceCaseStatus(config, body) {
+  const { caseId, status } = body;
+  if (!isUuid(caseId)) throw new Error("A valid caseId is required.");
+  if (!CASE_STATUSES.has(status)) throw new Error("A valid case status is required.");
+
+  const existing = await list(config, "cases", `select=id,status&id=eq.${caseId}&limit=1`);
+  const currentCase = existing[0];
+  if (!currentCase) throw new Error("Case not found.");
+
+  if (currentCase.status !== status) {
+    await supabaseFetch(config, `cases?id=eq.${caseId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
+      prefer: "return=minimal",
+    });
+
+    await logActivity(config, {
+      caseId,
+      eventType: "case_status_changed",
+      eventPayload: { from_status: currentCase.status, to_status: status },
+    });
+  }
+}
+
 async function setShortlist(config, body) {
   const { caseId, partnerId, providerIds = [] } = body;
   if (!isUuid(caseId) || !isUuid(partnerId)) throw new Error("Valid caseId and partnerId are required.");
@@ -687,6 +729,7 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const body = await readBody(req);
       if (body.action === "assignPartner") await assignPartner(config, body);
+      else if (body.action === "advanceCaseStatus") await advanceCaseStatus(config, body);
       else if (body.action === "setShortlist") await setShortlist(config, body);
       else if (body.action === "requestQuotes") await requestQuotes(config, body);
       else if (body.action === "submitProviderQuote") await submitProviderQuote(config, body);

@@ -125,6 +125,13 @@ export function assignPartnerMvp(token: string, caseId: string, partnerId: strin
   });
 }
 
+export function advanceCaseStatusMvp(token: string, caseId: string, status: string) {
+  return requestPartnerMvp(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "advanceCaseStatus", caseId, status }),
+  });
+}
+
 export function setPartnerShortlistMvp(token: string, caseId: string, partnerId: string, providerIds: string[]) {
   return requestPartnerMvp(token, {
     method: "POST",

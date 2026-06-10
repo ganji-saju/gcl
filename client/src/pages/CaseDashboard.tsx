@@ -12,6 +12,7 @@ import {
   formatUsd,
 } from "@/lib/betaData";
 import {
+  advanceCaseStatusMvp,
   assignPartnerMvp,
   fetchPartnerMvpSnapshot,
   readAdminApiToken,
@@ -214,10 +215,26 @@ export default function CaseDashboard() {
     setApiMessage("Supabase에 저장되었습니다");
   }
 
-  function advanceSelected() {
+  async function advanceSelected() {
     if (!selected) return;
     const target = nextStatus(selected.status);
-    setCases((current) => current.map((row) => (row.id === selected.id ? { ...row, status: target, nextAction: `Move to ${target}` } : row)));
+    const nextAction = `Move to ${target}`;
+
+    if (!adminToken) {
+      setCases((current) => current.map((row) => (row.id === selected.id ? { ...row, status: target, nextAction } : row)));
+      return;
+    }
+
+    setApiStatus("saving");
+    setApiMessage(`${caseStatusLabel(target)} 단계로 저장 중...`);
+
+    try {
+      applySnapshotAfterSave(await advanceCaseStatusMvp(adminToken, selected.id, target));
+      setApiMessage(`${caseStatusLabel(target)} 단계로 저장되었습니다.`);
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage("상태 변경 실패: 관리자 연결 토큰, Vercel 환경변수, Supabase 권한 설정을 확인하세요.");
+    }
   }
 
   function assignProvider(providerId: string) {
