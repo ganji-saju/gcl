@@ -8,6 +8,7 @@ export default function Footer() {
   const internalMode = location.startsWith("/admin") || location.startsWith("/partner") || location.startsWith("/provider");
 
   const internalLinks = [
+    { href: "/admin/ops-health", label: "운영 상태 점검" },
     { href: "/admin/cases", label: "케이스 보드" },
     { href: "/partner/cases", label: "파트너 보드" },
     { href: "/provider/quotes", label: "병원 견적 데스크" },

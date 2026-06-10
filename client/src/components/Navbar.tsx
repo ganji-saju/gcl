@@ -27,6 +27,7 @@ export default function Navbar() {
     { href: "/#process", label: t("nav.process") },
   ];
   const internalNavLinks = [
+    { href: "/admin/ops-health", label: "운영 점검" },
     { href: "/admin/cases", label: "케이스" },
     { href: "/partner/cases", label: "파트너" },
     { href: "/provider/quotes", label: "병원 견적" },

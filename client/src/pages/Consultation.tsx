@@ -51,18 +51,18 @@ const BUDGETS = [
 ];
 
 const PARTNER_ASSISTANCE_MODES = [
-  { value: "platform_direct", label: "Hospital matching only" },
-  { value: "partner_requested", label: "I want agency / agent support" },
-  { value: "partner_originated", label: "I am already speaking with an agency or agent" },
+  { value: "platform_direct", labelKey: "consult.partnerMode.platformDirect" },
+  { value: "partner_requested", labelKey: "consult.partnerMode.partnerRequested" },
+  { value: "partner_originated", labelKey: "consult.partnerMode.partnerOriginated" },
 ];
 
 const PARTNER_SERVICE_OPTIONS = [
-  { value: "medical_agency", label: "Medical agency coordination" },
-  { value: "personal_agent", label: "Personal agent" },
-  { value: "interpreter", label: "Interpreter" },
-  { value: "travel_agency", label: "Travel planning" },
-  { value: "airport_pickup", label: "Airport pickup" },
-  { value: "hotel_recovery", label: "Hotel / recovery support" },
+  { value: "medical_agency", labelKey: "consult.partnerService.medicalAgency" },
+  { value: "personal_agent", labelKey: "consult.partnerService.personalAgent" },
+  { value: "interpreter", labelKey: "consult.partnerService.interpreter" },
+  { value: "travel_agency", labelKey: "consult.partnerService.travelAgency" },
+  { value: "airport_pickup", labelKey: "consult.partnerService.airportPickup" },
+  { value: "hotel_recovery", labelKey: "consult.partnerService.hotelRecovery" },
 ];
 
 export default function Consultation() {
@@ -374,23 +374,23 @@ export default function Consultation() {
               </div>
 
               <div>
-                <h2 className="mb-4 font-serif text-3xl text-ink-950">Partner support request</h2>
+                <h2 className="mb-4 font-serif text-3xl text-ink-950">{t("consult.partnerSupportTitle")}</h2>
                 <div className="grid gap-4">
-                  <Field label="How would you like to be supported?">
+                  <Field label={t("consult.partnerSupportMode")}>
                     <select
                       {...register("partnerAssistanceMode")}
                       className="h-11 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                     >
                       {PARTNER_ASSISTANCE_MODES.map((mode) => (
                         <option key={mode.value} value={mode.value}>
-                          {mode.label}
+                          {t(mode.labelKey)}
                         </option>
                       ))}
                     </select>
                   </Field>
 
                   <div>
-                    <Label className="mb-3 block text-sm font-semibold text-ink-800">Optional partner services</Label>
+                    <Label className="mb-3 block text-sm font-semibold text-ink-800">{t("consult.partnerServices")}</Label>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {PARTNER_SERVICE_OPTIONS.map((option) => (
                         <label key={option.value} className="flex gap-3 rounded-md border border-ink-200 bg-ink-50 p-4 text-sm text-ink-700">
@@ -400,7 +400,7 @@ export default function Consultation() {
                             {...register("partnerServices")}
                             className="mt-1 size-4 rounded border-ink-300 accent-teal-700"
                           />
-                          {option.label}
+                          {t(option.labelKey)}
                         </label>
                       ))}
                     </div>
@@ -413,7 +413,7 @@ export default function Consultation() {
                         {...register("partnerShareConsent")}
                         className="mt-1 size-4 rounded border-teal-300 accent-teal-700"
                       />
-                      I agree that Global Patient Hub may share the minimum necessary case, travel, and contact details with assigned partner operators for the selected non-medical services.
+                      {t("consult.partnerShareConsent")}
                     </label>
                   )}
                 </div>

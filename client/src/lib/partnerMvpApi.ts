@@ -96,6 +96,10 @@ export function saveAdminApiToken(token: string) {
   else localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
+export function clearAdminApiToken() {
+  saveAdminApiToken("");
+}
+
 async function fetchAdminApi(init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ADMIN_API_TIMEOUT_MS);

@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import InternalOpsGate from "./components/InternalOpsGate";
 import ScrollManager from "./components/ScrollManager";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { I18nProvider } from "./contexts/I18nContext";
@@ -21,6 +23,39 @@ import QuoteBookingMvp from "./pages/QuoteBookingMvp";
 import AdminLandingRoutes from "./pages/AdminLandingRoutes";
 import PartnerCaseBoard from "./pages/PartnerCaseBoard";
 import ProviderQuoteDesk from "./pages/ProviderQuoteDesk";
+import OpsHealth from "./pages/OpsHealth";
+
+function InternalRoute({ children }: { children: ReactNode }) {
+  return <InternalOpsGate>{children}</InternalOpsGate>;
+}
+
+function ClosedBetaOpsRoute() {
+  return <InternalRoute><ClosedBetaOps /></InternalRoute>;
+}
+
+function CaseDashboardRoute() {
+  return <InternalRoute><CaseDashboard /></InternalRoute>;
+}
+
+function QuoteBookingRoute() {
+  return <InternalRoute><QuoteBookingMvp /></InternalRoute>;
+}
+
+function AdminLandingRoutesRoute() {
+  return <InternalRoute><AdminLandingRoutes /></InternalRoute>;
+}
+
+function PartnerCaseBoardRoute() {
+  return <InternalRoute><PartnerCaseBoard /></InternalRoute>;
+}
+
+function ProviderQuoteDeskRoute() {
+  return <InternalRoute><ProviderQuoteDesk /></InternalRoute>;
+}
+
+function OpsHealthRoute() {
+  return <InternalRoute><OpsHealth /></InternalRoute>;
+}
 
 function Router() {
   return (
@@ -32,12 +67,13 @@ function Router() {
       <Route path="/treatments/:slug" component={TreatmentDetail} />
       <Route path="/compare" component={Compare} />
       <Route path="/consultation" component={Consultation} />
-      <Route path="/admin/beta" component={ClosedBetaOps} />
-      <Route path="/admin/cases" component={CaseDashboard} />
-      <Route path="/admin/quote-booking" component={QuoteBookingMvp} />
-      <Route path="/admin/landing-routes" component={AdminLandingRoutes} />
-      <Route path="/partner/cases" component={PartnerCaseBoard} />
-      <Route path="/provider/quotes" component={ProviderQuoteDesk} />
+      <Route path="/admin/beta" component={ClosedBetaOpsRoute} />
+      <Route path="/admin/cases" component={CaseDashboardRoute} />
+      <Route path="/admin/quote-booking" component={QuoteBookingRoute} />
+      <Route path="/admin/landing-routes" component={AdminLandingRoutesRoute} />
+      <Route path="/admin/ops-health" component={OpsHealthRoute} />
+      <Route path="/partner/cases" component={PartnerCaseBoardRoute} />
+      <Route path="/provider/quotes" component={ProviderQuoteDeskRoute} />
       <Route path="/:locale/:slug" component={SkinPackageLanding} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
