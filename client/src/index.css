@@ -201,49 +201,57 @@
     height: 52px;
     min-width: 0;
     align-items: center;
-    gap: 0.625rem;
+    gap: 0.55rem;
     border-bottom: 1px solid oklch(0.89 0.012 238 / 0.7);
     padding: 0 0.75rem;
     white-space: nowrap;
   }
 
-  .live-inquiry-country {
-    display: inline-flex;
-    min-width: 5.25rem;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    border-radius: var(--radius-md);
+  .live-inquiry-flag {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 2rem;
+    place-items: center;
+    overflow: hidden;
+    border-radius: var(--radius-full);
     background: oklch(0.96 0.018 190);
-    padding: 0.25rem 0.5rem;
-    text-align: center;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    color: oklch(0.39 0.085 190);
+    box-shadow: inset 0 0 0 1px oklch(0.91 0.035 190);
   }
 
-  .live-inquiry-country::before {
-    content: "";
-    width: 0.4rem;
-    height: 0.4rem;
-    border-radius: var(--radius-full);
-    background: oklch(0.54 0.105 190);
-    box-shadow: 0 0 0 3px oklch(0.82 0.06 190 / 0.45);
+  .live-inquiry-flag-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .live-inquiry-name {
-    min-width: 4.25rem;
+    min-width: 3.7rem;
     font-size: 0.8125rem;
     font-weight: 700;
     color: oklch(0.23 0.03 238);
   }
 
-  .live-inquiry-product {
+  .live-inquiry-treatment {
     min-width: 0;
+    flex: 1 1 auto;
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 0.8125rem;
     color: oklch(0.48 0.032 238);
+  }
+
+  .live-inquiry-time {
+    min-width: 0;
+    flex: 0 0 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: var(--radius-md);
+    background: oklch(0.985 0.008 190);
+    padding: 0.25rem 0.45rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: oklch(0.39 0.085 190);
   }
 
   .soft-shadow {

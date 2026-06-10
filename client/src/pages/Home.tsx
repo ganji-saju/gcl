@@ -38,12 +38,12 @@ const goals = [
 ];
 
 const liveInquiries = [
-  { country: "Japan", name: "Mika T.", product: "Laser toning package" },
-  { country: "Taiwan", name: "Wei L.", product: "Skin booster weekend" },
-  { country: "USA", name: "Sarah K.", product: "Facial contour consult" },
-  { country: "Singapore", name: "Mei L.", product: "Dental veneer quote" },
-  { country: "UAE", name: "Noor A.", product: "Premium checkup plan" },
-  { country: "Canada", name: "Daniel P.", product: "Hair transplant package" },
+  { country: "Japan", flagCode: "jp", name: "Mika T.", treatment: "Laser toning", time: "2 min ago" },
+  { country: "Taiwan", flagCode: "tw", name: "Wei L.", treatment: "Skin booster", time: "5 min ago" },
+  { country: "USA", flagCode: "us", name: "Sarah K.", treatment: "Facial contour", time: "8 min ago" },
+  { country: "Singapore", flagCode: "sg", name: "Mei L.", treatment: "Dental veneer", time: "12 min ago" },
+  { country: "UAE", flagCode: "ae", name: "Noor A.", treatment: "Premium checkup", time: "15 min ago" },
+  { country: "Canada", flagCode: "ca", name: "Daniel P.", treatment: "Hair transplant", time: "18 min ago" },
 ];
 
 const rollingLiveInquiries = [...liveInquiries, ...liveInquiries.slice(0, 3)];
@@ -54,9 +54,18 @@ function LiveInquiryTicker() {
       <div className="live-inquiry-track">
         {rollingLiveInquiries.map((inquiry, index) => (
           <div key={`${inquiry.country}-${inquiry.name}-${index}`} className="live-inquiry-row">
-            <span className="live-inquiry-country">{inquiry.country}</span>
+            <span className="live-inquiry-flag" aria-label={inquiry.country} title={inquiry.country}>
+              <img
+                src={`https://flagcdn.com/w40/${inquiry.flagCode}.png`}
+                srcSet={`https://flagcdn.com/w40/${inquiry.flagCode}.png 1x, https://flagcdn.com/w80/${inquiry.flagCode}.png 2x`}
+                alt=""
+                className="live-inquiry-flag-image"
+                loading="lazy"
+              />
+            </span>
             <span className="live-inquiry-name">{inquiry.name}</span>
-            <span className="live-inquiry-product">{inquiry.product}</span>
+            <span className="live-inquiry-treatment">{inquiry.treatment}</span>
+            <span className="live-inquiry-time">{inquiry.time}</span>
           </div>
         ))}
       </div>
