@@ -9,6 +9,20 @@ export interface PartnerMvpSnapshot {
   activities?: CaseActivityEvent[];
   meta?: {
     mode: "supabase";
+    role?: OpsRole;
+    scopedAccountId?: string | null;
+    scopedAccountEnabled?: boolean;
+    roleTokensConfigured?: {
+      admin: boolean;
+      partner: boolean;
+      provider: boolean;
+      partnerScoped: boolean;
+      providerScoped: boolean;
+    };
+    notificationDispatchConfigured?: boolean;
+    notificationOutboxConfigured?: boolean;
+    stripeConfigured?: boolean;
+    paymentMode?: "test" | "live" | "not_configured";
     partnerRequestCount: number;
     quoteRequestCount?: number;
     quoteResponseCount?: number;
@@ -82,22 +96,78 @@ export interface ProviderQuoteInput {
   notes: string;
 }
 
+export type OpsRole = "admin" | "partner" | "provider";
+
+export interface NotificationInput {
+  caseId: string;
+  quoteId?: string;
+  channel: "email" | "whatsapp" | "kakao" | "line" | "sms";
+  recipient?: string;
+  template: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface NotificationResult {
+  ok: boolean;
+  notificationId: string;
+  status: "queued" | "sent" | "failed";
+  storage: string;
+  dispatchResult?: Record<string, unknown>;
+}
+
+export interface DepositCheckoutInput {
+  caseId: string;
+  quoteId: string;
+  providerId?: string;
+  depositAmountUsd: number;
+}
+
+export interface DepositCheckoutResult {
+  ok: boolean;
+  checkoutUrl: string;
+  sessionId: string;
+  paymentMode: "test" | "live" | "not_configured";
+}
+
 const ADMIN_TOKEN_KEY = "gph_admin_api_token";
+const OPS_ROLE_KEY = "gph_ops_role";
 const ADMIN_API_TIMEOUT_MS = 15000;
+
+export function normalizeOpsRole(value: string | null | undefined): OpsRole {
+  return value === "partner" || value === "provider" ? value : "admin";
+}
+
+export function opsRoleLabel(role: OpsRole) {
+  if (role === "partner") return "파트너";
+  if (role === "provider") return "병원";
+  return "관리자";
+}
+
+export function readOpsRole() {
+  if (typeof window === "undefined") return "admin" as OpsRole;
+  return normalizeOpsRole(localStorage.getItem(OPS_ROLE_KEY));
+}
 
 export function readAdminApiToken() {
   if (typeof window === "undefined") return "";
   return localStorage.getItem(ADMIN_TOKEN_KEY) ?? "";
 }
 
-export function saveAdminApiToken(token: string) {
+export function saveOpsSession(token: string, role: OpsRole) {
   if (typeof window === "undefined") return;
   if (token.trim()) localStorage.setItem(ADMIN_TOKEN_KEY, token.trim());
   else localStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.setItem(OPS_ROLE_KEY, role);
+}
+
+export function saveAdminApiToken(token: string) {
+  saveOpsSession(token, readOpsRole());
 }
 
 export function clearAdminApiToken() {
-  saveAdminApiToken("");
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.removeItem(OPS_ROLE_KEY);
 }
 
 async function fetchAdminApi(init?: RequestInit): Promise<Response> {
@@ -119,7 +189,7 @@ async function fetchAdminApi(init?: RequestInit): Promise<Response> {
   }
 }
 
-async function requestPartnerMvp(token: string, init?: RequestInit): Promise<PartnerMvpSnapshot> {
+async function requestPartnerMvpJson<T>(token: string, init?: RequestInit): Promise<T> {
   const response = await fetchAdminApi({
     ...init,
     headers: {
@@ -135,7 +205,15 @@ async function requestPartnerMvp(token: string, init?: RequestInit): Promise<Par
     throw new Error(payload.error || `Partner MVP API failed with ${response.status}`);
   }
 
-  return payload as PartnerMvpSnapshot;
+  return payload as T;
+}
+
+async function requestPartnerMvp(token: string, init?: RequestInit): Promise<PartnerMvpSnapshot> {
+  const payload = await requestPartnerMvpJson<PartnerMvpSnapshot>(token, init);
+  if (!Array.isArray(payload.cases) || !Array.isArray(payload.partners) || !Array.isArray(payload.providers)) {
+    throw new Error("운영 API 응답 형식이 올바르지 않습니다.");
+  }
+  return payload;
 }
 
 export function fetchPartnerMvpSnapshot(token: string) {
@@ -174,5 +252,29 @@ export function submitProviderQuoteMvp(token: string, input: ProviderQuoteInput)
   return requestPartnerMvp(token, {
     method: "POST",
     body: JSON.stringify({ action: "submitProviderQuote", ...input }),
+  });
+}
+
+export function queueNotificationMvp(token: string, input: NotificationInput) {
+  return requestPartnerMvpJson<NotificationResult>(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "queueNotification", ...input }),
+  }).then((payload) => {
+    if (!payload?.notificationId || !payload.status) {
+      throw new Error("알림 API 응답 형식이 올바르지 않습니다.");
+    }
+    return payload;
+  });
+}
+
+export function createDepositCheckoutMvp(token: string, input: DepositCheckoutInput) {
+  return requestPartnerMvpJson<DepositCheckoutResult>(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "createDepositCheckout", ...input }),
+  }).then((payload) => {
+    if (!payload?.checkoutUrl || !payload.sessionId) {
+      throw new Error("예약금 결제 API 응답 형식이 올바르지 않습니다.");
+    }
+    return payload;
   });
 }

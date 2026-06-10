@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, CheckCircle2, CircleDollarSign, ClipboardCheck, ShieldAlert, WalletCards } from "lucide-react";
+import { ArrowLeft, BellRing, CalendarCheck, CheckCircle2, CircleDollarSign, ClipboardCheck, ExternalLink, Loader2, ShieldAlert, WalletCards } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
   type BetaQuote,
 } from "@/lib/betaData";
 import { languageListLabel, quoteNoteLabel, statusLabel } from "@/lib/adminLabels";
+import { createDepositCheckoutMvp, queueNotificationMvp, readAdminApiToken, type DepositCheckoutResult } from "@/lib/partnerMvpApi";
 import { cn } from "@/lib/utils";
 
 function StepCard({
@@ -71,6 +72,10 @@ export default function QuoteBookingMvp() {
   const [quotes, setQuotes] = useState<BetaQuote[]>(betaQuotes);
   const [deposits, setDeposits] = useState<BetaDepositBooking[]>(betaDepositBookings);
   const [ledger, setLedger] = useState<BetaLedgerRow[]>(betaLedger);
+  const [opsToken] = useState(() => readAdminApiToken());
+  const [quoteMessages, setQuoteMessages] = useState<Record<string, string>>({});
+  const [quoteBusy, setQuoteBusy] = useState<Record<string, "notice" | "checkout" | undefined>>({});
+  const [checkoutLinks, setCheckoutLinks] = useState<Record<string, DepositCheckoutResult>>({});
   const [caseId, setCaseId] = useState(quoteReadyCases[0]?.id ?? "");
   const selectedCase = quoteReadyCases.find((row) => row.id === caseId) ?? quoteReadyCases[0];
   const selectedProvider = getProvider(selectedCase?.matchedProviderId) ?? betaProviders[0];
@@ -144,6 +149,64 @@ export default function QuoteBookingMvp() {
       },
       ...current,
     ]);
+  }
+
+  async function queueQuoteNotice(quote: BetaQuote) {
+    if (!opsToken) {
+      setQuoteMessages((current) => ({ ...current, [quote.id]: "운영 토큰 연결 후 알림을 저장할 수 있습니다." }));
+      return;
+    }
+
+    setQuoteBusy((current) => ({ ...current, [quote.id]: "notice" }));
+    try {
+      const result = await queueNotificationMvp(opsToken, {
+        caseId: quote.caseId,
+        quoteId: quote.id,
+        channel: "email",
+        recipient: "case_contact",
+        template: "quote_ready_deposit",
+        payload: {
+          quote_id: quote.id,
+          case_id: quote.caseId,
+          provider_id: quote.providerId,
+          deposit_amount_usd: quote.depositAmountUsd,
+          total_amount_usd: quote.medicalFeeUsd + quote.nonmedicalFeeUsd,
+          valid_until: quote.validUntil,
+        },
+      });
+      const message = result.status === "sent" ? "알림이 발송되었습니다." : result.status === "failed" ? "알림 큐에는 저장했지만 발송 게이트웨이 응답을 확인해야 합니다." : "알림이 운영 큐에 저장되었습니다.";
+      setQuoteMessages((current) => ({ ...current, [quote.id]: `${message} (${result.notificationId})` }));
+    } catch (error) {
+      setQuoteMessages((current) => ({ ...current, [quote.id]: error instanceof Error ? error.message : "알림 저장에 실패했습니다." }));
+    } finally {
+      setQuoteBusy((current) => ({ ...current, [quote.id]: undefined }));
+    }
+  }
+
+  async function createCheckoutLink(quote: BetaQuote) {
+    if (!opsToken) {
+      setQuoteMessages((current) => ({ ...current, [quote.id]: "운영 토큰 연결 후 예약금 링크를 생성할 수 있습니다." }));
+      return;
+    }
+
+    setQuoteBusy((current) => ({ ...current, [quote.id]: "checkout" }));
+    try {
+      const result = await createDepositCheckoutMvp(opsToken, {
+        caseId: quote.caseId,
+        quoteId: quote.id,
+        providerId: quote.providerId,
+        depositAmountUsd: quote.depositAmountUsd,
+      });
+      setCheckoutLinks((current) => ({ ...current, [quote.id]: result }));
+      setQuoteMessages((current) => ({
+        ...current,
+        [quote.id]: `${result.paymentMode === "live" ? "실결제" : "테스트"} 예약금 Checkout 링크가 생성되었습니다.`,
+      }));
+    } catch (error) {
+      setQuoteMessages((current) => ({ ...current, [quote.id]: error instanceof Error ? error.message : "예약금 링크 생성에 실패했습니다." }));
+    } finally {
+      setQuoteBusy((current) => ({ ...current, [quote.id]: undefined }));
+    }
   }
 
   const paidCount = deposits.filter((row) => row.depositStatus === "paid").length;
@@ -251,6 +314,8 @@ export default function QuoteBookingMvp() {
               <div className="grid gap-3">
                 {chain.map(({ quote, deposit, ledger: ledgerRow }) => {
                   const provider = getProvider(quote.providerId);
+                  const busy = quoteBusy[quote.id];
+                  const checkout = checkoutLinks[quote.id];
                   return (
                     <div key={quote.id} className="rounded-lg border border-ink-200 bg-white p-4">
                       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
@@ -263,9 +328,19 @@ export default function QuoteBookingMvp() {
                           </div>
                           <div className="mt-1 text-sm text-ink-500">{quote.caseId} / {provider?.name}</div>
                         </div>
-                        <Button size="sm" onClick={() => markDepositPaid(quote)} className="bg-ink-950 text-white hover:bg-ink-800">
-                          예약금 결제 처리
-                        </Button>
+                        <div className="flex flex-wrap gap-2 md:justify-end">
+                          <Button type="button" size="sm" variant="outline" onClick={() => queueQuoteNotice(quote)} disabled={Boolean(busy)} className="border-ink-300 text-ink-800">
+                            {busy === "notice" ? <Loader2 className="size-4 animate-spin" /> : <BellRing className="size-4" />}
+                            알림 큐 저장
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => createCheckoutLink(quote)} disabled={Boolean(busy) || quote.depositAmountUsd <= 0} className="border-teal-300 text-teal-800">
+                            {busy === "checkout" ? <Loader2 className="size-4 animate-spin" /> : <CircleDollarSign className="size-4" />}
+                            예약금 링크 생성
+                          </Button>
+                          <Button type="button" size="sm" onClick={() => markDepositPaid(quote)} className="bg-ink-950 text-white hover:bg-ink-800">
+                            예약금 결제 처리
+                          </Button>
+                        </div>
                       </div>
                       <div className="mt-4 grid gap-3 md:grid-cols-5">
                         <div>
@@ -290,6 +365,19 @@ export default function QuoteBookingMvp() {
                         </div>
                       </div>
                       <p className="mt-4 border-t border-ink-100 pt-3 text-xs leading-5 text-ink-500">{quoteNoteLabel(quote.notes)}</p>
+                      {(checkout || quoteMessages[quote.id]) && (
+                        <div className="mt-3 flex flex-col gap-2 border-t border-ink-100 pt-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-ink-600">{quoteMessages[quote.id]}</div>
+                          {checkout?.checkoutUrl && (
+                            <a href={checkout.checkoutUrl} target="_blank" rel="noreferrer" className="inline-flex">
+                              <Button type="button" size="sm" variant="outline" className="border-teal-300 text-teal-800">
+                                Stripe Checkout 열기
+                                <ExternalLink className="size-4" />
+                              </Button>
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

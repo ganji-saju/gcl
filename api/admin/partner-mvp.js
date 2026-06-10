@@ -4,6 +4,7 @@ const JSON_HEADERS = {
 };
 const SUPABASE_TIMEOUT_MS = 10000;
 const ACTIVITY_LOG_TIMEOUT_MS = 3000;
+const EXTERNAL_REQUEST_TIMEOUT_MS = 10000;
 
 const CASE_STATUS_FALLBACK = {
   matched: "matching_ready",
@@ -30,6 +31,13 @@ const CASE_STATUSES = new Set([
   "closed_lost",
 ]);
 
+class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
 function json(res, status, payload) {
   res.writeHead(status, JSON_HEADERS);
   res.end(JSON.stringify(payload));
@@ -45,16 +53,86 @@ function readToken(req) {
   return bearer || getHeader(req, "x-admin-token")?.trim() || "";
 }
 
-function requireConfig(req) {
-  const token = process.env.ADMIN_API_TOKEN;
+function parseTokenMap(raw) {
+  if (!raw) return new Map();
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return new Map(
+        parsed
+          .map((row) => [String(row.token || "").trim(), String(row.accountId || row.partnerId || row.providerId || "").trim()])
+          .filter(([token, accountId]) => token && accountId),
+      );
+    }
+
+    if (parsed && typeof parsed === "object") {
+      return new Map(
+        Object.entries(parsed)
+          .map(([token, accountId]) => [String(token).trim(), String(accountId || "").trim()])
+          .filter(([token, accountId]) => token && accountId),
+      );
+    }
+  } catch (error) {
+    console.warn("Role token map could not be parsed.", error);
+  }
+
+  return new Map();
+}
+
+function readRoleTokenConfig() {
+  const partnerMap = parseTokenMap(process.env.PARTNER_TOKEN_MAP || process.env.PARTNER_API_TOKEN_MAP);
+  const providerMap = parseTokenMap(process.env.PROVIDER_TOKEN_MAP || process.env.PROVIDER_API_TOKEN_MAP);
+  return {
+    adminToken: process.env.ADMIN_API_TOKEN?.trim() || "",
+    partnerToken: process.env.PARTNER_API_TOKEN?.trim() || "",
+    providerToken: process.env.PROVIDER_API_TOKEN?.trim() || "",
+    partnerMap,
+    providerMap,
+  };
+}
+
+function resolveRoleAccess(req) {
+  const roleTokens = readRoleTokenConfig();
   const suppliedToken = readToken(req);
 
-  if (!token) {
+  if (!roleTokens.adminToken) {
     return { error: "ADMIN_API_TOKEN is not configured.", status: 503 };
   }
 
-  if (!suppliedToken || suppliedToken !== token) {
+  if (!suppliedToken) {
     return { error: "Unauthorized.", status: 401 };
+  }
+
+  if (suppliedToken === roleTokens.adminToken) {
+    return { role: "admin", roleTokens, scopedAccountId: null };
+  }
+
+  if (roleTokens.partnerMap.has(suppliedToken)) {
+    return { role: "partner", roleTokens, partnerId: roleTokens.partnerMap.get(suppliedToken), scopedAccountId: roleTokens.partnerMap.get(suppliedToken) };
+  }
+
+  if (roleTokens.providerMap.has(suppliedToken)) {
+    return { role: "provider", roleTokens, providerId: roleTokens.providerMap.get(suppliedToken), scopedAccountId: roleTokens.providerMap.get(suppliedToken) };
+  }
+
+  if (roleTokens.partnerToken && suppliedToken === roleTokens.partnerToken) {
+    return { role: "partner", roleTokens, scopedAccountId: null };
+  }
+
+  if (roleTokens.providerToken && suppliedToken === roleTokens.providerToken) {
+    return { role: "provider", roleTokens, scopedAccountId: null };
+  }
+
+  return { error: "Unauthorized.", status: 401 };
+}
+
+function requireConfig(req, allowedRoles = ["admin"]) {
+  const access = resolveRoleAccess(req);
+  if (access.error) return access;
+
+  if (access.role !== "admin" && !allowedRoles.includes(access.role)) {
+    return { error: "This role is not allowed to perform this operation.", status: 403 };
   }
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -64,7 +142,15 @@ function requireConfig(req) {
     return { error: "Supabase server credentials are not configured.", status: 503 };
   }
 
-  return { supabaseUrl: supabaseUrl.replace(/\/$/, ""), serviceRoleKey };
+  return {
+    supabaseUrl: supabaseUrl.replace(/\/$/, ""),
+    serviceRoleKey,
+    role: access.role,
+    partnerId: access.partnerId,
+    providerId: access.providerId,
+    scopedAccountId: access.scopedAccountId,
+    roleTokens: access.roleTokens,
+  };
 }
 
 async function readBody(req) {
@@ -353,6 +439,42 @@ function normalizeActivity(row) {
   };
 }
 
+function notificationDispatchConfigured() {
+  return Boolean(process.env.NOTIFICATION_WEBHOOK_URL || process.env.RESEND_API_KEY || process.env.KAKAO_API_KEY || process.env.WHATSAPP_TOKEN);
+}
+
+function paymentMode() {
+  const key = process.env.STRIPE_SECRET_KEY || "";
+  if (key.startsWith("sk_live_")) return "live";
+  if (key.startsWith("sk_test_")) return "test";
+  return "not_configured";
+}
+
+function scopeSnapshot(config, snapshot) {
+  let { cases, partners, providers, providerQuoteRequests, quotes, activities } = snapshot;
+
+  if (config.role === "partner" && config.partnerId) {
+    partners = partners.filter((row) => row.id === config.partnerId);
+    cases = cases.filter((row) => row.assignedPartnerId === config.partnerId);
+    const caseIds = new Set(cases.map((row) => row.id));
+    providerQuoteRequests = providerQuoteRequests.filter((row) => caseIds.has(row.caseId));
+    quotes = quotes.filter((row) => caseIds.has(row.caseId));
+    activities = activities.filter((row) => caseIds.has(row.caseId));
+  }
+
+  if (config.role === "provider" && config.providerId) {
+    providers = providers.filter((row) => row.id === config.providerId);
+    providerQuoteRequests = providerQuoteRequests.filter((row) => row.providerId === config.providerId);
+    const caseIds = new Set(providerQuoteRequests.map((row) => row.caseId));
+    cases = cases.filter((row) => caseIds.has(row.id));
+    quotes = quotes.filter((row) => row.providerId === config.providerId);
+    activities = activities.filter((row) => caseIds.has(row.caseId));
+    partners = [];
+  }
+
+  return { cases, partners, providers, providerQuoteRequests, quotes, activities };
+}
+
 async function getSnapshot(config) {
   const requests = await list(
     config,
@@ -452,21 +574,39 @@ async function getSnapshot(config) {
     }),
   );
 
-  return {
+  const scoped = scopeSnapshot(config, {
     cases: casesNormalized,
     partners,
     providers,
     providerQuoteRequests,
     quotes: quotes.map(normalizeQuote),
     activities: activities.map(normalizeActivity),
+  });
+
+  return {
+    ...scoped,
     meta: {
       mode: "supabase",
-      partnerRequestCount: requests.length,
-      quoteRequestCount: quoteRequests.length,
-      quoteResponseCount: quotes.length,
+      role: config.role,
+      scopedAccountId: config.scopedAccountId,
+      scopedAccountEnabled: Boolean(config.scopedAccountId),
+      roleTokensConfigured: {
+        admin: Boolean(config.roleTokens.adminToken),
+        partner: Boolean(config.roleTokens.partnerToken || config.roleTokens.partnerMap.size),
+        provider: Boolean(config.roleTokens.providerToken || config.roleTokens.providerMap.size),
+        partnerScoped: config.roleTokens.partnerMap.size > 0,
+        providerScoped: config.roleTokens.providerMap.size > 0,
+      },
+      notificationDispatchConfigured: notificationDispatchConfigured(),
+      notificationOutboxConfigured: true,
+      stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
+      paymentMode: paymentMode(),
+      partnerRequestCount: scoped.cases.length,
+      quoteRequestCount: scoped.providerQuoteRequests.length,
+      quoteResponseCount: scoped.quotes.length,
       generatedAt: new Date().toISOString(),
-      hasDbPartners: partners.length > 0,
-      hasDbProviders: providers.length > 0,
+      hasDbPartners: scoped.partners.length > 0,
+      hasDbProviders: scoped.providers.length > 0,
     },
   };
 }
@@ -536,6 +676,9 @@ async function advanceCaseStatus(config, body) {
 async function setShortlist(config, body) {
   const { caseId, partnerId, providerIds = [] } = body;
   if (!isUuid(caseId) || !isUuid(partnerId)) throw new Error("Valid caseId and partnerId are required.");
+  if (config.role === "partner" && config.partnerId && partnerId !== config.partnerId) {
+    throw new HttpError(403, "This partner token can only update its own cases.");
+  }
 
   const cleanProviderIds = providerIds.filter(isUuid);
   if (cleanProviderIds.length !== providerIds.length) throw new Error("Every providerId must be a valid UUID.");
@@ -655,6 +798,9 @@ async function submitProviderQuote(config, body) {
   if (!isUuid(quoteRequestId) || !isUuid(caseId) || !isUuid(providerId)) {
     throw new Error("Valid quoteRequestId, caseId, and providerId are required.");
   }
+  if (config.role === "provider" && config.providerId && providerId !== config.providerId) {
+    throw new HttpError(403, "This provider token can only submit its own quotes.");
+  }
 
   const providerRows = await list(config, "providers", `select=id,default_commission_cap_rate&id=eq.${providerId}&limit=1`);
   const provider = providerRows[0];
@@ -735,29 +881,222 @@ async function submitProviderQuote(config, body) {
   });
 }
 
+function sanitizeText(value, fallback = "") {
+  return String(value || fallback).trim().slice(0, 400);
+}
+
+async function tryStoreNotification(config, event) {
+  try {
+    await supabaseFetch(config, "notification_outbox", {
+      method: "POST",
+      body: JSON.stringify({
+        id: event.id,
+        case_id: event.caseId,
+        quote_id: event.quoteId || null,
+        channel: event.channel,
+        recipient: event.recipient,
+        template: event.template,
+        status: event.status,
+        payload: event.payload,
+        dispatch_result: event.dispatchResult,
+        created_at: event.createdAt,
+      }),
+      prefer: "return=minimal",
+      timeoutMs: ACTIVITY_LOG_TIMEOUT_MS,
+    });
+    return "notification_outbox";
+  } catch (error) {
+    console.warn("Optional notification outbox insert skipped.", error);
+    return "case_activity_events";
+  }
+}
+
+async function dispatchNotification(event) {
+  const webhookUrl = process.env.NOTIFICATION_WEBHOOK_URL;
+  if (!webhookUrl) {
+    return { status: "queued", result: { gateway: "not_configured" } };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(event),
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      return { status: "failed", result: { gateway: "webhook", status: response.status, message: text.slice(0, 300) } };
+    }
+    return { status: "sent", result: { gateway: "webhook", status: response.status, response: text.slice(0, 300) } };
+  } catch (error) {
+    return { status: "failed", result: { gateway: "webhook", message: error instanceof Error ? error.message : "Webhook dispatch failed." } };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function queueNotification(config, body) {
+  const caseId = sanitizeText(body.caseId);
+  if (!caseId) throw new HttpError(400, "caseId is required.");
+
+  const event = {
+    id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    caseId,
+    quoteId: sanitizeText(body.quoteId),
+    channel: sanitizeText(body.channel, "email"),
+    recipient: sanitizeText(body.recipient, "case_contact"),
+    template: sanitizeText(body.template, "quote_ready"),
+    status: "queued",
+    payload: body.payload && typeof body.payload === "object" ? body.payload : {},
+    dispatchResult: {},
+    createdAt: new Date().toISOString(),
+  };
+
+  const dispatch = await dispatchNotification(event);
+  event.status = dispatch.status;
+  event.dispatchResult = dispatch.result;
+  const storage = await tryStoreNotification(config, event);
+
+  await logActivity(config, {
+    caseId,
+    actorRole: config.role,
+    actorLabel: "Operations notification",
+    eventType: dispatch.status === "sent" ? "notification_sent" : "notification_queued",
+    eventPayload: {
+      notification_id: event.id,
+      quote_id: event.quoteId || null,
+      channel: event.channel,
+      template: event.template,
+      status: event.status,
+      storage,
+    },
+  });
+
+  return { ok: true, notificationId: event.id, status: event.status, storage, dispatchResult: event.dispatchResult };
+}
+
+function appBaseUrl(req) {
+  const configured = process.env.APP_BASE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (configured) {
+    return configured.startsWith("http") ? configured.replace(/\/$/, "") : `https://${configured.replace(/\/$/, "")}`;
+  }
+
+  const proto = getHeader(req, "x-forwarded-proto") || "https";
+  const host = getHeader(req, "x-forwarded-host") || getHeader(req, "host");
+  return `${proto}://${host}`;
+}
+
+async function createDepositCheckout(config, req, body) {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) throw new HttpError(503, "STRIPE_SECRET_KEY is not configured.");
+
+  const caseId = sanitizeText(body.caseId);
+  const quoteId = sanitizeText(body.quoteId);
+  const providerId = sanitizeText(body.providerId);
+  const depositAmountUsd = numberOrDefault(body.depositAmountUsd ?? body.depositAmount, -1);
+  const unitAmount = Math.round(depositAmountUsd * 100);
+
+  if (!caseId || !quoteId) throw new HttpError(400, "caseId and quoteId are required.");
+  if (!Number.isFinite(unitAmount) || unitAmount <= 0) throw new HttpError(400, "A valid deposit amount is required.");
+
+  const baseUrl = appBaseUrl(req);
+  const params = new URLSearchParams();
+  params.append("mode", "payment");
+  params.append("client_reference_id", quoteId);
+  params.append("success_url", `${baseUrl}/admin/quote-booking?deposit=success&session_id={CHECKOUT_SESSION_ID}`);
+  params.append("cancel_url", `${baseUrl}/admin/quote-booking?deposit=cancelled`);
+  params.append("line_items[0][quantity]", "1");
+  params.append("line_items[0][price_data][currency]", "usd");
+  params.append("line_items[0][price_data][unit_amount]", String(unitAmount));
+  params.append("line_items[0][price_data][product_data][name]", `Global Patient Hub 예약금 ${quoteId}`);
+  params.append("line_items[0][price_data][product_data][description]", "Patient deposit for provider quote and booking coordination.");
+  params.append("metadata[case_id]", caseId);
+  params.append("metadata[quote_id]", quoteId);
+  if (providerId) params.append("metadata[provider_id]", providerId);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_REQUEST_TIMEOUT_MS);
+
+  let response;
+  try {
+    response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${stripeSecretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+  if (!response.ok) {
+    throw new HttpError(response.status, payload?.error?.message || "Stripe Checkout session could not be created.");
+  }
+
+  await logActivity(config, {
+    caseId,
+    actorRole: config.role,
+    actorLabel: "Stripe checkout",
+    eventType: "deposit_checkout_created",
+    eventPayload: {
+      quote_id: quoteId,
+      provider_id: providerId || null,
+      session_id: payload.id,
+      deposit_amount_usd: depositAmountUsd,
+      payment_mode: paymentMode(),
+    },
+  });
+
+  return { ok: true, checkoutUrl: payload.url, sessionId: payload.id, paymentMode: paymentMode() };
+}
+
+function allowedRolesForAction(action) {
+  if (action === "setShortlist") return ["admin", "partner"];
+  if (action === "submitProviderQuote") return ["admin", "provider"];
+  if (action === "assignPartner" || action === "advanceCaseStatus" || action === "requestQuotes" || action === "queueNotification" || action === "createDepositCheckout") {
+    return ["admin"];
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   try {
-    const config = requireConfig(req);
-    if (config.error) return json(res, config.status, { error: config.error });
-
     if (req.method === "GET") {
+      const config = requireConfig(req, ["admin", "partner", "provider"]);
+      if (config.error) return json(res, config.status, { error: config.error });
       return json(res, 200, await getSnapshot(config));
     }
 
     if (req.method === "POST") {
       const body = await readBody(req);
+      const allowedRoles = allowedRolesForAction(body.action);
+      if (!allowedRoles) return json(res, 400, { error: "Unsupported action." });
+
+      const config = requireConfig(req, allowedRoles);
+      if (config.error) return json(res, config.status, { error: config.error });
+
       if (body.action === "assignPartner") await assignPartner(config, body);
       else if (body.action === "advanceCaseStatus") await advanceCaseStatus(config, body);
       else if (body.action === "setShortlist") await setShortlist(config, body);
       else if (body.action === "requestQuotes") await requestQuotes(config, body);
       else if (body.action === "submitProviderQuote") await submitProviderQuote(config, body);
-      else return json(res, 400, { error: "Unsupported action." });
+      else if (body.action === "queueNotification") return json(res, 200, await queueNotification(config, body));
+      else if (body.action === "createDepositCheckout") return json(res, 200, await createDepositCheckout(config, req, body));
 
       return json(res, 200, await getSnapshot(config));
     }
 
     return json(res, 405, { error: "Method not allowed." });
   } catch (error) {
-    return json(res, 500, { error: error instanceof Error ? error.message : "Unexpected server error." });
+    return json(res, error?.status || 500, { error: error instanceof Error ? error.message : "Unexpected server error." });
   }
 }

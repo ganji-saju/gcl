@@ -24,9 +24,10 @@ import AdminLandingRoutes from "./pages/AdminLandingRoutes";
 import PartnerCaseBoard from "./pages/PartnerCaseBoard";
 import ProviderQuoteDesk from "./pages/ProviderQuoteDesk";
 import OpsHealth from "./pages/OpsHealth";
+import type { OpsRole } from "./lib/partnerMvpApi";
 
-function InternalRoute({ children }: { children: ReactNode }) {
-  return <InternalOpsGate>{children}</InternalOpsGate>;
+function InternalRoute({ children, allowedRoles = ["admin"], title }: { children: ReactNode; allowedRoles?: OpsRole[]; title?: string }) {
+  return <InternalOpsGate allowedRoles={allowedRoles} title={title}>{children}</InternalOpsGate>;
 }
 
 function ClosedBetaOpsRoute() {
@@ -46,11 +47,11 @@ function AdminLandingRoutesRoute() {
 }
 
 function PartnerCaseBoardRoute() {
-  return <InternalRoute><PartnerCaseBoard /></InternalRoute>;
+  return <InternalRoute allowedRoles={["admin", "partner"]} title="파트너 운영 접근"><PartnerCaseBoard /></InternalRoute>;
 }
 
 function ProviderQuoteDeskRoute() {
-  return <InternalRoute><ProviderQuoteDesk /></InternalRoute>;
+  return <InternalRoute allowedRoles={["admin", "provider"]} title="병원 운영 접근"><ProviderQuoteDesk /></InternalRoute>;
 }
 
 function OpsHealthRoute() {
