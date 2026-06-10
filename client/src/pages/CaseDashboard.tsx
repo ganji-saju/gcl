@@ -1,9 +1,18 @@
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, CalendarClock, ClipboardList, Filter, Languages, UserRoundCheck } from "lucide-react";
+import { ArrowRight, Building2, CalendarClock, ClipboardList, Filter, Handshake, Languages, Send, UserRoundCheck } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { betaCases, betaProviders, type BetaCase, type BetaCaseStatus, formatUsd, getProvider } from "@/lib/betaData";
+import {
+  betaCases,
+  betaPartners,
+  betaProviders,
+  type BetaCase,
+  type BetaCaseStatus,
+  formatUsd,
+  getPartner,
+  getProvider,
+} from "@/lib/betaData";
 import { cn } from "@/lib/utils";
 
 const statusOrder: BetaCaseStatus[] = [
@@ -48,7 +57,9 @@ function nextStatus(status: BetaCaseStatus): BetaCaseStatus {
 
 function CaseRow({ row, selected, onSelect }: { row: BetaCase; selected: boolean; onSelect: () => void }) {
   const provider = getProvider(row.matchedProviderId);
+  const partner = getPartner(row.assignedPartnerId);
   const slaRisk = row.status === "quote_requested" || row.firstResponseMinutes > 5 || row.riskFlags.length > 0;
+  const partnerRequested = row.partnerAssistanceMode && row.partnerAssistanceMode !== "platform_direct";
 
   return (
     <button
@@ -72,7 +83,7 @@ function CaseRow({ row, selected, onSelect }: { row: BetaCase; selected: boolean
       </div>
       <div>
         <div className="text-sm font-semibold text-ink-950">{provider?.name ?? "Unmatched"}</div>
-        <div className="text-xs text-ink-500">{row.source} / {row.campaign}</div>
+        <div className="text-xs text-ink-500">{partnerRequested ? partner?.name ?? "Partner requested" : row.source} / {row.campaign}</div>
       </div>
       <div>
         <div className="text-sm font-semibold text-ink-950">{formatUsd(row.budgetMinUsd)} - {formatUsd(row.budgetMaxUsd)}</div>
@@ -114,10 +125,64 @@ export default function CaseDashboard() {
     setCases((current) => current.map((row) => (row.id === selected.id ? { ...row, matchedProviderId: providerId, status: "quote_requested" } : row)));
   }
 
+  function assignPartner(partnerId: string) {
+    if (!selected) return;
+    setCases((current) =>
+      current.map((row) =>
+        row.id === selected.id
+          ? {
+              ...row,
+              assignedPartnerId: partnerId || undefined,
+              partnerAssistanceMode: row.partnerAssistanceMode === "platform_direct" ? "partner_requested" : row.partnerAssistanceMode,
+              nextAction: partnerId ? "Partner assigned; review provider shortlist" : "Assign partner for requested services",
+            }
+          : row,
+      ),
+    );
+  }
+
+  function togglePartnerShortlist(providerId: string) {
+    if (!selected) return;
+    setCases((current) =>
+      current.map((row) => {
+        if (row.id !== selected.id) return row;
+        const existing = row.partnerShortlistedProviderIds ?? [];
+        const nextShortlist = existing.includes(providerId) ? existing.filter((id) => id !== providerId) : [...existing, providerId];
+        return {
+          ...row,
+          partnerShortlistedProviderIds: nextShortlist,
+          nextAction: nextShortlist.length ? "Coordinator to request quotes from partner shortlist" : "Partner should select provider candidates",
+        };
+      }),
+    );
+  }
+
+  function requestQuotesFromShortlist() {
+    if (!selected) return;
+    const shortlist = selected.partnerShortlistedProviderIds ?? [];
+    if (!shortlist.length) return;
+    setCases((current) =>
+      current.map((row) =>
+        row.id === selected.id
+          ? {
+              ...row,
+              status: "quote_requested",
+              matchedProviderId: row.matchedProviderId ?? shortlist[0],
+              quoteRequestedProviderIds: Array.from(new Set([...(row.quoteRequestedProviderIds ?? []), ...shortlist])),
+              nextAction: "Provider quote SLA check",
+              nextActionAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+            }
+          : row,
+      ),
+    );
+  }
+
   const counts = statusOrder.map((status) => ({
     status,
     count: cases.filter((row) => row.status === status).length,
   }));
+  const partnerRequestedCount = cases.filter((row) => row.partnerAssistanceMode && row.partnerAssistanceMode !== "platform_direct").length;
+  const partnerAssignedCount = cases.filter((row) => row.assignedPartnerId).length;
 
   return (
     <Layout>
@@ -130,17 +195,33 @@ export default function CaseDashboard() {
                 Coordinator case dashboard
               </div>
               <h1 className="font-serif text-5xl text-ink-950">Closed beta case board</h1>
-              <p className="mt-3 max-w-2xl text-ink-600">Live operating surface for lead qualification, manual matching, quote SLA, deposit follow-up, and booking readiness.</p>
+              <p className="mt-3 max-w-2xl text-ink-600">Live operating surface for lead qualification, partner assignment, provider shortlisting, quote SLA, deposit follow-up, and booking readiness.</p>
             </div>
-            <Link href="/admin/quote-booking">
-              <Button className="bg-teal-700 text-white hover:bg-teal-800">
-                Quote / Deposit / Booking
-                <ArrowRight className="size-4" />
-              </Button>
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/partner/cases">
+                <Button variant="outline" className="border-ink-300 text-ink-800">
+                  Partner view
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+              <Link href="/admin/quote-booking">
+                <Button className="bg-teal-700 text-white hover:bg-teal-800">
+                  Quote / Deposit / Booking
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <div className="mt-6 grid gap-3 md:grid-cols-4 xl:grid-cols-6">
+            <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 text-left">
+              <div className="font-serif text-2xl text-ink-950">{partnerRequestedCount}</div>
+              <div className="text-xs font-semibold text-teal-700">partner requested</div>
+            </div>
+            <div className="rounded-lg border border-ink-200 bg-white p-3 text-left">
+              <div className="font-serif text-2xl text-ink-950">{partnerAssignedCount}</div>
+              <div className="text-xs font-semibold text-ink-500">partner assigned</div>
+            </div>
             {counts.filter((item) => item.count > 0 || visibleStatuses.includes(item.status)).slice(0, 6).map((item) => (
               <button
                 key={item.status}
@@ -242,6 +323,92 @@ export default function CaseDashboard() {
                   </div>
                   <div className="font-semibold text-ink-950">{selectedProvider?.name ?? "Not matched"}</div>
                 </div>
+              </div>
+
+              <div className="mt-5 rounded-md border border-teal-200 bg-teal-50 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-teal-900">
+                  <Handshake className="size-4" />
+                  Partner service request
+                </div>
+                <div className="grid gap-2 text-sm text-ink-700">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-ink-500">Mode</span>
+                    <span className="font-semibold text-ink-950">{selected.partnerAssistanceMode ?? "platform_direct"}</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-ink-500">Consent</span>
+                    <span className={cn("font-semibold", selected.partnerShareConsent ? "text-teal-700" : "text-coral-700")}>
+                      {selected.partnerShareConsent ? "shared scope approved" : "needs consent"}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="mb-1 text-ink-500">Requested services</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(selected.requestedPartnerServices?.length ? selected.requestedPartnerServices : ["none"]).map((service) => (
+                        <span key={service} className="rounded bg-white px-2 py-1 text-xs font-semibold text-ink-700">
+                          {service.replaceAll("_", " ")}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <label className="mt-2 grid gap-1.5 font-medium text-ink-800">
+                    Assign partner
+                    <select
+                      value={selected.assignedPartnerId ?? ""}
+                      onChange={(event) => assignPartner(event.target.value)}
+                      className="h-11 rounded-md border border-teal-200 bg-white px-3 text-sm text-ink-900"
+                    >
+                      <option value="">Unassigned</option>
+                      {betaPartners.filter((partner) => partner.active).map((partner) => (
+                        <option key={partner.id} value={partner.id}>
+                          {partner.name} / {partner.type.replaceAll("_", " ")}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
+                  <Building2 className="size-4 text-teal-700" />
+                  Partner provider shortlist
+                </div>
+                <div className="grid gap-2">
+                  {betaProviders.filter((provider) => provider.active).map((provider) => {
+                    const selectedForShortlist = Boolean(selected.partnerShortlistedProviderIds?.includes(provider.id));
+                    const requested = Boolean(selected.quoteRequestedProviderIds?.includes(provider.id));
+                    return (
+                      <button
+                        key={provider.id}
+                        type="button"
+                        onClick={() => togglePartnerShortlist(provider.id)}
+                        className={cn(
+                          "rounded-md border p-3 text-left text-sm transition-colors",
+                          selectedForShortlist ? "border-teal-300 bg-teal-50" : "border-ink-200 bg-ink-50 hover:bg-white",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-semibold text-ink-950">{provider.name}</span>
+                          <span className={cn("text-xs font-bold", requested ? "text-teal-700" : "text-ink-400")}>
+                            {requested ? "quote requested" : `${provider.betaScore} fit`}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-ink-500">
+                          {provider.languages.join(", ").toUpperCase()} / {provider.slaHours}h SLA
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button
+                  onClick={requestQuotesFromShortlist}
+                  disabled={!selected.partnerShortlistedProviderIds?.length}
+                  className="mt-3 w-full bg-teal-700 text-white hover:bg-teal-800 disabled:bg-ink-300"
+                >
+                  <Send className="size-4" />
+                  Coordinator request quote
+                </Button>
               </div>
 
               <div className="mt-5 rounded-md border border-coral-200 bg-coral-50 p-4">

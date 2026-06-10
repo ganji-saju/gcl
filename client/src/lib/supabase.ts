@@ -17,6 +17,9 @@ export interface InquiryInput {
   budgetMax?: number;
   currency?: string;
   message?: string;
+  partnerAssistanceMode?: string;
+  partnerServices?: string[];
+  partnerShareConsent?: boolean;
   hasKoreanNationalHealthInsurance?: boolean;
   hasKoreanAlienRegistration?: boolean;
   hasOverseasKoreanResidenceReport?: boolean;
@@ -53,6 +56,9 @@ function getAttribution(input: InquiryInput) {
     source_landing: clean(input.sourceLanding) ?? searchParams.get("source_landing"),
     package_interest: clean(input.packageInterest),
     market: clean(input.market),
+    partner_assistance_mode: clean(input.partnerAssistanceMode) ?? "platform_direct",
+    partner_services: input.partnerServices ?? [],
+    partner_share_consent: Boolean(input.partnerShareConsent),
     current_path: typeof window === "undefined" ? null : window.location.pathname,
   };
 }
@@ -80,6 +86,9 @@ function toRecord(input: InquiryInput) {
     input.residenceCountry ? `Residence: ${input.residenceCountry}` : null,
     input.travelStartDate || input.travelEndDate ? `Travel window: ${input.travelStartDate ?? "?"} to ${input.travelEndDate ?? "?"}` : null,
     input.budgetMin || input.budgetMax ? `Budget numeric: ${input.budgetMin ?? "?"}-${input.budgetMax ?? "?"} ${input.currency ?? "USD"}` : null,
+    input.partnerAssistanceMode && input.partnerAssistanceMode !== "platform_direct" ? `Partner mode: ${input.partnerAssistanceMode}` : null,
+    input.partnerServices?.length ? `Partner services: ${input.partnerServices.join(", ")}` : null,
+    input.partnerShareConsent ? "Partner sharing consent: yes" : input.partnerServices?.length ? "Partner sharing consent: no" : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -127,6 +136,14 @@ async function insertSupabaseRecord(table: string, record: Record<string, unknow
   if (!response.ok) {
     const details = await response.text().catch(() => "");
     throw new Error(details || `Supabase ${table} insert failed with ${response.status}`);
+  }
+}
+
+async function tryInsertSupabaseRecord(table: string, record: Record<string, unknown>): Promise<void> {
+  try {
+    await insertSupabaseRecord(table, record);
+  } catch (error) {
+    console.warn(`Optional Supabase ${table} insert skipped.`, error);
   }
 }
 
@@ -238,11 +255,40 @@ async function insertV1LeadCase(input: InquiryInput): Promise<InquiryResult> {
     risk_flags: {
       market: clean(input.market),
       package_interest: clean(input.packageInterest),
+      partner_assistance_mode: clean(input.partnerAssistanceMode) ?? "platform_direct",
+      partner_services: input.partnerServices ?? [],
+      partner_share_consent: Boolean(input.partnerShareConsent),
       source_landing: clean(input.sourceLanding),
     },
     status: "submitted",
     submitted_at: new Date().toISOString(),
   });
+
+  const requestedServices = input.partnerServices?.filter(Boolean) ?? [];
+  const partnerMode = clean(input.partnerAssistanceMode) ?? "platform_direct";
+  const hasPartnerRequest = partnerMode !== "platform_direct" || requestedServices.length > 0;
+
+  if (hasPartnerRequest) {
+    await tryInsertSupabaseRecord("partner_service_requests", {
+      id: crypto.randomUUID(),
+      lead_id: leadId,
+      case_id: caseId,
+      assistance_mode: partnerMode,
+      requested_services: requestedServices,
+      patient_notes: clean(input.message),
+      consent_to_share_with_partners: Boolean(input.partnerShareConsent),
+      status: "requested",
+      request_snapshot: {
+        market: clean(input.market),
+        package_interest: clean(input.packageInterest),
+        treatment_interest: clean(input.treatmentInterest),
+        travel_start_date: clean(input.travelStartDate),
+        travel_end_date: clean(input.travelEndDate),
+        residence_country: clean(input.residenceCountry),
+        preferred_language: input.preferredLanguage,
+      },
+    });
+  }
 
   return { saved: true, demoMode: false, storage: "v1", leadId, caseId, eligible: true };
 }

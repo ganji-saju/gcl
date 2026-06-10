@@ -30,6 +30,9 @@ interface FormData {
   travelEndDate?: string;
   budget?: string;
   message?: string;
+  partnerAssistanceMode: string;
+  partnerServices?: string[];
+  partnerShareConsent?: boolean;
   hasKoreanNationalHealthInsurance?: boolean;
   hasKoreanAlienRegistration?: boolean;
   hasOverseasKoreanResidenceReport?: boolean;
@@ -45,6 +48,21 @@ const BUDGETS = [
   { label: "$10,000 - $20,000", min: 10000, max: 20000 },
   { label: "Over $20,000", min: 20000, max: 50000 },
   { label: "Flexible", min: undefined, max: undefined },
+];
+
+const PARTNER_ASSISTANCE_MODES = [
+  { value: "platform_direct", label: "Hospital matching only" },
+  { value: "partner_requested", label: "I want agency / agent support" },
+  { value: "partner_originated", label: "I am already speaking with an agency or agent" },
+];
+
+const PARTNER_SERVICE_OPTIONS = [
+  { value: "medical_agency", label: "Medical agency coordination" },
+  { value: "personal_agent", label: "Personal agent" },
+  { value: "interpreter", label: "Interpreter" },
+  { value: "travel_agency", label: "Travel planning" },
+  { value: "airport_pickup", label: "Airport pickup" },
+  { value: "hotel_recovery", label: "Hotel / recovery support" },
 ];
 
 export default function Consultation() {
@@ -79,13 +97,19 @@ export default function Consultation() {
       treatmentInterest: preselectedTreatment || resolvedPackage?.treatmentSlug,
       packageInterest: resolvedPackage?.id ?? preselectedPackage,
       market: preselectedMarket || (resolvedPackage?.market === "taiwan" ? "taiwan" : "japan"),
+      partnerAssistanceMode: "platform_direct",
+      partnerServices: [],
+      partnerShareConsent: false,
       consent: true,
     },
   });
 
   const preferredLanguage = watch("preferredLanguage");
   const selectedPackageId = watch("packageInterest");
+  const partnerAssistanceMode = watch("partnerAssistanceMode");
+  const selectedPartnerServices = watch("partnerServices") ?? [];
   const selectedPackage = useMemo(() => getSkinPackageById(selectedPackageId ?? ""), [selectedPackageId]);
+  const partnerSupportRequested = partnerAssistanceMode !== "platform_direct" || selectedPartnerServices.length > 0;
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
@@ -110,6 +134,9 @@ export default function Consultation() {
         budgetMax: selectedBudget?.max,
         currency: "USD",
         message: data.message,
+        partnerAssistanceMode: data.partnerAssistanceMode,
+        partnerServices: data.partnerServices,
+        partnerShareConsent: data.partnerShareConsent,
         hasKoreanNationalHealthInsurance: data.hasKoreanNationalHealthInsurance,
         hasKoreanAlienRegistration: data.hasKoreanAlienRegistration,
         hasOverseasKoreanResidenceReport: data.hasOverseasKoreanResidenceReport,
@@ -336,6 +363,52 @@ export default function Consultation() {
                 <p className="mt-3 text-xs leading-5 text-ink-500">
                   {t("consult.eligibilityHelp")}
                 </p>
+              </div>
+
+              <div>
+                <h2 className="mb-4 font-serif text-3xl text-ink-950">Partner support request</h2>
+                <div className="grid gap-4">
+                  <Field label="How would you like to be supported?">
+                    <select
+                      {...register("partnerAssistanceMode")}
+                      className="h-11 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    >
+                      {PARTNER_ASSISTANCE_MODES.map((mode) => (
+                        <option key={mode.value} value={mode.value}>
+                          {mode.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <div>
+                    <Label className="mb-3 block text-sm font-semibold text-ink-800">Optional partner services</Label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {PARTNER_SERVICE_OPTIONS.map((option) => (
+                        <label key={option.value} className="flex gap-3 rounded-md border border-ink-200 bg-ink-50 p-4 text-sm text-ink-700">
+                          <input
+                            type="checkbox"
+                            value={option.value}
+                            {...register("partnerServices")}
+                            className="mt-1 size-4 rounded border-ink-300 accent-teal-700"
+                          />
+                          {option.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {partnerSupportRequested && (
+                    <label className="flex gap-3 rounded-md border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900">
+                      <input
+                        type="checkbox"
+                        {...register("partnerShareConsent")}
+                        className="mt-1 size-4 rounded border-teal-300 accent-teal-700"
+                      />
+                      I agree that Global Patient Hub may share the minimum necessary case, travel, and contact details with assigned partner operators for the selected non-medical services.
+                    </label>
+                  )}
+                </div>
               </div>
 
               <div>

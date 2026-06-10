@@ -37,6 +37,19 @@ export interface BetaProviderCandidate {
   platformRevenueUsd: number;
 }
 
+export interface BetaPartner {
+  id: string;
+  name: string;
+  type: "agency" | "personal_agent" | "interpreter" | "travel_agency" | "concierge";
+  verificationStatus: "pending" | "verified" | "rejected";
+  languages: string[];
+  markets: string[];
+  services: string[];
+  preferredProviderIds: string[];
+  active: boolean;
+  slaHours: number;
+}
+
 export interface BetaCase {
   id: string;
   leadId: string;
@@ -57,6 +70,12 @@ export interface BetaCase {
   travelStart: string;
   travelEnd: string;
   matchedProviderId?: string;
+  partnerAssistanceMode?: "platform_direct" | "partner_requested" | "partner_originated" | "partner_managed";
+  requestedPartnerServices?: string[];
+  partnerShareConsent?: boolean;
+  assignedPartnerId?: string;
+  partnerShortlistedProviderIds?: string[];
+  quoteRequestedProviderIds?: string[];
   firstResponseMinutes: number;
   nextAction: string;
   nextActionAt: string;
@@ -263,6 +282,45 @@ export const betaProviders: BetaProviderCandidate[] = [
   },
 ];
 
+export const betaPartners: BetaPartner[] = [
+  {
+    id: "partner-001",
+    name: "Tokyo Care Bridge",
+    type: "agency",
+    verificationStatus: "verified",
+    languages: ["ja", "en", "ko"],
+    markets: ["japan"],
+    services: ["medical_agency", "personal_agent", "interpreter"],
+    preferredProviderIds: ["prov-001", "prov-002"],
+    active: true,
+    slaHours: 4,
+  },
+  {
+    id: "partner-002",
+    name: "Taipei Wellness Travel",
+    type: "travel_agency",
+    verificationStatus: "verified",
+    languages: ["zh", "en", "ko"],
+    markets: ["taiwan"],
+    services: ["travel_agency", "airport_pickup", "hotel_recovery"],
+    preferredProviderIds: ["prov-003", "prov-005"],
+    active: true,
+    slaHours: 6,
+  },
+  {
+    id: "partner-003",
+    name: "Seoul Med Interpreter Pool",
+    type: "interpreter",
+    verificationStatus: "pending",
+    languages: ["ja", "zh", "en", "ko"],
+    markets: ["japan", "taiwan"],
+    services: ["interpreter", "concierge"],
+    preferredProviderIds: ["prov-001", "prov-005"],
+    active: true,
+    slaHours: 8,
+  },
+];
+
 export const betaCases: BetaCase[] = [
   {
     id: "case-0001",
@@ -284,6 +342,9 @@ export const betaCases: BetaCase[] = [
     travelStart: "2026-07-10",
     travelEnd: "2026-07-12",
     matchedProviderId: "prov-001",
+    partnerAssistanceMode: "platform_direct",
+    requestedPartnerServices: [],
+    partnerShareConsent: false,
     firstResponseMinutes: 4,
     nextAction: "Follow up quote acceptance",
     nextActionAt: "2026-06-10 18:00",
@@ -308,8 +369,13 @@ export const betaCases: BetaCase[] = [
     budgetMaxUsd: 1800,
     travelStart: "2026-07-18",
     travelEnd: "2026-07-21",
+    partnerAssistanceMode: "partner_requested",
+    requestedPartnerServices: ["interpreter", "travel_agency", "hotel_recovery"],
+    partnerShareConsent: true,
+    assignedPartnerId: "partner-002",
+    partnerShortlistedProviderIds: ["prov-003", "prov-005"],
     firstResponseMinutes: 7,
-    nextAction: "Run manual match",
+    nextAction: "Coordinator to request quotes from partner shortlist",
     nextActionAt: "2026-06-10 16:00",
     riskFlags: [],
   },
@@ -333,6 +399,12 @@ export const betaCases: BetaCase[] = [
     travelStart: "2026-07-05",
     travelEnd: "2026-07-08",
     matchedProviderId: "prov-002",
+    partnerAssistanceMode: "partner_originated",
+    requestedPartnerServices: ["medical_agency", "interpreter"],
+    partnerShareConsent: true,
+    assignedPartnerId: "partner-001",
+    partnerShortlistedProviderIds: ["prov-001", "prov-002"],
+    quoteRequestedProviderIds: ["prov-002"],
     firstResponseMinutes: 5,
     nextAction: "Pre-visit confirmation",
     nextActionAt: "2026-07-03 09:00",
@@ -357,8 +429,11 @@ export const betaCases: BetaCase[] = [
     budgetMaxUsd: 3000,
     travelStart: "2026-08-02",
     travelEnd: "2026-08-06",
+    partnerAssistanceMode: "partner_requested",
+    requestedPartnerServices: ["personal_agent", "interpreter"],
+    partnerShareConsent: false,
     firstResponseMinutes: 3,
-    nextAction: "Collect intake and photo consent",
+    nextAction: "Collect intake, photo consent, and partner-sharing consent",
     nextActionAt: "2026-06-10 17:30",
     riskFlags: ["photo_consent_pending"],
   },
@@ -382,6 +457,12 @@ export const betaCases: BetaCase[] = [
     travelStart: "2026-07-22",
     travelEnd: "2026-07-25",
     matchedProviderId: "prov-005",
+    partnerAssistanceMode: "partner_managed",
+    requestedPartnerServices: ["travel_agency", "airport_pickup", "hotel_recovery"],
+    partnerShareConsent: true,
+    assignedPartnerId: "partner-002",
+    partnerShortlistedProviderIds: ["prov-005"],
+    quoteRequestedProviderIds: ["prov-005"],
     firstResponseMinutes: 9,
     nextAction: "Provider quote SLA check",
     nextActionAt: "2026-06-11 09:00",
@@ -407,6 +488,9 @@ export const betaCases: BetaCase[] = [
     travelStart: "2026-06-28",
     travelEnd: "2026-06-30",
     matchedProviderId: "prov-001",
+    partnerAssistanceMode: "platform_direct",
+    requestedPartnerServices: [],
+    partnerShareConsent: false,
     firstResponseMinutes: 2,
     nextAction: "Send 24h deposit follow-up",
     nextActionAt: "2026-06-11 10:00",
@@ -619,6 +703,10 @@ export const channelRankings: ChannelRanking[] = [
 
 export function getProvider(providerId?: string) {
   return betaProviders.find((provider) => provider.id === providerId);
+}
+
+export function getPartner(partnerId?: string) {
+  return betaPartners.find((partner) => partner.id === partnerId);
 }
 
 export function formatUsd(value: number) {

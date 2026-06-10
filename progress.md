@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-10  
 Current production URL: https://global-patient-hub.vercel.app  
-Latest verified app commit before this planning update: `ba002b9`
+Latest verified app commit before partner-assisted MVP work: `ba002b9`
 
 ## 1. Current Product State
 
@@ -23,6 +23,7 @@ The public site currently includes:
 - Automatic scroll reset on route changes.
 - Multilingual UI with RTL support for Arabic.
 - Planned V2 partner-assisted care model documented in `docs/product/07-multi-sided-partner-network-plan.md`.
+- Consultation form partner-support request fields for agency, agent, interpreter, travel, pickup, and recovery support.
 
 Internal/admin surfaces currently include:
 
@@ -30,6 +31,7 @@ Internal/admin surfaces currently include:
 - `/admin/cases`: case dashboard.
 - `/admin/quote-booking`: quote/deposit/booking MVP.
 - `/admin/landing-routes`: internal landing route inventory and draft input UI.
+- `/partner/cases`: partner-safe assigned case and provider-shortlist MVP.
 
 Important: `/admin/*` routes are hidden from public navigation, but they are not yet protected by authentication or RBAC. Do not put real confidential data there before adding route protection.
 
@@ -70,6 +72,31 @@ Relevant files:
 - `supabase/schema.sql`
 - `supabase/migrations/20260609_0001_core_marketplace_schema.sql`
 - `supabase/migrations/20260609_0002_public_v1_lead_capture_policies.sql`
+- `supabase/migrations/20260610_0003_partner_assisted_mvp.sql`
+
+### Partner-Assisted MVP Flow
+
+Implemented the first operational slice for:
+
+`patient consultation -> partner service request saved -> admin partner assignment -> partner case review -> partner provider shortlist -> coordinator quote request`
+
+Current MVP behavior:
+
+- Consultation form captures partner assistance mode, requested partner services, and partner-sharing consent.
+- Supabase lead storage persists partner request data in attribution/risk flags.
+- If the `partner_service_requests` table exists, eligible v1 cases also attempt to insert a partner service request.
+- New additive Supabase migration adds partner service request, partner verification, case assignment, partner-provider relationship, shortlist, and partner service quote tables.
+- Admin case dashboard shows partner request counts, requested services, consent status, partner assignment, provider shortlist, and coordinator quote-request action.
+- Partner case board shows only assigned cases using a partner-safe summary and lets partners select hospital candidates.
+
+Relevant files:
+
+- `client/src/pages/Consultation.tsx`
+- `client/src/lib/supabase.ts`
+- `client/src/pages/CaseDashboard.tsx`
+- `client/src/pages/PartnerCaseBoard.tsx`
+- `client/src/lib/betaData.ts`
+- `supabase/migrations/20260610_0003_partner_assisted_mvp.sql`
 
 ### Japan/Taiwan Skin Package Wedge
 
