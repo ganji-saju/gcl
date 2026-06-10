@@ -1,6 +1,6 @@
 # Global Patient Hub Product Design Pack
 
-Last updated: 2026-06-09
+Last updated: 2026-06-10
 
 This folder contains the v1 product and implementation design for a Korean international patient acquisition platform.
 
@@ -15,6 +15,7 @@ This folder contains the v1 product and implementation design for a Korean inter
 | 5 | `04-mvp-backlog-sprint-1.md` | Jira/Linear-ready MVP backlog and Sprint 1 kickoff |
 | 6 | `05-validation-roadmap-japan-taiwan-skin-wedge.md` | Pre-development validation roadmap for Japan/Taiwan skin package wedge |
 | 7 | `06-closed-beta-operating-plan.md` | Closed beta operating plan for provider SLA, coordinator workflow, 300-lead test, deposits, ledger, and rankings |
+| 8 | `07-multi-sided-partner-network-plan.md` | V2 plan for patient-partner-provider orchestration across agencies, agents, interpreters, travel agencies, and hospitals |
 
 ## Executable Schema
 
@@ -35,7 +36,8 @@ operating plan in `06-closed-beta-operating-plan.md`.
 5. Build Provider Compliance Documents and Quote Composer.
 6. Run closed beta with 5 provider SLAs, 300 leads, and 15+ deposits.
 7. Implement matching engine and quote/booking/deposit workflows.
+8. Expand partner support from referral attribution into case-scoped partner services, partner-assisted matching, and partner-provider shortlisting after the v1 compliance and case workflow is stable.
 
 ## Production Caution
 
-This pack encodes product and technical guardrails, but it is not a legal opinion. Before launch, validate foreign-patient eligibility logic, provider-registration requirements, medical-advertising handling, and commission-cap handling with qualified Korean healthcare regulatory counsel.
+This pack encodes product and technical guardrails, but it is not a legal opinion. Before launch, validate foreign-patient eligibility logic, provider-registration requirements, medical-advertising handling, partner/facilitator registration requirements, travel/interpreter service boundaries, and commission-cap handling with qualified Korean healthcare regulatory counsel.

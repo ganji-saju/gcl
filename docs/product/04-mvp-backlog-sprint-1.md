@@ -1,6 +1,6 @@
 # MVP Backlog and Sprint 1 Kickoff
 
-Last updated: 2026-06-09
+Last updated: 2026-06-10
 
 Ticket format is Jira/Linear-ready:
 
@@ -24,6 +24,13 @@ Do not start the full Sprint 1 build until the validation roadmap in
 
 The tickets below remain the implementation backlog once those validation gates pass.
 
+Planning update: `GPH-008 Partner Referral` is no longer only a link-based
+referral/commission feature. It should expand into the multi-sided partner
+network described in `07-multi-sided-partner-network-plan.md`, where agencies,
+individual agents, interpreters, and travel agencies can be assigned to cases,
+offer non-medical services, and help shortlist compliant providers under
+platform guardrails.
+
 ## MVP Epics
 
 | ID | Type | Priority | Epic | Outcome |
@@ -38,6 +45,7 @@ The tickets below remain the implementation backlog once those validation gates 
 | GPH-008 | Epic | P1 | Partner Referral | Partners can create links and track attributed leads/commissions |
 | GPH-009 | Epic | P1 | Analytics and Attribution | Marketing funnel and source performance are measurable |
 | GPH-010 | Epic | P1 | Portal UX | Admin/Provider portal screens support MVP workflows |
+| GPH-043 | Epic | P1 | Partner-Assisted Care Network | Patients can request partner services and partners can support hospital shortlisting under compliance controls |
 
 ## P0 Stories
 
@@ -80,6 +88,13 @@ The tickets below remain the implementation backlog once those validation gates 
 | GPH-040 | GPH-003 | Story | P1 | FE | 5 | Build Provider Package Management screen |
 | GPH-041 | GPH-003 | Story | P1 | FE | 5 | Build Provider Availability screen |
 | GPH-042 | GPH-004 | Story | P1 | BE | 5 | Implement external message adapter abstraction |
+| GPH-044 | GPH-043 | Story | P1 | Product/Compliance | 3 | Define agency/agent/interpreter/travel partner compliance rules |
+| GPH-045 | GPH-043 | Story | P1 | FE/BE | 5 | Add partner-support request fields to consultation intake |
+| GPH-046 | GPH-043 | Story | P1 | BE | 5 | Add partner service request and case partner assignment model |
+| GPH-047 | GPH-043 | Story | P1 | BE | 5 | Implement partner-scoped RBAC and audit rules |
+| GPH-048 | GPH-043 | Story | P1 | FE | 5 | Build admin partner assignment MVP |
+| GPH-049 | GPH-043 | Story | P1 | BE | 5 | Build partner verification and service catalog APIs |
+| GPH-050 | GPH-043 | Story | P1 | FE | 8 | Build Partner Dashboard MVP |
 
 ## Story Details
 

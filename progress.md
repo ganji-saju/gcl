@@ -2,11 +2,13 @@
 
 Last updated: 2026-06-10  
 Current production URL: https://global-patient-hub.vercel.app  
-Latest verified commit at time of writing: `be8f06a`
+Latest verified app commit before this planning update: `ba002b9`
 
 ## 1. Current Product State
 
 Global Patient Hub is now a React + Vite static web app for a Korea-based international patient acquisition platform. The site is positioned as a regulated international patient marketplace plus coordinator CRM and quote/booking engine, with the first wedge focused on Japan/Taiwan skin package demand.
+
+The product plan has been expanded from a patient-hospital hub into a future multi-sided network: patient - partner operator - hospital. Partner operators include agencies, individual agents, interpreters, travel agencies, concierge services, and recovery/travel support vendors. The platform should remain the compliance, consent, audit, matching, and settlement layer while partners receive scoped case access and can support patient service requests and hospital shortlisting.
 
 The public site currently includes:
 
@@ -20,6 +22,7 @@ The public site currently includes:
 - Back-to-top button.
 - Automatic scroll reset on route changes.
 - Multilingual UI with RTL support for Arabic.
+- Planned V2 partner-assisted care model documented in `docs/product/07-multi-sided-partner-network-plan.md`.
 
 Internal/admin surfaces currently include:
 
@@ -52,6 +55,7 @@ Relevant files:
 The initial PRD direction was translated into documentation and schema assets for:
 
 - Regulated foreign patient marketplace.
+- Future partner-assisted patient acquisition and care orchestration.
 - Coordinator CRM.
 - Quote/booking/deposit workflow.
 - Compliance guardrails.
@@ -647,4 +651,3 @@ Priority next steps:
 6. Add route-level code splitting to reduce bundle size.
 7. Add real provider verification workflow and document expiry alerts.
 8. Add settlement ledger persistence and audit logs.
-
