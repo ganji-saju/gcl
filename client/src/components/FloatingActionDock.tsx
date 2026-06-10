@@ -6,28 +6,30 @@ const CONTACT_LINKS = [
   {
     label: "WhatsApp",
     shortLabel: "WA",
-    href: "https://wa.me/82262002026?text=Hello%20Global%20Patient%20Hub%2C%20I%20would%20like%20to%20ask%20about%20Korea%20skin%20packages.",
+    href:
+      import.meta.env.VITE_CONTACT_WHATSAPP_URL ||
+      "https://wa.me/82262002026?text=Hello%20Global%20Patient%20Hub%2C%20I%20would%20like%20to%20ask%20about%20Korea%20skin%20packages.",
     className: "bg-[#25D366] text-white hover:bg-[#1fb758]",
   },
   {
     label: "LINE",
     shortLabel: "LINE",
-    href: "https://line.me/R/ti/p/@globalpatienthub",
+    href: import.meta.env.VITE_CONTACT_LINE_URL || "https://line.me/R/ti/p/@globalpatienthub",
     className: "bg-[#06C755] text-white hover:bg-[#05aa49]",
   },
   {
     label: "WeChat",
     shortLabel: "WC",
-    href: "weixin://dl/chat?globalpatienthub",
+    href: import.meta.env.VITE_CONTACT_WECHAT_URL || "weixin://dl/chat?globalpatienthub",
     className: "bg-[#07C160] text-white hover:bg-[#06a653]",
   },
   {
     label: "KakaoTalk",
     shortLabel: "KO",
-    href: "https://pf.kakao.com/_globalpatienthub/chat",
+    href: import.meta.env.VITE_CONTACT_KAKAO_URL || "https://pf.kakao.com/_globalpatienthub/chat",
     className: "bg-[#FEE500] text-ink-950 hover:bg-[#f3d900]",
   },
-];
+].filter((link) => Boolean(link.href));
 
 export default function FloatingActionDock() {
   const [open, setOpen] = useState(false);

@@ -30,12 +30,12 @@ Internal/admin surfaces currently include:
 - `/admin/beta`: closed beta command center.
 - `/admin/cases`: case dashboard.
 - `/admin/quote-booking`: quote/deposit/booking MVP.
-- `/admin/landing-routes`: internal landing route inventory and draft input UI.
+- `/admin/landing-routes`: internal landing route inventory plus Supabase-backed draft input UI.
 - `/partner/cases`: partner-safe assigned case and provider-shortlist MVP.
 - `/provider/quotes`: provider quote desk for responding to coordinator quote requests.
 - `/api/admin/partner-mvp`: server-side Vercel API for protected partner-assisted operations.
 
-Important: `/admin/*` routes are hidden from public navigation, but they are not yet protected by full authentication or RBAC. Real Supabase operations are gated by the server-side `ADMIN_API_TOKEN`; keep confidential medical documents out of the frontend until proper auth/role policies are added.
+Important: `/admin/*`, `/partner/*`, and `/provider/*` now render through `InternalOpsGate`, which validates the entered token against the server-side `/api/admin/partner-mvp` API before showing internal screens. Real Supabase operations are still gated by server-side tokens and service-role credentials; keep confidential medical documents out of the frontend until full user-account auth and private storage policies are added.
 
 ## 2. Work Completed
 
@@ -323,24 +323,14 @@ CSS direction fallback lives in:
 
 ### Change Floating Contact Buttons
 
-Edit:
+Set official account URLs through environment variables:
 
-- `client/src/components/FloatingActionDock.tsx`
+- `VITE_CONTACT_WHATSAPP_URL`
+- `VITE_CONTACT_LINE_URL`
+- `VITE_CONTACT_WECHAT_URL`
+- `VITE_CONTACT_KAKAO_URL`
 
-Look for:
-
-```ts
-const CONTACT_LINKS = [...]
-```
-
-Update the `href` values when the official IDs are confirmed:
-
-- WhatsApp: `https://wa.me/...`
-- LINE: `https://line.me/R/ti/p/...`
-- WeChat: `weixin://dl/chat?...`
-- KakaoTalk: `https://pf.kakao.com/.../chat`
-
-Current values are placeholders based on the project phone/handle pattern. Replace before production marketing traffic.
+`client/src/components/FloatingActionDock.tsx` keeps development fallbacks only. Production should use Vercel environment variables so official account changes do not require a code edit.
 
 ### Change Back-to-Top or Route Scroll Behavior
 
@@ -624,10 +614,10 @@ Keep these rules when editing copy or data:
 
 ## 9. Known Limitations
 
-- `/admin/*` is not auth-protected yet.
-- Admin route draft form is local UI state only; it does not persist to Supabase/CMS yet.
-- Floating contact channel IDs should be replaced with official production IDs.
-- Current data is mostly seed/static data, not real live provider inventory.
+- Internal access is token-gated and role-checked through the operations API, but it is not yet full user-account authentication with per-user sessions.
+- Admin route drafts can persist to `admin_landing_routes` after migration `20260610_0006_admin_ops_persistence.sql` is applied.
+- Floating contact channel URLs are environment-configurable via `VITE_CONTACT_*_URL`; replace placeholder/fallback IDs with official production accounts in Vercel.
+- Current provider rows are candidate/seed operating data. Do not treat them as public verified provider inventory until registration, insurance, SLA, language, and pricing evidence is uploaded.
 - Vite build has a chunk-size warning. It is not blocking, but future code splitting can improve load performance.
 - Supabase insert depends on correct env vars and applied migrations.
 
@@ -693,11 +683,10 @@ Do not remove the lock while a real Git operation is running.
 
 Priority next steps:
 
-1. Add auth/RBAC protection for `/admin/*`.
-2. Replace static admin seed data with Supabase-backed tables.
-3. Connect landing route manager drafts to persistence.
-4. Replace contact channel placeholder IDs with official accounts.
+1. Apply migration `20260610_0006_admin_ops_persistence.sql` to production Supabase.
+2. Set official `VITE_CONTACT_WHATSAPP_URL`, `VITE_CONTACT_LINE_URL`, `VITE_CONTACT_WECHAT_URL`, and `VITE_CONTACT_KAKAO_URL` in Vercel.
+3. Replace candidate provider rows with signed/verified Gangnam hospital data and mark readiness through `provider_operating_profiles`.
+4. Add full user-account auth on top of the current token gate.
 5. Add spam protection to consultation submission.
 6. Add route-level code splitting to reduce bundle size.
-7. Add real provider verification workflow and document expiry alerts.
-8. Add settlement ledger persistence and audit logs.
+7. Add settlement ledger persistence and audit logs.

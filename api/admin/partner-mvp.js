@@ -206,6 +206,91 @@ async function supabaseFetch(config, path, init = {}) {
   return body;
 }
 
+async function supabaseCount(config, table) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/${table}?select=id`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+        Prefer: "count=exact",
+        Range: "0-0",
+      },
+    });
+
+    if (!response.ok) return null;
+
+    const contentRange = response.headers.get("content-range") || "";
+    const total = Number(contentRange.split("/")[1]);
+    return Number.isFinite(total) ? total : null;
+  } catch (error) {
+    console.warn(`Supabase count skipped for ${table}.`, error);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function getLeadStorageHealth(config) {
+  const [patients, leads, cases, medicalIntakes, latestLeads] = await Promise.all([
+    supabaseCount(config, "patients"),
+    supabaseCount(config, "leads"),
+    supabaseCount(config, "cases"),
+    supabaseCount(config, "medical_intakes"),
+    safeList(config, "leads", "select=created_at&order=created_at.desc&limit=1"),
+  ]);
+
+  const latestLeadAt = latestLeads[0]?.created_at || null;
+  const v1PipelineReady =
+    patients !== null &&
+    leads !== null &&
+    cases !== null &&
+    medicalIntakes !== null &&
+    leads > 0 &&
+    patients >= leads &&
+    cases <= leads &&
+    medicalIntakes <= cases;
+
+  return {
+    patients,
+    leads,
+    cases,
+    medicalIntakes,
+    latestLeadAt,
+    v1PipelineReady,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+async function getAdminPersistenceHealth(config) {
+  const [adminLandingRoutes, contactChannels, providerOperatingProfiles, providerDataQualityChecks, notificationOutbox] = await Promise.all([
+    supabaseCount(config, "admin_landing_routes"),
+    supabaseCount(config, "contact_channel_settings"),
+    supabaseCount(config, "provider_operating_profiles"),
+    supabaseCount(config, "provider_data_quality_checks"),
+    supabaseCount(config, "notification_outbox"),
+  ]);
+
+  return {
+    adminLandingRoutes,
+    contactChannels,
+    providerOperatingProfiles,
+    providerDataQualityChecks,
+    notificationOutbox,
+    ready:
+      adminLandingRoutes !== null &&
+      contactChannels !== null &&
+      providerOperatingProfiles !== null &&
+      providerDataQualityChecks !== null &&
+      notificationOutbox !== null,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
 async function list(config, table, query) {
   return supabaseFetch(config, `${table}?${query}`);
 }
@@ -358,23 +443,25 @@ function normalizePartner(row) {
 }
 
 function normalizeProvider(row) {
+  const profile = row.operating_profile || {};
+  const standardSlaHours = Number(profile.standard_sla_hours || Math.max(1, Math.ceil((row.average_response_minutes || 360) / 60)));
   return {
     id: row.id,
     name: displayName(row.name_display, row.name_legal),
     region: row.district || row.city || "Seoul",
     specialty: row.facility_type || "clinic",
     registrationVerified: Boolean(row.medical_korea_registered),
-    insuranceVerified: true,
-    languages: row.languages || ["en", "ko"],
-    slaHours: Math.max(1, Math.ceil((row.average_response_minutes || 360) / 60)),
-    urgentSlaHours: 4,
-    quoteTemplateReady: true,
-    depositPolicyReady: true,
-    slaStatus: "draft",
+    insuranceVerified: profile.data_source_status === "verified_docs" || profile.data_source_status === "contracted",
+    languages: profile.supported_languages || row.languages || ["en", "ko"],
+    slaHours: standardSlaHours,
+    urgentSlaHours: Number(profile.urgent_sla_hours || Math.min(6, standardSlaHours)),
+    quoteTemplateReady: Boolean(profile.quote_template_ready),
+    depositPolicyReady: Boolean(profile.deposit_policy_ready),
+    slaStatus: profile.sla_contract_status || "draft",
     active: Boolean(row.active),
     betaScore: Number(row.quality_score || 80),
     owner: "Ops",
-    nextStep: "Request quote",
+    nextStep: profile.next_step || "Request quote",
     matchedCases: 0,
     quotesSent: 0,
     depositsPaid: 0,
@@ -439,6 +526,91 @@ function normalizeActivity(row) {
   };
 }
 
+function normalizeLandingRoute(row) {
+  return {
+    id: row.id,
+    locale: row.locale,
+    slug: row.slug,
+    market: row.market,
+    intent: row.intent || "",
+    title: row.title || "",
+    subtitle: row.subtitle || "",
+    searchTheme: row.search_theme || "",
+    cta: row.cta || "",
+    secondaryCta: row.secondary_cta || "",
+    packageIds: row.package_ids || [],
+    status: row.status || "draft",
+    source: row.source || "admin",
+    active: Boolean(row.active),
+    publishedAt: row.published_at || null,
+    updatedAt: row.updated_at,
+  };
+}
+
+function normalizeContactChannel(row) {
+  return {
+    channel: row.channel,
+    label: row.label,
+    href: row.href,
+    officialAccountId: row.official_account_id || null,
+    officialVerified: Boolean(row.official_verified),
+    active: Boolean(row.active),
+    displayOrder: Number(row.display_order || 0),
+    notes: row.notes || null,
+  };
+}
+
+function normalizeProviderOperatingProfile(row) {
+  return {
+    providerId: row.provider_id,
+    publicExposureStatus: row.public_exposure_status,
+    dataSourceStatus: row.data_source_status,
+    supportedMarkets: row.supported_markets || [],
+    supportedLanguages: row.supported_languages || [],
+    standardSlaHours: Number(row.standard_sla_hours || 24),
+    urgentSlaHours: Number(row.urgent_sla_hours || 6),
+    priceRangeUsdMin: row.price_range_usd_min === null ? null : Number(row.price_range_usd_min),
+    priceRangeUsdMax: row.price_range_usd_max === null ? null : Number(row.price_range_usd_max),
+    quoteTemplateReady: Boolean(row.quote_template_ready),
+    depositPolicyReady: Boolean(row.deposit_policy_ready),
+    slaContractStatus: row.sla_contract_status,
+    verificationSummary: row.verification_summary || null,
+    sourceNotes: row.source_notes || null,
+    lastVerifiedAt: row.last_verified_at || null,
+    nextStep: row.next_step || null,
+  };
+}
+
+async function getAdminOperationsData(config) {
+  if (config.role !== "admin") {
+    return { landingRoutes: [], contactChannels: [], providerOperatingProfiles: [] };
+  }
+
+  const [landingRoutes, contactChannels, providerOperatingProfiles] = await Promise.all([
+    safeList(
+      config,
+      "admin_landing_routes",
+      "select=id,locale,slug,market,intent,title,subtitle,search_theme,cta,secondary_cta,package_ids,status,source,active,published_at,updated_at&active=eq.true&order=updated_at.desc&limit=120",
+    ),
+    safeList(
+      config,
+      "contact_channel_settings",
+      "select=channel,label,href,official_account_id,official_verified,active,display_order,notes&order=display_order.asc",
+    ),
+    safeList(
+      config,
+      "provider_operating_profiles",
+      "select=provider_id,public_exposure_status,data_source_status,supported_markets,supported_languages,standard_sla_hours,urgent_sla_hours,price_range_usd_min,price_range_usd_max,quote_template_ready,deposit_policy_ready,sla_contract_status,verification_summary,source_notes,last_verified_at,next_step&order=updated_at.desc&limit=120",
+    ),
+  ]);
+
+  return {
+    landingRoutes: landingRoutes.map(normalizeLandingRoute),
+    contactChannels: contactChannels.map(normalizeContactChannel),
+    providerOperatingProfiles: providerOperatingProfiles.map(normalizeProviderOperatingProfile),
+  };
+}
+
 function notificationDispatchConfigured() {
   return Boolean(process.env.NOTIFICATION_WEBHOOK_URL || process.env.RESEND_API_KEY || process.env.KAKAO_API_KEY || process.env.WHATSAPP_TOKEN);
 }
@@ -485,7 +657,20 @@ async function getSnapshot(config) {
   const caseIds = Array.from(new Set(requests.map((row) => row.case_id).filter(Boolean)));
   const leadIds = Array.from(new Set(requests.map((row) => row.lead_id).filter(Boolean)));
 
-  const [cases, leads, intakes, assignments, shortlists, quoteRequests, quotes, activities, partnersRaw, providersRaw, relationships] = await Promise.all([
+  const [
+    cases,
+    leads,
+    intakes,
+    assignments,
+    shortlists,
+    quoteRequests,
+    quotes,
+    activities,
+    partnersRaw,
+    providersRaw,
+    relationships,
+    providerOperatingProfilesRaw,
+  ] = await Promise.all([
     caseIds.length ? list(config, "cases", `select=id,lead_id,patient_id,status,priority,source,created_at,updated_at&id=${inFilter(caseIds)}`) : [],
     leadIds.length ? list(config, "leads", `select=id,name,nationality,residence_country,preferred_language,treatment_interest,budget_min,budget_max,currency,source,attribution,created_at,updated_at&id=${inFilter(leadIds)}`) : [],
     caseIds.length ? list(config, "medical_intakes", `select=case_id,budget_min,budget_max,currency,travel_start_date,travel_end_date,risk_flags,chief_request,submitted_at&case_id=${inFilter(caseIds)}`) : [],
@@ -509,6 +694,11 @@ async function getSnapshot(config) {
     list(config, "partners", "select=id,name,partner_type,active&active=eq.true&order=name.asc"),
     list(config, "providers", "select=id,name_legal,name_display,facility_type,city,district,medical_korea_registered,active,average_response_minutes,quality_score&active=eq.true&order=quality_score.desc"),
     list(config, "partner_provider_relationships", "select=partner_id,provider_id,relationship_status,allowed_services,active&active=eq.true"),
+    safeList(
+      config,
+      "provider_operating_profiles",
+      "select=provider_id,public_exposure_status,data_source_status,supported_markets,supported_languages,standard_sla_hours,urgent_sla_hours,quote_template_ready,deposit_policy_ready,sla_contract_status,next_step",
+    ),
   ]);
 
   const caseMap = new Map(cases.map((row) => [row.id, row]));
@@ -516,6 +706,7 @@ async function getSnapshot(config) {
   const intakeMap = new Map(intakes.map((row) => [row.case_id, row]));
   const assignmentMap = new Map(assignments.map((row) => [row.case_id, row]));
   const providerMap = new Map(providersRaw.map((row) => [row.id, row]));
+  const operatingProfileMap = new Map(providerOperatingProfilesRaw.map((row) => [row.provider_id, row]));
   const quoteByRequest = new Map();
   const quotesByCase = new Map();
   const shortlistsByCase = new Map();
@@ -562,7 +753,7 @@ async function getSnapshot(config) {
     .filter((row) => row.id);
 
   const partners = partnersRaw.map((row) => normalizePartner({ ...row, preferred_provider_ids: relationshipsByPartner.get(row.id) || [] }));
-  const providers = providersRaw.map(normalizeProvider);
+  const providers = providersRaw.map((row) => normalizeProvider({ ...row, operating_profile: operatingProfileMap.get(row.id) }));
   const providerQuoteRequests = quoteRequests.map((quoteRequest) =>
     normalizeProviderQuoteRequest({
       quoteRequest,
@@ -582,9 +773,15 @@ async function getSnapshot(config) {
     quotes: quotes.map(normalizeQuote),
     activities: activities.map(normalizeActivity),
   });
+  const [leadStorageHealth, adminPersistenceHealth, adminOperationsData] = await Promise.all([
+    getLeadStorageHealth(config),
+    config.role === "admin" ? getAdminPersistenceHealth(config) : Promise.resolve(null),
+    getAdminOperationsData(config),
+  ]);
 
   return {
     ...scoped,
+    ...adminOperationsData,
     meta: {
       mode: "supabase",
       role: config.role,
@@ -601,6 +798,8 @@ async function getSnapshot(config) {
       notificationOutboxConfigured: true,
       stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
       paymentMode: paymentMode(),
+      leadStorageHealth,
+      adminPersistenceHealth,
       partnerRequestCount: scoped.cases.length,
       quoteRequestCount: scoped.providerQuoteRequests.length,
       quoteResponseCount: scoped.quotes.length,
@@ -609,6 +808,62 @@ async function getSnapshot(config) {
       hasDbProviders: scoped.providers.length > 0,
     },
   };
+}
+
+const LANDING_ROUTE_LOCALES = new Set(["en", "jp"]);
+const LANDING_ROUTE_MARKETS = new Set(["japan", "taiwan"]);
+const LANDING_ROUTE_STATUSES = new Set(["draft", "published", "paused", "archived"]);
+
+function normalizeSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function cleanPackageIds(value) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.map((item) => sanitizeText(item).slice(0, 80)).filter(Boolean)));
+}
+
+async function upsertLandingRoute(config, body) {
+  const route = body.route || body;
+  const locale = sanitizeText(route.locale, "en").toLowerCase();
+  const market = sanitizeText(route.market, "japan").toLowerCase();
+  const status = sanitizeText(route.status, "draft").toLowerCase();
+  const slug = normalizeSlug(route.slug);
+  const title = sanitizeText(route.title);
+  const intent = sanitizeText(route.intent);
+
+  if (!LANDING_ROUTE_LOCALES.has(locale)) throw new HttpError(400, "Unsupported landing route locale.");
+  if (!LANDING_ROUTE_MARKETS.has(market)) throw new HttpError(400, "Unsupported landing route market.");
+  if (!LANDING_ROUTE_STATUSES.has(status)) throw new HttpError(400, "Unsupported landing route status.");
+  if (!slug || !title || !intent) throw new HttpError(400, "slug, title, and intent are required.");
+
+  await supabaseFetch(config, "admin_landing_routes?on_conflict=locale,slug", {
+    method: "POST",
+    body: JSON.stringify({
+      locale,
+      slug,
+      market,
+      intent,
+      title,
+      subtitle: sanitizeText(route.subtitle),
+      search_theme: sanitizeText(route.searchTheme || route.search_theme),
+      cta: sanitizeText(route.cta),
+      secondary_cta: sanitizeText(route.secondaryCta || route.secondary_cta),
+      package_ids: cleanPackageIds(route.packageIds || route.package_ids),
+      status,
+      source: "admin",
+      active: route.active !== false,
+      published_at: status === "published" ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    }),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
 }
 
 async function assignPartner(config, body) {
@@ -1012,7 +1267,7 @@ async function createDepositCheckout(config, req, body) {
   params.append("line_items[0][quantity]", "1");
   params.append("line_items[0][price_data][currency]", "usd");
   params.append("line_items[0][price_data][unit_amount]", String(unitAmount));
-  params.append("line_items[0][price_data][product_data][name]", `Global Patient Hub 예약금 ${quoteId}`);
+  params.append("line_items[0][price_data][product_data][name]", `Global Patient Hub deposit ${quoteId}`);
   params.append("line_items[0][price_data][product_data][description]", "Patient deposit for provider quote and booking coordination.");
   params.append("metadata[case_id]", caseId);
   params.append("metadata[quote_id]", quoteId);
@@ -1062,7 +1317,14 @@ async function createDepositCheckout(config, req, body) {
 function allowedRolesForAction(action) {
   if (action === "setShortlist") return ["admin", "partner"];
   if (action === "submitProviderQuote") return ["admin", "provider"];
-  if (action === "assignPartner" || action === "advanceCaseStatus" || action === "requestQuotes" || action === "queueNotification" || action === "createDepositCheckout") {
+  if (
+    action === "assignPartner" ||
+    action === "advanceCaseStatus" ||
+    action === "requestQuotes" ||
+    action === "queueNotification" ||
+    action === "createDepositCheckout" ||
+    action === "upsertLandingRoute"
+  ) {
     return ["admin"];
   }
   return null;
@@ -1091,6 +1353,7 @@ export default async function handler(req, res) {
       else if (body.action === "submitProviderQuote") await submitProviderQuote(config, body);
       else if (body.action === "queueNotification") return json(res, 200, await queueNotification(config, body));
       else if (body.action === "createDepositCheckout") return json(res, 200, await createDepositCheckout(config, req, body));
+      else if (body.action === "upsertLandingRoute") await upsertLandingRoute(config, body);
 
       return json(res, 200, await getSnapshot(config));
     }

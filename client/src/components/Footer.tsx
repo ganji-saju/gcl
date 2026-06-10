@@ -14,6 +14,12 @@ export default function Footer() {
     { href: "/provider/quotes", label: "병원 견적 데스크" },
     { href: "/admin/quote-booking", label: "견적/예약 관리" },
   ];
+  const publicLinks = [
+    { href: "/hospitals", label: t("nav.hospitals") },
+    { href: "/treatments", label: t("nav.treatments") },
+    { href: "/compare", label: t("nav.compare") },
+    { href: "/consultation", label: t("nav.consultation") },
+  ];
 
   return (
     <footer className="border-t border-ink-200 bg-ink-950 text-white">
@@ -22,27 +28,24 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="mb-4 flex items-center gap-3">
               <div className="grid size-9 place-items-center rounded-md bg-white text-sm font-semibold text-ink-950">
-                {internalMode ? "허브" : "GP"}
+                {internalMode ? "OPS" : "GP"}
               </div>
               <div>
-                <div className="font-serif text-xl">{internalMode ? "글로벌 환자 허브" : "Global Patient Hub"}</div>
-                <div className="text-sm text-teal-200">{internalMode ? "한국 의료 운영 네트워크" : t("footer.tagline")}</div>
+                <div className="font-serif text-xl">{internalMode ? "Global Patient Hub Ops" : "Global Patient Hub"}</div>
+                <div className="text-sm text-teal-200">{internalMode ? "내부 운영 콘솔" : t("footer.tagline")}</div>
               </div>
             </div>
             <p className="max-w-md text-sm leading-6 text-ink-300">
-              {internalMode ? "환자, 파트너, 병원 케이스를 한 곳에서 관리하는 내부 운영 화면입니다." : t("footer.tagline")}
+              {internalMode
+                ? "환자, 파트너, 병원 케이스를 한 곳에서 관리하는 내부 운영 화면입니다."
+                : t("footer.tagline")}
             </p>
           </div>
 
           <div>
             <h4 className="mb-4 text-sm font-semibold text-white">{internalMode ? "운영 메뉴" : t("footer.explore")}</h4>
             <div className="grid gap-2 text-sm">
-              {(internalMode ? internalLinks : [
-                { href: "/hospitals", label: t("nav.hospitals") },
-                { href: "/treatments", label: t("nav.treatments") },
-                { href: "/compare", label: t("nav.compare") },
-                { href: "/consultation", label: t("nav.consultation") },
-              ]).map((link) => (
+              {(internalMode ? internalLinks : publicLinks).map((link) => (
                 <Link key={link.href} href={link.href} className="text-ink-300 hover:text-white">
                   {link.label}
                 </Link>
@@ -55,7 +58,7 @@ export default function Footer() {
             <div className="grid gap-3 text-sm text-ink-300">
               <div className="flex gap-2">
                 <MapPin className="mt-0.5 size-4 text-teal-300" />
-                {internalMode ? "서울 운영팀" : t("footer.location")}
+                {internalMode ? "Seoul operations" : t("footer.location")}
               </div>
               <a href="tel:+82-2-6200-2026" className="flex gap-2 hover:text-white">
                 <Phone className="size-4 text-teal-300" />
@@ -72,9 +75,15 @@ export default function Footer() {
       <div className="border-t border-white/10">
         <div className="container-wide flex flex-col gap-3 py-5 text-xs text-ink-400 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            {internalMode ? `${new Date().getFullYear()} 글로벌 환자 허브. 모든 권리 보유.` : `Copyright ${new Date().getFullYear()} Global Patient Hub. ${t("footer.rights")}`}
+            {internalMode
+              ? `${new Date().getFullYear()} Global Patient Hub Ops. All rights reserved.`
+              : `Copyright ${new Date().getFullYear()} Global Patient Hub. ${t("footer.rights")}`}
           </p>
-          <p>{internalMode ? "내부 운영 자료는 환자 동의와 접근 권한 범위 안에서만 사용해야 합니다." : t("common.medicalDisclaimer")}</p>
+          <p>
+            {internalMode
+              ? "내부 운영 자료는 승인된 역할과 접근 범위 안에서만 사용해야 합니다."
+              : t("common.medicalDisclaimer")}
+          </p>
         </div>
       </div>
     </footer>

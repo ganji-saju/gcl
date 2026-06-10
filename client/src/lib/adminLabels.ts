@@ -35,7 +35,7 @@ const GENERIC_STATUS_LABELS: Record<string, string> = {
   registration: "등록 확인",
   registration_pending: "등록 대기",
   insurance: "보험 확인",
-  increase: "확대",
+  increase: "증액",
   hold: "유지",
   reduce: "축소",
   stop: "중단",
@@ -43,10 +43,16 @@ const GENERIC_STATUS_LABELS: Record<string, string> = {
   paused: "중지",
   ready: "준비 완료",
   published: "게시됨",
+  archived: "보관됨",
   verified: "검증 완료",
   rejected: "반려",
   active: "활성",
   inactive: "비활성",
+  blocked: "차단",
+  candidate: "후보",
+  demo_seed: "데모 시드",
+  verified_docs: "서류 검증",
+  contracted: "계약 완료",
 };
 
 const PARTNER_MODE_LABELS: Record<string, string> = {
@@ -83,6 +89,9 @@ const EVENT_LABELS: Record<string, string> = {
   provider_quote_submitted: "병원 견적 제출",
   provider_quote_revised: "병원 견적 수정",
   case_status_changed: "케이스 상태 변경",
+  notification_queued: "알림 대기열 등록",
+  notification_sent: "알림 발송",
+  deposit_checkout_created: "예약금 결제 링크 생성",
 };
 
 const ACTOR_LABELS: Record<string, string> = {
@@ -117,6 +126,10 @@ const LANGUAGE_LABELS: Record<string, string> = {
   zh: "중국어",
   "zh-tw": "중국어(번체)",
   "zh-cn": "중국어(간체)",
+  th: "태국어",
+  vi: "베트남어",
+  ru: "러시아어",
+  ar: "아랍어",
 };
 
 const RISK_FLAG_LABELS: Record<string, string> = {
@@ -124,6 +137,7 @@ const RISK_FLAG_LABELS: Record<string, string> = {
   "low budget": "예산 확인 필요",
   "language support": "언어 지원 확인 필요",
   "travel window": "방문 일정 확인 필요",
+  photo_consent_pending: "사진 동의 대기",
 };
 
 const PROVIDER_NEXT_STEP_LABELS: Record<string, string> = {
@@ -132,6 +146,11 @@ const PROVIDER_NEXT_STEP_LABELS: Record<string, string> = {
   "Send first SLA draft": "1차 응답 기준 초안 발송",
   "Verify insurance before assigning cases": "케이스 배정 전 보험 서류 확인",
   "Finalize quote template": "견적 템플릿 최종 확정",
+  "Collect registration certificate and insurance evidence.": "유치기관 등록증과 보험 증빙 수집",
+  "Confirm deposit refund wording and SLA owner.": "예약금 환불 문구와 SLA 담당자 확정",
+  "Send first SLA draft and confirm language coverage.": "1차 SLA 초안 발송 및 언어 지원 확인",
+  "Verify insurance before assigning cases.": "케이스 배정 전 보험 확인",
+  "Finalize quote template and package price ranges.": "견적 템플릿과 패키지 가격 범위 확정",
 };
 
 const QUOTE_NOTE_LABELS: Record<string, string> = {

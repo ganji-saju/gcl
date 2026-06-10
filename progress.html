@@ -244,8 +244,10 @@
           </div>
         </div>
         <div class="note">
-          <strong>주의:</strong> <code>/admin/*</code> 경로는 공개 네비에서 숨겨졌지만 아직 인증/RBAC로 보호되지 않습니다.
-          실제 민감 데이터는 auth 적용 전 입력하지 마세요.
+          <strong>Access note:</strong> <code>/admin/*</code>, <code>/partner/*</code>, and <code>/provider/*</code>
+          now pass through the internal operations gate. The gate validates the entered role token against the server-side
+          operations API before rendering internal screens. Keep confidential medical documents out of the frontend until
+          full user-account authentication and private storage policies are added.
         </div>
       </section>
 
@@ -357,7 +359,7 @@
         <p><code>I18nContext.tsx</code>에서 <code>LANGUAGES</code>와 <code>T</code>를 수정합니다. Arabic은 <code>dir: "rtl"</code>, 나머지는 <code>ltr</code>로 유지합니다.</p>
 
         <h3>플로팅 연락 버튼 수정</h3>
-        <p><code>client/src/components/FloatingActionDock.tsx</code>의 <code>CONTACT_LINKS</code>를 수정합니다. 공식 LINE/WeChat/Kakao/WhatsApp 계정이 확정되면 href만 교체하면 됩니다.</p>
+        <p>공식 연락 채널은 <code>VITE_CONTACT_WHATSAPP_URL</code>, <code>VITE_CONTACT_LINE_URL</code>, <code>VITE_CONTACT_WECHAT_URL</code>, <code>VITE_CONTACT_KAKAO_URL</code> 환경변수로 교체합니다. 코드에는 개발용 fallback만 유지합니다.</p>
 
         <h3>피부 패키지 SKU 수정</h3>
         <p><code>client/src/lib/wedgeData.ts</code>의 <code>SKIN_PACKAGE_SKUS</code>를 수정합니다. 랜딩에 노출하려면 <code>SKIN_LANDING_PAGES</code>의 <code>packageIds</code>에도 연결합니다.</p>
@@ -446,15 +448,15 @@ curl.exe -I -L https://global-patient-hub.vercel.app</code></pre>
       </section>
 
       <section id="next">
-        <h2>8. 다음 작업</h2>
+        <h2>8. Next Work</h2>
         <ol>
-          <li><code>/admin/*</code> auth/RBAC 보호.</li>
-          <li>Admin seed data를 Supabase persistence로 교체.</li>
-          <li>Landing route manager 저장/승인 workflow 연결.</li>
-          <li>공식 WhatsApp/LINE/WeChat/Kakao 계정 링크 교체.</li>
-          <li>상담 폼 spam protection 추가.</li>
-          <li>route-level code splitting으로 bundle size 개선.</li>
-          <li>provider verification workflow와 document expiry alert 추가.</li>
+          <li>Apply <code>20260610_0006_admin_ops_persistence.sql</code> to production Supabase.</li>
+          <li>Set official WhatsApp, LINE, WeChat, and KakaoTalk URLs through <code>VITE_CONTACT_*_URL</code>.</li>
+          <li>Replace candidate provider rows with signed and verified Gangnam hospital data.</li>
+          <li>Add full user-account auth on top of the current role-token gate.</li>
+          <li>Add consultation spam protection.</li>
+          <li>Add route-level code splitting to reduce bundle size.</li>
+          <li>Add settlement ledger persistence and audit logs.</li>
         </ol>
       </section>
     </main>

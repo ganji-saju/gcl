@@ -7,6 +7,9 @@ export interface PartnerMvpSnapshot {
   providerQuoteRequests?: ProviderQuoteRequest[];
   quotes?: ProviderQuote[];
   activities?: CaseActivityEvent[];
+  landingRoutes?: ManagedLandingRoute[];
+  contactChannels?: ContactChannelSetting[];
+  providerOperatingProfiles?: ProviderOperatingProfile[];
   meta?: {
     mode: "supabase";
     role?: OpsRole;
@@ -18,6 +21,24 @@ export interface PartnerMvpSnapshot {
       provider: boolean;
       partnerScoped: boolean;
       providerScoped: boolean;
+    };
+    leadStorageHealth?: {
+      patients: number | null;
+      leads: number | null;
+      cases: number | null;
+      medicalIntakes: number | null;
+      latestLeadAt: string | null;
+      v1PipelineReady: boolean;
+      checkedAt: string;
+    };
+    adminPersistenceHealth?: {
+      adminLandingRoutes: number | null;
+      contactChannels: number | null;
+      providerOperatingProfiles: number | null;
+      providerDataQualityChecks: number | null;
+      notificationOutbox: number | null;
+      ready: boolean;
+      checkedAt: string;
     };
     notificationDispatchConfigured?: boolean;
     notificationOutboxConfigured?: boolean;
@@ -33,6 +54,57 @@ export interface PartnerMvpSnapshot {
 }
 
 export type PartnerMvpActionSnapshot = PartnerMvpSnapshot;
+export type OpsRole = "admin" | "partner" | "provider";
+export type LandingRouteStatus = "draft" | "published" | "paused" | "archived";
+
+export interface ManagedLandingRoute {
+  id?: string;
+  locale: "en" | "jp";
+  slug: string;
+  market: "japan" | "taiwan";
+  intent: string;
+  title: string;
+  subtitle: string;
+  searchTheme: string;
+  cta: string;
+  secondaryCta: string;
+  packageIds: string[];
+  status: LandingRouteStatus;
+  source?: string;
+  active?: boolean;
+  publishedAt?: string | null;
+  updatedAt?: string;
+}
+
+export interface ContactChannelSetting {
+  channel: "whatsapp" | "line" | "wechat" | "kakao";
+  label: string;
+  href: string;
+  officialAccountId?: string | null;
+  officialVerified: boolean;
+  active: boolean;
+  displayOrder: number;
+  notes?: string | null;
+}
+
+export interface ProviderOperatingProfile {
+  providerId: string;
+  publicExposureStatus: "blocked" | "candidate" | "ready" | "published";
+  dataSourceStatus: "demo_seed" | "candidate" | "verified_docs" | "contracted";
+  supportedMarkets: string[];
+  supportedLanguages: string[];
+  standardSlaHours: number;
+  urgentSlaHours: number;
+  priceRangeUsdMin?: number | null;
+  priceRangeUsdMax?: number | null;
+  quoteTemplateReady: boolean;
+  depositPolicyReady: boolean;
+  slaContractStatus: "draft" | "sent" | "negotiating" | "pending_docs" | "signed";
+  verificationSummary?: string | null;
+  sourceNotes?: string | null;
+  lastVerifiedAt?: string | null;
+  nextStep?: string | null;
+}
 
 export interface ProviderQuote {
   id: string;
@@ -95,8 +167,6 @@ export interface ProviderQuoteInput {
   validUntil: string;
   notes: string;
 }
-
-export type OpsRole = "admin" | "partner" | "provider";
 
 export interface NotificationInput {
   caseId: string;
@@ -178,10 +248,10 @@ async function fetchAdminApi(init?: RequestInit): Promise<Response> {
     return await fetch("/api/admin/partner-mvp", { ...init, signal: controller.signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("관리자 API 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요.");
+      throw new Error("관리자 API 응답 시간이 초과했습니다. 잠시 후 다시 시도하세요.");
     }
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("관리자 API 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요.");
+      throw new Error("관리자 API 응답 시간이 초과했습니다. 잠시 후 다시 시도하세요.");
     }
     throw error;
   } finally {
@@ -252,6 +322,13 @@ export function submitProviderQuoteMvp(token: string, input: ProviderQuoteInput)
   return requestPartnerMvp(token, {
     method: "POST",
     body: JSON.stringify({ action: "submitProviderQuote", ...input }),
+  });
+}
+
+export function upsertLandingRouteMvp(token: string, route: ManagedLandingRoute) {
+  return requestPartnerMvp(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "upsertLandingRoute", route }),
   });
 }
 
