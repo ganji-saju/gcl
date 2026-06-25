@@ -6,6 +6,8 @@ export interface PartnerMvpSnapshot {
   providers: BetaProviderCandidate[];
   providerQuoteRequests?: ProviderQuoteRequest[];
   quotes?: ProviderQuote[];
+  availabilitySlots?: AvailabilitySlot[];
+  bookings?: BookingReservation[];
   activities?: CaseActivityEvent[];
   landingRoutes?: ManagedLandingRoute[];
   contactChannels?: ContactChannelSetting[];
@@ -145,6 +147,38 @@ export interface ProviderQuoteRequest {
   quote: ProviderQuote | null;
 }
 
+export type SlotStatus = "available" | "held" | "booked" | "unavailable";
+export type VisitType = "consultation" | "procedure" | "surgery" | "checkup";
+
+export interface AvailabilitySlot {
+  id: string;
+  providerId: string;
+  doctorId?: string | null;
+  procedureId?: string | null;
+  startsAt: string;
+  endsAt: string;
+  status: SlotStatus;
+  languageSupport: string[];
+  holdExpiresAt?: string | null;
+  holdCaseId?: string | null;
+  holdQuoteId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BookingReservation {
+  id: string;
+  caseId: string;
+  quoteId: string;
+  providerId: string;
+  scheduledAt: string;
+  visitType: VisitType;
+  status: "requested" | "confirmed" | "rescheduled" | "completed" | "cancelled" | "no_show";
+  confirmedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CaseActivityEvent {
   id: string;
   caseId: string;
@@ -171,9 +205,12 @@ export interface ProviderQuoteInput {
 export interface NotificationInput {
   caseId: string;
   quoteId?: string;
+  bookingId?: string;
   channel: "email" | "whatsapp" | "kakao" | "line" | "sms";
   recipient?: string;
   template: string;
+  sendAfter?: string;
+  deliveryKey?: string;
   payload?: Record<string, unknown>;
 }
 
@@ -197,6 +234,45 @@ export interface DepositCheckoutResult {
   checkoutUrl: string;
   sessionId: string;
   paymentMode: "test" | "live" | "not_configured";
+}
+
+export interface AvailabilitySlotInput {
+  providerId: string;
+  startsAt: string;
+  endsAt: string;
+  languageSupport?: string[];
+  status?: SlotStatus;
+}
+
+export interface HoldAvailabilitySlotInput {
+  slotId: string;
+  caseId: string;
+  quoteId?: string;
+  holdMinutes?: number;
+  channel?: NotificationInput["channel"];
+  recipient?: string;
+}
+
+export interface ReleaseAvailabilitySlotInput {
+  slotId: string;
+  caseId?: string;
+  quoteId?: string;
+}
+
+export interface ConfirmHeldBookingInput {
+  slotId: string;
+  caseId: string;
+  quoteId: string;
+  visitType: VisitType;
+  channel?: NotificationInput["channel"];
+  recipient?: string;
+}
+
+export interface ReservationActionResult {
+  ok: boolean;
+  slot?: AvailabilitySlot;
+  booking?: BookingReservation;
+  notifications?: NotificationResult[];
 }
 
 const ADMIN_TOKEN_KEY = "gph_admin_api_token";
@@ -353,5 +429,33 @@ export function createDepositCheckoutMvp(token: string, input: DepositCheckoutIn
       throw new Error("예약금 결제 API 응답 형식이 올바르지 않습니다.");
     }
     return payload;
+  });
+}
+
+export function createAvailabilitySlotMvp(token: string, input: AvailabilitySlotInput) {
+  return requestPartnerMvpJson<ReservationActionResult>(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "createAvailabilitySlot", ...input }),
+  });
+}
+
+export function holdAvailabilitySlotMvp(token: string, input: HoldAvailabilitySlotInput) {
+  return requestPartnerMvpJson<ReservationActionResult>(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "holdAvailabilitySlot", ...input }),
+  });
+}
+
+export function releaseAvailabilitySlotMvp(token: string, input: ReleaseAvailabilitySlotInput) {
+  return requestPartnerMvpJson<ReservationActionResult>(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "releaseAvailabilitySlot", ...input }),
+  });
+}
+
+export function confirmHeldBookingMvp(token: string, input: ConfirmHeldBookingInput) {
+  return requestPartnerMvpJson<ReservationActionResult>(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "confirmHeldBooking", ...input }),
   });
 }

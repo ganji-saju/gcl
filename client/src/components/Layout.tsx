@@ -1,3 +1,4 @@
+import { useLocation } from "wouter";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import FloatingActionDock from "./FloatingActionDock";
@@ -8,6 +9,9 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, className }: LayoutProps) {
+  const [location] = useLocation();
+  const internalMode = location.startsWith("/admin") || location.startsWith("/partner") || location.startsWith("/provider");
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -15,7 +19,7 @@ export default function Layout({ children, className }: LayoutProps) {
         {children}
       </main>
       <Footer />
-      <FloatingActionDock />
+      {!internalMode && <FloatingActionDock />}
     </div>
   );
 }

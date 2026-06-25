@@ -19,6 +19,7 @@ interface InternalOpsGateProps {
   children: ReactNode;
   title?: string;
   allowedRoles?: OpsRole[];
+  allowLocalDemo?: boolean;
 }
 
 type GateStatus = "idle" | "validating" | "valid" | "invalid";
@@ -33,7 +34,7 @@ function roleAllowed(role: OpsRole, allowedRoles: OpsRole[]) {
   return role === "admin" || allowedRoles.includes(role);
 }
 
-export default function InternalOpsGate({ children, title = "내부 운영 접근", allowedRoles = ["admin"] }: InternalOpsGateProps) {
+export default function InternalOpsGate({ children, title = "내부 운영 접근", allowedRoles = ["admin"], allowLocalDemo = false }: InternalOpsGateProps) {
   const allowedRoleSet = useMemo(() => new Set<OpsRole>(["admin", ...allowedRoles]), [allowedRoles]);
   const [token, setToken] = useState(() => readAdminApiToken());
   const [input, setInput] = useState(() => readAdminApiToken());
@@ -91,6 +92,20 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
     setValidatedRole(null);
     setStatus("idle");
     setMessage("");
+  }
+
+  if (allowLocalDemo && import.meta.env.DEV && !token) {
+    return (
+      <>
+        <div className="border-b border-coral-200 bg-coral-50">
+          <div className="container-wide flex items-center gap-2 py-3 text-sm font-semibold text-coral-900">
+            <TriangleAlert className="size-4" />
+            로컬 데모 모드: 서버 운영 데이터는 연결하지 않았습니다.
+          </div>
+        </div>
+        {children}
+      </>
+    );
   }
 
   if (status === "valid" && validatedRole) {

@@ -32,6 +32,7 @@ export default function Navbar() {
     { href: "/partner/cases", label: "파트너" },
     { href: "/provider/quotes", label: "병원 견적" },
     { href: "/admin/quote-booking", label: "견적/예약" },
+    { href: "/admin/reservation-calendar", label: "예약 캘린더" },
     { href: "/admin/beta", label: "베타 운영" },
     { href: "/admin/landing-routes", label: "랜딩 경로" },
   ];

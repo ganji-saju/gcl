@@ -1,6 +1,6 @@
 # Global Patient Hub Product Design Pack
 
-Last updated: 2026-06-10
+Last updated: 2026-06-25
 
 This folder contains the v1 product and implementation design for a Korean international patient acquisition platform.
 
@@ -16,6 +16,7 @@ This folder contains the v1 product and implementation design for a Korean inter
 | 6 | `05-validation-roadmap-japan-taiwan-skin-wedge.md` | Pre-development validation roadmap for Japan/Taiwan skin package wedge |
 | 7 | `06-closed-beta-operating-plan.md` | Closed beta operating plan for provider SLA, coordinator workflow, 300-lead test, deposits, ledger, and rankings |
 | 8 | `07-multi-sided-partner-network-plan.md` | V2 plan for patient-partner-provider orchestration across agencies, agents, interpreters, travel agencies, and hospitals |
+| 9 | `08-reservation-calendar-hold-notification-plan.md` | Slot calendar, temporary hold, booking confirmation, and automated notification operating structure |
 
 ## Executable Schema
 
