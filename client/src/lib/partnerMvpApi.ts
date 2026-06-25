@@ -283,6 +283,16 @@ const OPS_EMAIL_KEY = "gcl_ops_email:v1";
 const OPS_ROLE_KEY = "gcl_ops_role";
 const LEGACY_ADMIN_TOKEN_KEY = "gcl_admin_api_token";
 const ADMIN_API_TIMEOUT_MS = 15000;
+const PARTNER_MVP_SNAPSHOT_CACHE_TTL_MS = 30000;
+
+interface PartnerMvpSnapshotCache {
+  token: string;
+  snapshot: PartnerMvpSnapshot;
+  cachedAt: number;
+}
+
+let partnerMvpSnapshotCache: PartnerMvpSnapshotCache | null = null;
+let partnerMvpSnapshotRequest: { token: string; promise: Promise<PartnerMvpSnapshot> } | null = null;
 
 export function normalizeOpsRole(value: string | null | undefined): OpsRole {
   return value === "partner" || value === "provider" ? value : "admin";
@@ -329,6 +339,25 @@ export function clearAdminApiToken() {
   localStorage.removeItem(OPS_EMAIL_KEY);
   localStorage.removeItem(OPS_ROLE_KEY);
   localStorage.removeItem(LEGACY_ADMIN_TOKEN_KEY);
+  invalidatePartnerMvpSnapshotCache();
+}
+
+function cacheMatches(token: string, maxAgeMs = PARTNER_MVP_SNAPSHOT_CACHE_TTL_MS) {
+  if (!partnerMvpSnapshotCache || partnerMvpSnapshotCache.token !== token) return false;
+  return Date.now() - partnerMvpSnapshotCache.cachedAt <= maxAgeMs;
+}
+
+export function getCachedPartnerMvpSnapshot(token: string, maxAgeMs = PARTNER_MVP_SNAPSHOT_CACHE_TTL_MS) {
+  return cacheMatches(token, maxAgeMs) ? partnerMvpSnapshotCache?.snapshot ?? null : null;
+}
+
+export function setPartnerMvpSnapshotCache(token: string, snapshot: PartnerMvpSnapshot) {
+  partnerMvpSnapshotCache = { token, snapshot, cachedAt: Date.now() };
+}
+
+export function invalidatePartnerMvpSnapshotCache() {
+  partnerMvpSnapshotCache = null;
+  partnerMvpSnapshotRequest = null;
 }
 
 async function fetchAdminApi(init?: RequestInit): Promise<Response> {
@@ -377,57 +406,87 @@ async function requestPartnerMvp(token: string, init?: RequestInit): Promise<Par
   return payload;
 }
 
-export function fetchPartnerMvpSnapshot(token: string) {
-  return requestPartnerMvp(token);
+export function fetchPartnerMvpSnapshot(token: string, options: { force?: boolean; maxAgeMs?: number } = {}) {
+  if (!options.force) {
+    const cachedSnapshot = getCachedPartnerMvpSnapshot(token, options.maxAgeMs);
+    if (cachedSnapshot) return Promise.resolve(cachedSnapshot);
+    if (partnerMvpSnapshotRequest?.token === token) return partnerMvpSnapshotRequest.promise;
+  }
+
+  const promise = requestPartnerMvp(token)
+    .then((snapshot) => {
+      setPartnerMvpSnapshotCache(token, snapshot);
+      return snapshot;
+    })
+    .finally(() => {
+      if (partnerMvpSnapshotRequest?.promise === promise) partnerMvpSnapshotRequest = null;
+    });
+
+  partnerMvpSnapshotRequest = { token, promise };
+  return promise;
+}
+
+function requestPartnerMvpAction(token: string, init: RequestInit) {
+  return requestPartnerMvp(token, init).then((snapshot) => {
+    setPartnerMvpSnapshotCache(token, snapshot);
+    return snapshot;
+  });
+}
+
+function invalidatePartnerMvpSnapshotAfter<T>(promise: Promise<T>) {
+  return promise.then((payload) => {
+    invalidatePartnerMvpSnapshotCache();
+    return payload;
+  });
 }
 
 export function assignPartnerMvp(token: string, caseId: string, partnerId: string) {
-  return requestPartnerMvp(token, {
+  return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "assignPartner", caseId, partnerId }),
   });
 }
 
 export function advanceCaseStatusMvp(token: string, caseId: string, status: string) {
-  return requestPartnerMvp(token, {
+  return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "advanceCaseStatus", caseId, status }),
   });
 }
 
 export function setPartnerShortlistMvp(token: string, caseId: string, partnerId: string, providerIds: string[]) {
-  return requestPartnerMvp(token, {
+  return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "setShortlist", caseId, partnerId, providerIds }),
   });
 }
 
 export function requestPartnerQuoteMvp(token: string, caseId: string, partnerId: string, providerIds: string[]) {
-  return requestPartnerMvp(token, {
+  return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "requestQuotes", caseId, partnerId, providerIds }),
   });
 }
 
 export function submitProviderQuoteMvp(token: string, input: ProviderQuoteInput) {
-  return requestPartnerMvp(token, {
+  return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "submitProviderQuote", ...input }),
   });
 }
 
 export function upsertLandingRouteMvp(token: string, route: ManagedLandingRoute) {
-  return requestPartnerMvp(token, {
+  return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "upsertLandingRoute", route }),
   });
 }
 
 export function queueNotificationMvp(token: string, input: NotificationInput) {
-  return requestPartnerMvpJson<NotificationResult>(token, {
+  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<NotificationResult>(token, {
     method: "POST",
     body: JSON.stringify({ action: "queueNotification", ...input }),
-  }).then((payload) => {
+  })).then((payload) => {
     if (!payload?.notificationId || !payload.status) {
       throw new Error("알림 API 응답 형식이 올바르지 않습니다.");
     }
@@ -436,10 +495,10 @@ export function queueNotificationMvp(token: string, input: NotificationInput) {
 }
 
 export function createDepositCheckoutMvp(token: string, input: DepositCheckoutInput) {
-  return requestPartnerMvpJson<DepositCheckoutResult>(token, {
+  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<DepositCheckoutResult>(token, {
     method: "POST",
     body: JSON.stringify({ action: "createDepositCheckout", ...input }),
-  }).then((payload) => {
+  })).then((payload) => {
     if (!payload?.checkoutUrl || !payload.sessionId) {
       throw new Error("예약금 결제 API 응답 형식이 올바르지 않습니다.");
     }
@@ -448,29 +507,29 @@ export function createDepositCheckoutMvp(token: string, input: DepositCheckoutIn
 }
 
 export function createAvailabilitySlotMvp(token: string, input: AvailabilitySlotInput) {
-  return requestPartnerMvpJson<ReservationActionResult>(token, {
+  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<ReservationActionResult>(token, {
     method: "POST",
     body: JSON.stringify({ action: "createAvailabilitySlot", ...input }),
-  });
+  }));
 }
 
 export function holdAvailabilitySlotMvp(token: string, input: HoldAvailabilitySlotInput) {
-  return requestPartnerMvpJson<ReservationActionResult>(token, {
+  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<ReservationActionResult>(token, {
     method: "POST",
     body: JSON.stringify({ action: "holdAvailabilitySlot", ...input }),
-  });
+  }));
 }
 
 export function releaseAvailabilitySlotMvp(token: string, input: ReleaseAvailabilitySlotInput) {
-  return requestPartnerMvpJson<ReservationActionResult>(token, {
+  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<ReservationActionResult>(token, {
     method: "POST",
     body: JSON.stringify({ action: "releaseAvailabilitySlot", ...input }),
-  });
+  }));
 }
 
 export function confirmHeldBookingMvp(token: string, input: ConfirmHeldBookingInput) {
-  return requestPartnerMvpJson<ReservationActionResult>(token, {
+  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<ReservationActionResult>(token, {
     method: "POST",
     body: JSON.stringify({ action: "confirmHeldBooking", ...input }),
-  });
+  }));
 }
