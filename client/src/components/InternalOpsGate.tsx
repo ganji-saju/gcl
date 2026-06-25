@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import {
   clearAdminApiToken,
   fetchPartnerMvpSnapshot,
+  getCachedPartnerMvpSnapshot,
   normalizeOpsRole,
   opsRoleLabel,
   readAdminApiToken,
   readOpsEmail,
+  readOpsRole,
   saveOpsSession,
   type OpsRole,
 } from "@/lib/partnerMvpApi";
@@ -38,14 +40,18 @@ function roleAllowed(role: OpsRole, allowedRoles: OpsRole[]) {
 }
 
 export default function InternalOpsGate({ children, title = "내부 운영 접근", allowedRoles = ["admin"], allowLocalDemo = false }: InternalOpsGateProps) {
+  const initialToken = readAdminApiToken();
+  const initialEmail = readOpsEmail();
+  const initialRole = readOpsRole();
+  const hasStoredAllowedSession = Boolean(initialToken && roleAllowed(initialRole, allowedRoles));
   const validationRunRef = useRef(0);
-  const [token, setToken] = useState(() => readAdminApiToken());
-  const [email, setEmail] = useState(() => readOpsEmail());
+  const [token, setToken] = useState(initialToken);
+  const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
-  const [validatedEmail, setValidatedEmail] = useState(() => readOpsEmail());
-  const [validatedRole, setValidatedRole] = useState<OpsRole | null>(null);
-  const [status, setStatus] = useState<GateStatus>(() => (readAdminApiToken() ? "validating" : "booting"));
-  const [message, setMessage] = useState("이메일 인증 세션을 확인하는 중입니다.");
+  const [validatedEmail, setValidatedEmail] = useState(initialEmail);
+  const [validatedRole, setValidatedRole] = useState<OpsRole | null>(() => (hasStoredAllowedSession ? initialRole : null));
+  const [status, setStatus] = useState<GateStatus>(() => (hasStoredAllowedSession ? "valid" : initialToken ? "validating" : "booting"));
+  const [message, setMessage] = useState(() => (hasStoredAllowedSession ? "" : "이메일 인증 세션을 확인하는 중입니다."));
 
   const allowedRoleLabel = useMemo(() => {
     const roles = Array.from(new Set<OpsRole>(["admin", ...allowedRoles]));
@@ -53,7 +59,7 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
   }, [allowedRoles]);
 
   const validateSession = useCallback(
-    async (session: OpsEmailSession | null) => {
+    async (session: OpsEmailSession | null, options: { background?: boolean } = {}) => {
       const runId = validationRunRef.current + 1;
       validationRunRef.current = runId;
 
@@ -65,27 +71,37 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
         return;
       }
 
-      setStatus("validating");
-      setMessage("이메일 인증 세션을 서버에서 검증하는 중입니다.");
+      if (!options.background) {
+        setStatus("validating");
+        setMessage("이메일 인증 세션을 서버에서 검증하는 중입니다.");
+      }
 
       try {
+        const applyValidatedSnapshot = (snapshot: Awaited<ReturnType<typeof fetchPartnerMvpSnapshot>>) => {
+          if (runId !== validationRunRef.current) return false;
+
+          const serverRole = normalizeOpsRole(snapshot.meta?.role);
+          const serverEmail = snapshot.meta?.authEmail ?? session.email;
+
+          if (!roleAllowed(serverRole, allowedRoles)) {
+            throw new Error(`${opsRoleLabel(serverRole)} 권한은 이 화면에 접근할 수 없습니다.`);
+          }
+
+          saveOpsSession(session.accessToken, serverRole, serverEmail);
+          setToken(session.accessToken);
+          setEmail(serverEmail ?? session.email);
+          setValidatedEmail(serverEmail ?? session.email);
+          setValidatedRole(serverRole);
+          setStatus("valid");
+          setMessage("");
+          return true;
+        };
+
+        const cachedSnapshot = getCachedPartnerMvpSnapshot(session.accessToken);
+        if (cachedSnapshot && applyValidatedSnapshot(cachedSnapshot)) return;
+
         const snapshot = await fetchPartnerMvpSnapshot(session.accessToken);
-        if (runId !== validationRunRef.current) return;
-
-        const serverRole = normalizeOpsRole(snapshot.meta?.role);
-        const serverEmail = snapshot.meta?.authEmail ?? session.email;
-
-        if (!roleAllowed(serverRole, allowedRoles)) {
-          throw new Error(`${opsRoleLabel(serverRole)} 권한은 이 화면에 접근할 수 없습니다.`);
-        }
-
-        saveOpsSession(session.accessToken, serverRole, serverEmail);
-        setToken(session.accessToken);
-        setEmail(serverEmail ?? session.email);
-        setValidatedEmail(serverEmail ?? session.email);
-        setValidatedRole(serverRole);
-        setStatus("valid");
-        setMessage("이메일 인증이 승인되었습니다.");
+        applyValidatedSnapshot(snapshot);
       } catch (error) {
         if (runId !== validationRunRef.current) return;
         clearAdminApiToken();
@@ -114,7 +130,7 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
       try {
         const session = await getCurrentOpsEmailSession();
         if (!mounted) return;
-        if (session) await validateSession(session);
+        if (session) await validateSession(session, { background: hasStoredAllowedSession });
         else {
           clearAdminApiToken();
           setToken("");
@@ -145,7 +161,7 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
         return;
       }
 
-      if (session) void validateSession(session);
+      if (session) void validateSession(session, { background: Boolean(readAdminApiToken() && roleAllowed(readOpsRole(), allowedRoles)) });
     });
   }, [validateSession]);
 
