@@ -122,21 +122,6 @@ export async function requestOpsEmailSignIn(email: string, redirectTo?: string) 
   return cleanEmail;
 }
 
-export async function verifyOpsEmailOtp(email: string, token: string) {
-  const cleanEmail = normalizeEmail(email);
-  const cleanToken = token.trim();
-  if (!cleanEmail || !cleanToken) throw new Error("이메일과 인증 코드를 모두 입력하세요.");
-
-  const { data, error } = await getOpsAuthClient().auth.verifyOtp({
-    email: cleanEmail,
-    token: cleanToken,
-    type: "email",
-  });
-
-  if (error) throw new Error(error.message);
-  return toOpsSession(data.session);
-}
-
 export async function getCurrentOpsEmailSession() {
   if (!isOpsEmailAuthConfigured()) return null;
   let redirectError: Error | null = null;
