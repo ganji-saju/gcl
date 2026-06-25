@@ -15,9 +15,21 @@ export type BetaCaseStatus =
 export interface BetaProviderCandidate {
   id: string;
   name: string;
+  nameLegal?: string;
+  nameDisplayKo?: string;
+  nameDisplayEn?: string;
+  facilityType?: "clinic" | "hospital" | "general_hospital" | "tertiary_hospital";
+  address?: string;
+  city?: string;
+  district?: string;
+  countryCode?: string;
+  defaultCommissionCapRate?: number;
+  qualityScore?: number;
+  opsEmail?: string;
   region: string;
   specialty: string;
   registrationVerified: boolean;
+  medicalKoreaRegistered?: boolean;
   insuranceVerified: boolean;
   languages: string[];
   slaHours: number;
@@ -41,6 +53,10 @@ export interface BetaPartner {
   id: string;
   name: string;
   type: "agency" | "personal_agent" | "interpreter" | "travel_agency" | "concierge";
+  contactEmail?: string;
+  contactPhone?: string;
+  defaultRevenueShareRate?: number;
+  opsEmail?: string;
   verificationStatus: "pending" | "verified" | "rejected";
   languages: string[];
   markets: string[];

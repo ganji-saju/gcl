@@ -531,18 +531,34 @@ function normalizePartner(row) {
     preferredProviderIds: row.preferred_provider_ids || [],
     active: Boolean(row.active),
     slaHours: profile.slaHours || row.sla_hours || 8,
+    contactEmail: row.contact_email || "",
+    contactPhone: row.contact_phone || "",
+    defaultRevenueShareRate: Number(row.default_revenue_share_rate || 0),
+    opsEmail: row.ops_email || "",
   };
 }
 
 function normalizeProvider(row) {
   const profile = row.operating_profile || {};
+  const nameDisplay = row.name_display || {};
   const standardSlaHours = Number(profile.standard_sla_hours || Math.max(1, Math.ceil((row.average_response_minutes || 360) / 60)));
   return {
     id: row.id,
-    name: displayName(row.name_display, row.name_legal),
+    name: displayName(nameDisplay, row.name_legal),
+    nameLegal: row.name_legal || "",
+    nameDisplayKo: nameDisplay.ko || displayName(nameDisplay, row.name_legal),
+    nameDisplayEn: nameDisplay.en || displayName(nameDisplay, row.name_legal),
+    facilityType: row.facility_type || "clinic",
+    address: row.address || "",
+    city: row.city || "Seoul",
+    district: row.district || "",
+    countryCode: row.country_code || "KR",
+    defaultCommissionCapRate: Number(row.default_commission_cap_rate || 0.3),
+    opsEmail: row.ops_email || "",
     region: row.district || row.city || "Seoul",
     specialty: row.facility_type || "clinic",
     registrationVerified: Boolean(row.medical_korea_registered),
+    medicalKoreaRegistered: Boolean(row.medical_korea_registered),
     insuranceVerified: profile.data_source_status === "verified_docs" || profile.data_source_status === "contracted",
     languages: profile.supported_languages || row.languages || ["en", "ko"],
     slaHours: standardSlaHours,
@@ -552,6 +568,7 @@ function normalizeProvider(row) {
     slaStatus: profile.sla_contract_status || "draft",
     active: Boolean(row.active),
     betaScore: Number(row.quality_score || 80),
+    qualityScore: Number(row.quality_score || 80),
     owner: "Ops",
     nextStep: profile.next_step || "Request quote",
     matchedCases: 0,
@@ -802,6 +819,7 @@ async function getSnapshot(config) {
     providersRaw,
     relationships,
     providerOperatingProfilesRaw,
+    opsAccessRaw,
     availabilitySlotsRaw,
     bookingsRaw,
   ] = await Promise.all([
@@ -825,14 +843,19 @@ async function getSnapshot(config) {
           `select=id,case_id,actor_role,actor_label,event_type,event_payload,created_at&case_id=${inFilter(caseIds)}&order=created_at.desc&limit=120`,
         )
       : [],
-    list(config, "partners", "select=id,name,partner_type,active&active=eq.true&order=name.asc"),
-    list(config, "providers", "select=id,name_legal,name_display,facility_type,city,district,medical_korea_registered,active,average_response_minutes,quality_score&active=eq.true&order=quality_score.desc"),
+    list(config, "partners", "select=id,name,partner_type,contact_email,contact_phone,default_revenue_share_rate,active&active=eq.true&order=name.asc"),
+    list(
+      config,
+      "providers",
+      "select=id,name_legal,name_display,facility_type,address,city,district,country_code,medical_korea_registered,active,default_commission_cap_rate,average_response_minutes,quality_score&active=eq.true&order=quality_score.desc",
+    ),
     list(config, "partner_provider_relationships", "select=partner_id,provider_id,relationship_status,allowed_services,active&active=eq.true"),
     safeList(
       config,
       "provider_operating_profiles",
       "select=provider_id,public_exposure_status,data_source_status,supported_markets,supported_languages,standard_sla_hours,urgent_sla_hours,quote_template_ready,deposit_policy_ready,sla_contract_status,next_step",
     ),
+    config.role === "admin" ? safeList(config, "ops_user_access", "select=email,role,partner_id,provider_id,active&active=eq.true") : [],
     safeList(
       config,
       "availability_slots",
@@ -851,10 +874,21 @@ async function getSnapshot(config) {
   const assignmentMap = new Map(assignments.map((row) => [row.case_id, row]));
   const providerMap = new Map(providersRaw.map((row) => [row.id, row]));
   const operatingProfileMap = new Map(providerOperatingProfilesRaw.map((row) => [row.provider_id, row]));
+  const providerOpsEmailMap = new Map();
+  const partnerOpsEmailMap = new Map();
   const quoteByRequest = new Map();
   const quotesByCase = new Map();
   const shortlistsByCase = new Map();
   const quoteRequestsByCase = new Map();
+
+  for (const row of opsAccessRaw) {
+    if (row.role === "provider" && row.provider_id && !providerOpsEmailMap.has(row.provider_id)) {
+      providerOpsEmailMap.set(row.provider_id, row.email);
+    }
+    if (row.role === "partner" && row.partner_id && !partnerOpsEmailMap.has(row.partner_id)) {
+      partnerOpsEmailMap.set(row.partner_id, row.email);
+    }
+  }
 
   for (const row of quotes) {
     if (row.quote_request_id && !quoteByRequest.has(row.quote_request_id)) quoteByRequest.set(row.quote_request_id, row);
@@ -907,9 +941,10 @@ async function getSnapshot(config) {
       ...row,
       preferred_provider_ids: relationshipsByPartner.get(row.id) || [],
       services: Array.from(servicesByPartner.get(row.id) || []),
+      ops_email: partnerOpsEmailMap.get(row.id) || "",
     }),
   );
-  const providers = providersRaw.map((row) => normalizeProvider({ ...row, operating_profile: operatingProfileMap.get(row.id) }));
+  const providers = providersRaw.map((row) => normalizeProvider({ ...row, operating_profile: operatingProfileMap.get(row.id), ops_email: providerOpsEmailMap.get(row.id) || "" }));
   const providerQuoteRequests = quoteRequests.map((quoteRequest) =>
     normalizeProviderQuoteRequest({
       quoteRequest,
@@ -1170,6 +1205,330 @@ async function createPartner(config, body) {
   }
 
   return { ok: true, partnerId: partner.id };
+}
+
+function parseProviderRegistryInput(body) {
+  const input = body.provider || body;
+  const nameLegal = sanitizeText(input.nameLegal || input.name_legal);
+  const nameDisplayKo = sanitizeText(input.nameDisplayKo || input.nameKo || input.nameDisplay || input.name);
+  const nameDisplayEn = sanitizeText(input.nameDisplayEn || input.nameEn || input.nameDisplay || nameLegal);
+  const facilityType = sanitizeText(input.facilityType || input.facility_type, "clinic").toLowerCase();
+  const address = sanitizeText(input.address);
+  const city = sanitizeText(input.city, "Seoul");
+  const district = sanitizeText(input.district);
+  const countryCode = sanitizeText(input.countryCode || input.country_code, "KR").toUpperCase().slice(0, 2);
+  const opsEmail = sanitizeText(input.opsEmail || input.ops_email).toLowerCase();
+  const standardSlaHours = Math.round(numberInRange(input.standardSlaHours ?? input.standard_sla_hours, 24, 1, 168));
+  const urgentSlaHours = Math.round(numberInRange(input.urgentSlaHours ?? input.urgent_sla_hours, 6, 1, standardSlaHours));
+  const publicExposureStatus = sanitizeText(input.publicExposureStatus ?? input.public_exposure_status, "candidate").toLowerCase();
+  const dataSourceStatus = sanitizeText(input.dataSourceStatus ?? input.data_source_status, "candidate").toLowerCase();
+  const slaContractStatus = sanitizeText(input.slaContractStatus ?? input.sla_contract_status, "draft").toLowerCase();
+  const priceMin = nullableMoney(input.priceRangeUsdMin ?? input.price_range_usd_min);
+  const priceMax = nullableMoney(input.priceRangeUsdMax ?? input.price_range_usd_max);
+
+  return {
+    input,
+    nameLegal,
+    nameDisplayKo,
+    nameDisplayEn,
+    facilityType,
+    address,
+    city,
+    district,
+    countryCode,
+    opsEmail,
+    standardSlaHours,
+    urgentSlaHours,
+    publicExposureStatus,
+    dataSourceStatus,
+    slaContractStatus,
+    priceMin,
+    priceMax,
+  };
+}
+
+function assertProviderRegistryInput(parsed) {
+  if (!parsed.nameLegal || !parsed.nameDisplayKo || !parsed.address) throw new HttpError(400, "Provider name, display name, and address are required.");
+  if (!FACILITY_TYPES.has(parsed.facilityType)) throw new HttpError(400, "Unsupported provider facility type.");
+  if (!PROVIDER_EXPOSURE_STATUSES.has(parsed.publicExposureStatus)) throw new HttpError(400, "Unsupported provider exposure status.");
+  if (!PROVIDER_DATA_SOURCE_STATUSES.has(parsed.dataSourceStatus)) throw new HttpError(400, "Unsupported provider data source status.");
+  if (!SLA_CONTRACT_STATUSES.has(parsed.slaContractStatus)) throw new HttpError(400, "Unsupported provider SLA status.");
+  if (parsed.priceMin !== null && parsed.priceMax !== null && parsed.priceMax < parsed.priceMin) {
+    throw new HttpError(400, "Provider price max must be greater than or equal to price min.");
+  }
+}
+
+function providerRegistryBasePayload(parsed, includeUpdatedAt = true) {
+  return {
+    name_legal: parsed.nameLegal,
+    name_display: { ko: parsed.nameDisplayKo, en: parsed.nameDisplayEn || parsed.nameDisplayKo },
+    facility_type: parsed.facilityType,
+    address: parsed.address,
+    city: parsed.city,
+    district: parsed.district || null,
+    country_code: parsed.countryCode || "KR",
+    medical_korea_registered: Boolean(parsed.input.medicalKoreaRegistered || parsed.input.medical_korea_registered),
+    active: parsed.input.active !== false,
+    default_commission_cap_rate: numberInRange(parsed.input.defaultCommissionCapRate ?? parsed.input.default_commission_cap_rate, 0.3, 0, 0.3),
+    average_response_minutes: parsed.standardSlaHours * 60,
+    quality_score: numberInRange(parsed.input.qualityScore ?? parsed.input.quality_score, 70, 0, 100),
+    ...(includeUpdatedAt ? { updated_at: new Date().toISOString() } : {}),
+  };
+}
+
+function providerRegistryProfilePayload(providerId, parsed) {
+  return {
+    provider_id: providerId,
+    public_exposure_status: parsed.publicExposureStatus,
+    data_source_status: parsed.dataSourceStatus,
+    supported_markets: cleanTextArray(parsed.input.supportedMarkets || parsed.input.supported_markets),
+    supported_languages: cleanTextArray(parsed.input.supportedLanguages || parsed.input.supported_languages),
+    standard_sla_hours: parsed.standardSlaHours,
+    urgent_sla_hours: parsed.urgentSlaHours,
+    price_range_usd_min: parsed.priceMin,
+    price_range_usd_max: parsed.priceMax,
+    quote_template_ready: Boolean(parsed.input.quoteTemplateReady || parsed.input.quote_template_ready),
+    deposit_policy_ready: Boolean(parsed.input.depositPolicyReady || parsed.input.deposit_policy_ready),
+    sla_contract_status: parsed.slaContractStatus,
+    verification_summary: sanitizeText(parsed.input.verificationSummary || parsed.input.verification_summary),
+    source_notes: sanitizeText(parsed.input.sourceNotes || parsed.input.source_notes),
+    next_step: sanitizeText(parsed.input.nextStep || parsed.input.next_step, "검증 서류 확인"),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function syncRegistryOpsAccess(config, { role, partnerId = null, providerId = null, email, label }) {
+  const filter = role === "partner" ? `role=eq.partner&partner_id=eq.${partnerId}` : `role=eq.provider&provider_id=eq.${providerId}`;
+  const existingRows = await safeList(config, "ops_user_access", `select=id,email&${filter}&active=eq.true`);
+  const normalizedEmail = sanitizeText(email).toLowerCase();
+
+  for (const row of existingRows) {
+    if (!normalizedEmail || String(row.email || "").toLowerCase() !== normalizedEmail) {
+      await supabaseFetch(config, `ops_user_access?id=eq.${row.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ active: false, updated_at: new Date().toISOString() }),
+        prefer: "return=minimal",
+      });
+    }
+  }
+
+  if (!normalizedEmail) return;
+
+  await supabaseFetch(config, "ops_user_access?on_conflict=email", {
+    method: "POST",
+    body: JSON.stringify({
+      email: normalizedEmail,
+      role,
+      partner_id: partnerId,
+      provider_id: providerId,
+      active: true,
+      notes: `${role === "partner" ? "Partner" : "Provider"} access synced from admin registry for ${label}.`,
+      updated_at: new Date().toISOString(),
+    }),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+}
+
+async function createProviderRegistry(config, body) {
+  const parsed = parseProviderRegistryInput(body);
+  assertProviderRegistryInput(parsed);
+
+  const providerRows = await supabaseFetch(config, "providers", {
+    method: "POST",
+    body: JSON.stringify(providerRegistryBasePayload(parsed, false)),
+    prefer: "return=representation",
+  });
+  const provider = providerRows?.[0];
+  if (!provider?.id) throw new HttpError(409, "Provider could not be created.");
+
+  await supabaseFetch(config, "provider_operating_profiles?on_conflict=provider_id", {
+    method: "POST",
+    body: JSON.stringify(providerRegistryProfilePayload(provider.id, parsed)),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+  await syncRegistryOpsAccess(config, { role: "provider", providerId: provider.id, email: parsed.opsEmail, label: parsed.nameLegal });
+
+  return { ok: true, providerId: provider.id };
+}
+
+async function updateProvider(config, body) {
+  const providerId = sanitizeText(body.providerId || body.id || body.provider?.id);
+  if (!isUuid(providerId)) throw new HttpError(400, "A valid providerId is required.");
+
+  const parsed = parseProviderRegistryInput(body);
+  assertProviderRegistryInput(parsed);
+
+  const providerRows = await supabaseFetch(config, `providers?id=eq.${providerId}`, {
+    method: "PATCH",
+    body: JSON.stringify(providerRegistryBasePayload(parsed)),
+    prefer: "return=representation",
+  });
+  const provider = providerRows?.[0];
+  if (!provider?.id) throw new HttpError(404, "Provider not found.");
+
+  await supabaseFetch(config, "provider_operating_profiles?on_conflict=provider_id", {
+    method: "POST",
+    body: JSON.stringify(providerRegistryProfilePayload(provider.id, parsed)),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+  await syncRegistryOpsAccess(config, { role: "provider", providerId: provider.id, email: parsed.opsEmail, label: parsed.nameLegal });
+
+  return { ok: true, providerId: provider.id };
+}
+
+async function deleteProvider(config, body) {
+  const providerId = sanitizeText(body.providerId || body.id || body.provider?.id);
+  if (!isUuid(providerId)) throw new HttpError(400, "A valid providerId is required.");
+
+  const providerRows = await supabaseFetch(config, `providers?id=eq.${providerId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ active: false, updated_at: new Date().toISOString() }),
+    prefer: "return=representation",
+  });
+  if (!providerRows?.[0]) throw new HttpError(404, "Provider not found.");
+
+  await supabaseFetch(config, `provider_operating_profiles?provider_id=eq.${providerId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ public_exposure_status: "blocked", updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+  await supabaseFetch(config, `partner_provider_relationships?provider_id=eq.${providerId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ active: false, relationship_status: "inactive", updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+  await supabaseFetch(config, `ops_user_access?provider_id=eq.${providerId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ active: false, updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+
+  return { ok: true, providerId };
+}
+
+function parsePartnerRegistryInput(body) {
+  const input = body.partner || body;
+  const name = sanitizeText(input.name);
+  const partnerType = sanitizeText(input.partnerType || input.partner_type, "agency").toLowerCase();
+  const contactEmail = sanitizeText(input.contactEmail || input.contact_email).toLowerCase();
+  const opsEmail = sanitizeText(input.opsEmail || input.ops_email || contactEmail).toLowerCase();
+  const contactPhone = sanitizeText(input.contactPhone || input.contact_phone);
+  const preferredProviderIds = Array.isArray(input.preferredProviderIds || input.preferred_provider_ids)
+    ? (input.preferredProviderIds || input.preferred_provider_ids).map((item) => sanitizeText(item)).filter(Boolean)
+    : [];
+  const services = cleanTextArray(input.services, 12);
+
+  return { input, name, partnerType, contactEmail, opsEmail, contactPhone, preferredProviderIds, services };
+}
+
+function assertPartnerRegistryInput(parsed) {
+  if (!parsed.name) throw new HttpError(400, "Partner name is required.");
+  if (!PARTNER_TYPES.has(parsed.partnerType)) throw new HttpError(400, "Unsupported partner type.");
+  for (const providerId of parsed.preferredProviderIds) {
+    if (!isUuid(providerId)) throw new HttpError(400, "Preferred provider IDs must be valid UUIDs.");
+  }
+}
+
+function partnerRegistryBasePayload(parsed, includeUpdatedAt = true) {
+  return {
+    name: parsed.name,
+    partner_type: parsed.partnerType,
+    contact_email: parsed.contactEmail || null,
+    contact_phone: parsed.contactPhone || null,
+    default_revenue_share_rate: numberInRange(parsed.input.defaultRevenueShareRate ?? parsed.input.default_revenue_share_rate, 0, 0, 1),
+    active: parsed.input.active !== false,
+    ...(includeUpdatedAt ? { updated_at: new Date().toISOString() } : {}),
+  };
+}
+
+async function syncPartnerRegistryRelationships(config, partnerId, parsed) {
+  await supabaseFetch(config, `partner_provider_relationships?partner_id=eq.${partnerId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ active: false, relationship_status: "inactive", updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+
+  if (!parsed.preferredProviderIds.length) return;
+
+  await supabaseFetch(config, "partner_provider_relationships?on_conflict=partner_id,provider_id", {
+    method: "POST",
+    body: JSON.stringify(
+      parsed.preferredProviderIds.map((providerId) => ({
+        partner_id: partnerId,
+        provider_id: providerId,
+        relationship_status: "preferred",
+        allowed_services: parsed.services,
+        notes: sanitizeText(parsed.input.notes || parsed.input.sourceNotes),
+        active: true,
+        updated_at: new Date().toISOString(),
+      })),
+    ),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+}
+
+async function createPartnerRegistry(config, body) {
+  const parsed = parsePartnerRegistryInput(body);
+  assertPartnerRegistryInput(parsed);
+
+  const partnerRows = await supabaseFetch(config, "partners", {
+    method: "POST",
+    body: JSON.stringify(partnerRegistryBasePayload(parsed, false)),
+    prefer: "return=representation",
+  });
+  const partner = partnerRows?.[0];
+  if (!partner?.id) throw new HttpError(409, "Partner could not be created.");
+
+  await syncPartnerRegistryRelationships(config, partner.id, parsed);
+  await syncRegistryOpsAccess(config, { role: "partner", partnerId: partner.id, email: parsed.opsEmail, label: parsed.name });
+
+  return { ok: true, partnerId: partner.id };
+}
+
+async function updatePartner(config, body) {
+  const partnerId = sanitizeText(body.partnerId || body.id || body.partner?.id);
+  if (!isUuid(partnerId)) throw new HttpError(400, "A valid partnerId is required.");
+
+  const parsed = parsePartnerRegistryInput(body);
+  assertPartnerRegistryInput(parsed);
+
+  const partnerRows = await supabaseFetch(config, `partners?id=eq.${partnerId}`, {
+    method: "PATCH",
+    body: JSON.stringify(partnerRegistryBasePayload(parsed)),
+    prefer: "return=representation",
+  });
+  const partner = partnerRows?.[0];
+  if (!partner?.id) throw new HttpError(404, "Partner not found.");
+
+  await syncPartnerRegistryRelationships(config, partner.id, parsed);
+  await syncRegistryOpsAccess(config, { role: "partner", partnerId: partner.id, email: parsed.opsEmail, label: parsed.name });
+
+  return { ok: true, partnerId: partner.id };
+}
+
+async function deletePartner(config, body) {
+  const partnerId = sanitizeText(body.partnerId || body.id || body.partner?.id);
+  if (!isUuid(partnerId)) throw new HttpError(400, "A valid partnerId is required.");
+
+  const partnerRows = await supabaseFetch(config, `partners?id=eq.${partnerId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ active: false, updated_at: new Date().toISOString() }),
+    prefer: "return=representation",
+  });
+  if (!partnerRows?.[0]) throw new HttpError(404, "Partner not found.");
+
+  await supabaseFetch(config, `partner_provider_relationships?partner_id=eq.${partnerId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ active: false, relationship_status: "inactive", updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+  await supabaseFetch(config, `ops_user_access?partner_id=eq.${partnerId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ active: false, updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+
+  return { ok: true, partnerId };
 }
 
 async function upsertLandingRoute(config, body) {
@@ -1970,7 +2329,11 @@ function allowedRolesForAction(action) {
     action === "confirmHeldBooking" ||
     action === "upsertLandingRoute" ||
     action === "createProvider" ||
-    action === "createPartner"
+    action === "updateProvider" ||
+    action === "deleteProvider" ||
+    action === "createPartner" ||
+    action === "updatePartner" ||
+    action === "deletePartner"
   ) {
     return ["admin"];
   }
@@ -2005,8 +2368,12 @@ export default async function handler(req, res) {
       else if (body.action === "releaseAvailabilitySlot") return json(res, 200, await releaseAvailabilitySlot(config, body));
       else if (body.action === "confirmHeldBooking") return json(res, 200, await confirmHeldBooking(config, body));
       else if (body.action === "upsertLandingRoute") await upsertLandingRoute(config, body);
-      else if (body.action === "createProvider") await createProvider(config, body);
-      else if (body.action === "createPartner") await createPartner(config, body);
+      else if (body.action === "createProvider") await createProviderRegistry(config, body);
+      else if (body.action === "updateProvider") await updateProvider(config, body);
+      else if (body.action === "deleteProvider") await deleteProvider(config, body);
+      else if (body.action === "createPartner") await createPartnerRegistry(config, body);
+      else if (body.action === "updatePartner") await updatePartner(config, body);
+      else if (body.action === "deletePartner") await deletePartner(config, body);
 
       return json(res, 200, await getSnapshot(config));
     }
