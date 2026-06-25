@@ -876,9 +876,15 @@ async function getSnapshot(config) {
   }
 
   const relationshipsByPartner = new Map();
+  const servicesByPartner = new Map();
   for (const row of relationships) {
     const providerIds = relationshipsByPartner.get(row.partner_id) || [];
-    if (row.relationship_status !== "blocked") providerIds.push(row.provider_id);
+    if (row.relationship_status !== "blocked") {
+      providerIds.push(row.provider_id);
+      const services = servicesByPartner.get(row.partner_id) || new Set();
+      for (const service of row.allowed_services || []) services.add(service);
+      servicesByPartner.set(row.partner_id, services);
+    }
     relationshipsByPartner.set(row.partner_id, providerIds);
   }
 
@@ -896,7 +902,13 @@ async function getSnapshot(config) {
     )
     .filter((row) => row.id);
 
-  const partners = partnersRaw.map((row) => normalizePartner({ ...row, preferred_provider_ids: relationshipsByPartner.get(row.id) || [] }));
+  const partners = partnersRaw.map((row) =>
+    normalizePartner({
+      ...row,
+      preferred_provider_ids: relationshipsByPartner.get(row.id) || [],
+      services: Array.from(servicesByPartner.get(row.id) || []),
+    }),
+  );
   const providers = providersRaw.map((row) => normalizeProvider({ ...row, operating_profile: operatingProfileMap.get(row.id) }));
   const providerQuoteRequests = quoteRequests.map((quoteRequest) =>
     normalizeProviderQuoteRequest({
@@ -962,6 +974,11 @@ async function getSnapshot(config) {
 const LANDING_ROUTE_LOCALES = new Set(["en", "jp"]);
 const LANDING_ROUTE_MARKETS = new Set(["japan", "taiwan"]);
 const LANDING_ROUTE_STATUSES = new Set(["draft", "published", "paused", "archived"]);
+const FACILITY_TYPES = new Set(["clinic", "hospital", "general_hospital", "tertiary_hospital"]);
+const PROVIDER_EXPOSURE_STATUSES = new Set(["blocked", "candidate", "ready", "published"]);
+const PROVIDER_DATA_SOURCE_STATUSES = new Set(["demo_seed", "candidate", "verified_docs", "contracted"]);
+const SLA_CONTRACT_STATUSES = new Set(["draft", "sent", "negotiating", "pending_docs", "signed"]);
+const PARTNER_TYPES = new Set(["agency", "personal_agent", "interpreter", "travel_agency", "concierge"]);
 
 function normalizeSlug(value) {
   return String(value || "")
@@ -976,6 +993,183 @@ function normalizeSlug(value) {
 function cleanPackageIds(value) {
   if (!Array.isArray(value)) return [];
   return Array.from(new Set(value.map((item) => sanitizeText(item).slice(0, 80)).filter(Boolean)));
+}
+
+function cleanTextArray(value, limit = 12) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.map((item) => sanitizeText(item).toLowerCase()).filter(Boolean))).slice(0, limit);
+}
+
+function numberInRange(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function nullableMoney(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+async function createProvider(config, body) {
+  const input = body.provider || body;
+  const nameLegal = sanitizeText(input.nameLegal || input.name_legal);
+  const nameDisplayKo = sanitizeText(input.nameDisplayKo || input.nameKo || input.nameDisplay || input.name);
+  const nameDisplayEn = sanitizeText(input.nameDisplayEn || input.nameEn || input.nameDisplay || nameLegal);
+  const facilityType = sanitizeText(input.facilityType || input.facility_type, "clinic").toLowerCase();
+  const address = sanitizeText(input.address);
+  const city = sanitizeText(input.city, "Seoul");
+  const district = sanitizeText(input.district);
+  const countryCode = sanitizeText(input.countryCode || input.country_code, "KR").toUpperCase().slice(0, 2);
+  const opsEmail = sanitizeText(input.opsEmail || input.ops_email).toLowerCase();
+  const standardSlaHours = Math.round(numberInRange(input.standardSlaHours ?? input.standard_sla_hours, 24, 1, 168));
+  const urgentSlaHours = Math.round(numberInRange(input.urgentSlaHours ?? input.urgent_sla_hours, 6, 1, standardSlaHours));
+  const publicExposureStatus = sanitizeText(input.publicExposureStatus ?? input.public_exposure_status, "candidate").toLowerCase();
+  const dataSourceStatus = sanitizeText(input.dataSourceStatus ?? input.data_source_status, "candidate").toLowerCase();
+  const slaContractStatus = sanitizeText(input.slaContractStatus ?? input.sla_contract_status, "draft").toLowerCase();
+  const priceMin = nullableMoney(input.priceRangeUsdMin ?? input.price_range_usd_min);
+  const priceMax = nullableMoney(input.priceRangeUsdMax ?? input.price_range_usd_max);
+
+  if (!nameLegal || !nameDisplayKo || !address) throw new HttpError(400, "Provider name, display name, and address are required.");
+  if (!FACILITY_TYPES.has(facilityType)) throw new HttpError(400, "Unsupported provider facility type.");
+  if (!PROVIDER_EXPOSURE_STATUSES.has(publicExposureStatus)) throw new HttpError(400, "Unsupported provider exposure status.");
+  if (!PROVIDER_DATA_SOURCE_STATUSES.has(dataSourceStatus)) throw new HttpError(400, "Unsupported provider data source status.");
+  if (!SLA_CONTRACT_STATUSES.has(slaContractStatus)) throw new HttpError(400, "Unsupported provider SLA status.");
+  if (priceMin !== null && priceMax !== null && priceMax < priceMin) throw new HttpError(400, "Provider price max must be greater than or equal to price min.");
+
+  const providerRows = await supabaseFetch(config, "providers", {
+    method: "POST",
+    body: JSON.stringify({
+      name_legal: nameLegal,
+      name_display: { ko: nameDisplayKo, en: nameDisplayEn || nameDisplayKo },
+      facility_type: facilityType,
+      address,
+      city,
+      district: district || null,
+      country_code: countryCode || "KR",
+      medical_korea_registered: Boolean(input.medicalKoreaRegistered || input.medical_korea_registered),
+      active: input.active !== false,
+      default_commission_cap_rate: numberInRange(input.defaultCommissionCapRate ?? input.default_commission_cap_rate, 0.3, 0, 0.3),
+      average_response_minutes: standardSlaHours * 60,
+      quality_score: numberInRange(input.qualityScore ?? input.quality_score, 70, 0, 100),
+    }),
+    prefer: "return=representation",
+  });
+
+  const provider = providerRows?.[0];
+  if (!provider?.id) throw new HttpError(409, "Provider could not be created.");
+
+  await supabaseFetch(config, "provider_operating_profiles?on_conflict=provider_id", {
+    method: "POST",
+    body: JSON.stringify({
+      provider_id: provider.id,
+      public_exposure_status: publicExposureStatus,
+      data_source_status: dataSourceStatus,
+      supported_markets: cleanTextArray(input.supportedMarkets || input.supported_markets),
+      supported_languages: cleanTextArray(input.supportedLanguages || input.supported_languages),
+      standard_sla_hours: standardSlaHours,
+      urgent_sla_hours: urgentSlaHours,
+      price_range_usd_min: priceMin,
+      price_range_usd_max: priceMax,
+      quote_template_ready: Boolean(input.quoteTemplateReady || input.quote_template_ready),
+      deposit_policy_ready: Boolean(input.depositPolicyReady || input.deposit_policy_ready),
+      sla_contract_status: slaContractStatus,
+      verification_summary: sanitizeText(input.verificationSummary || input.verification_summary),
+      source_notes: sanitizeText(input.sourceNotes || input.source_notes),
+      next_step: sanitizeText(input.nextStep || input.next_step, "검증 서류 확인"),
+      updated_at: new Date().toISOString(),
+    }),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+
+  if (opsEmail) {
+    await supabaseFetch(config, "ops_user_access?on_conflict=email", {
+      method: "POST",
+      body: JSON.stringify({
+        email: opsEmail,
+        role: "provider",
+        provider_id: provider.id,
+        partner_id: null,
+        active: true,
+        notes: `Provider access created from admin provider registry for ${nameLegal}.`,
+        updated_at: new Date().toISOString(),
+      }),
+      prefer: "resolution=merge-duplicates,return=minimal",
+    });
+  }
+
+  return { ok: true, providerId: provider.id };
+}
+
+async function createPartner(config, body) {
+  const input = body.partner || body;
+  const name = sanitizeText(input.name);
+  const partnerType = sanitizeText(input.partnerType || input.partner_type, "agency").toLowerCase();
+  const contactEmail = sanitizeText(input.contactEmail || input.contact_email).toLowerCase();
+  const opsEmail = sanitizeText(input.opsEmail || input.ops_email || contactEmail).toLowerCase();
+  const contactPhone = sanitizeText(input.contactPhone || input.contact_phone);
+  const preferredProviderIds = Array.isArray(input.preferredProviderIds || input.preferred_provider_ids)
+    ? (input.preferredProviderIds || input.preferred_provider_ids).map((item) => sanitizeText(item)).filter(Boolean)
+    : [];
+  const services = cleanTextArray(input.services, 12);
+
+  if (!name) throw new HttpError(400, "Partner name is required.");
+  if (!PARTNER_TYPES.has(partnerType)) throw new HttpError(400, "Unsupported partner type.");
+  for (const providerId of preferredProviderIds) {
+    if (!isUuid(providerId)) throw new HttpError(400, "Preferred provider IDs must be valid UUIDs.");
+  }
+
+  const partnerRows = await supabaseFetch(config, "partners", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      partner_type: partnerType,
+      contact_email: contactEmail || null,
+      contact_phone: contactPhone || null,
+      default_revenue_share_rate: numberInRange(input.defaultRevenueShareRate ?? input.default_revenue_share_rate, 0, 0, 1),
+      active: input.active !== false,
+    }),
+    prefer: "return=representation",
+  });
+
+  const partner = partnerRows?.[0];
+  if (!partner?.id) throw new HttpError(409, "Partner could not be created.");
+
+  if (preferredProviderIds.length) {
+    await supabaseFetch(config, "partner_provider_relationships?on_conflict=partner_id,provider_id", {
+      method: "POST",
+      body: JSON.stringify(
+        preferredProviderIds.map((providerId) => ({
+          partner_id: partner.id,
+          provider_id: providerId,
+          relationship_status: "preferred",
+          allowed_services: services,
+          notes: sanitizeText(input.notes || input.sourceNotes),
+          active: true,
+          updated_at: new Date().toISOString(),
+        })),
+      ),
+      prefer: "resolution=merge-duplicates,return=minimal",
+    });
+  }
+
+  if (opsEmail) {
+    await supabaseFetch(config, "ops_user_access?on_conflict=email", {
+      method: "POST",
+      body: JSON.stringify({
+        email: opsEmail,
+        role: "partner",
+        partner_id: partner.id,
+        provider_id: null,
+        active: true,
+        notes: `Partner access created from admin partner registry for ${name}.`,
+        updated_at: new Date().toISOString(),
+      }),
+      prefer: "resolution=merge-duplicates,return=minimal",
+    });
+  }
+
+  return { ok: true, partnerId: partner.id };
 }
 
 async function upsertLandingRoute(config, body) {
@@ -1774,7 +1968,9 @@ function allowedRolesForAction(action) {
     action === "holdAvailabilitySlot" ||
     action === "releaseAvailabilitySlot" ||
     action === "confirmHeldBooking" ||
-    action === "upsertLandingRoute"
+    action === "upsertLandingRoute" ||
+    action === "createProvider" ||
+    action === "createPartner"
   ) {
     return ["admin"];
   }
@@ -1809,6 +2005,8 @@ export default async function handler(req, res) {
       else if (body.action === "releaseAvailabilitySlot") return json(res, 200, await releaseAvailabilitySlot(config, body));
       else if (body.action === "confirmHeldBooking") return json(res, 200, await confirmHeldBooking(config, body));
       else if (body.action === "upsertLandingRoute") await upsertLandingRoute(config, body);
+      else if (body.action === "createProvider") await createProvider(config, body);
+      else if (body.action === "createPartner") await createPartner(config, body);
 
       return json(res, 200, await getSnapshot(config));
     }

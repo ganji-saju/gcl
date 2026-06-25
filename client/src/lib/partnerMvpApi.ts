@@ -247,6 +247,49 @@ export interface AvailabilitySlotInput {
   status?: SlotStatus;
 }
 
+export interface AdminProviderInput {
+  nameLegal: string;
+  nameDisplayKo: string;
+  nameDisplayEn?: string;
+  opsEmail?: string;
+  facilityType: "clinic" | "hospital" | "general_hospital" | "tertiary_hospital";
+  address: string;
+  city: string;
+  district?: string;
+  countryCode: string;
+  medicalKoreaRegistered: boolean;
+  active: boolean;
+  defaultCommissionCapRate: number;
+  qualityScore: number;
+  publicExposureStatus: "blocked" | "candidate" | "ready" | "published";
+  dataSourceStatus: "demo_seed" | "candidate" | "verified_docs" | "contracted";
+  supportedMarkets: string[];
+  supportedLanguages: string[];
+  standardSlaHours: number;
+  urgentSlaHours: number;
+  priceRangeUsdMin?: number | null;
+  priceRangeUsdMax?: number | null;
+  quoteTemplateReady: boolean;
+  depositPolicyReady: boolean;
+  slaContractStatus: "draft" | "sent" | "negotiating" | "pending_docs" | "signed";
+  verificationSummary?: string;
+  sourceNotes?: string;
+  nextStep?: string;
+}
+
+export interface AdminPartnerInput {
+  name: string;
+  partnerType: BetaPartner["type"];
+  contactEmail?: string;
+  contactPhone?: string;
+  opsEmail?: string;
+  defaultRevenueShareRate: number;
+  active: boolean;
+  services: string[];
+  preferredProviderIds: string[];
+  notes?: string;
+}
+
 export interface HoldAvailabilitySlotInput {
   slotId: string;
   caseId: string;
@@ -511,6 +554,20 @@ export function createAvailabilitySlotMvp(token: string, input: AvailabilitySlot
     method: "POST",
     body: JSON.stringify({ action: "createAvailabilitySlot", ...input }),
   }));
+}
+
+export function createProviderMvp(token: string, input: AdminProviderInput) {
+  return requestPartnerMvpAction(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "createProvider", provider: input }),
+  });
+}
+
+export function createPartnerMvp(token: string, input: AdminPartnerInput) {
+  return requestPartnerMvpAction(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "createPartner", partner: input }),
+  });
 }
 
 export function holdAvailabilitySlotMvp(token: string, input: HoldAvailabilitySlotInput) {

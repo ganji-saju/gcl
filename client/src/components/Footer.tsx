@@ -14,6 +14,8 @@ export default function Footer() {
     { href: "/provider/quotes", label: "병원 견적 데스크" },
     { href: "/admin/quote-booking", label: "견적/예약 관리" },
     { href: "/admin/reservation-calendar", label: "예약 캘린더" },
+    { href: "/admin/providers", label: "병원 등록" },
+    { href: "/admin/partners", label: "에이전트 등록" },
   ];
   const publicLinks = [
     { href: "/hospitals", label: t("nav.hospitals") },
