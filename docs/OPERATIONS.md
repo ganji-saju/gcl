@@ -44,6 +44,8 @@ Closed beta operating artifacts:
 - Case dashboard: `/admin/cases`
 - Quote/deposit/booking MVP: `/admin/quote-booking`
 - Reservation slot calendar: `/admin/reservation-calendar`
+- Provider registration: `/admin/providers`
+- Partner/agent registration: `/admin/partners`
 
 For backend implementation, apply the additive core schema migration after the POC schema:
 

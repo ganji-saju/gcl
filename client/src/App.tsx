@@ -21,6 +21,8 @@ import ClosedBetaOps from "./pages/ClosedBetaOps";
 import CaseDashboard from "./pages/CaseDashboard";
 import QuoteBookingMvp from "./pages/QuoteBookingMvp";
 import AdminLandingRoutes from "./pages/AdminLandingRoutes";
+import AdminPartnerRegistry from "./pages/AdminPartnerRegistry";
+import AdminProviderRegistry from "./pages/AdminProviderRegistry";
 import PartnerCaseBoard from "./pages/PartnerCaseBoard";
 import ProviderQuoteDesk from "./pages/ProviderQuoteDesk";
 import OpsHealth from "./pages/OpsHealth";
@@ -61,6 +63,14 @@ function AdminLandingRoutesRoute() {
   return <InternalRoute><AdminLandingRoutes /></InternalRoute>;
 }
 
+function AdminProviderRegistryRoute() {
+  return <InternalRoute><AdminProviderRegistry /></InternalRoute>;
+}
+
+function AdminPartnerRegistryRoute() {
+  return <InternalRoute><AdminPartnerRegistry /></InternalRoute>;
+}
+
 function PartnerCaseBoardRoute() {
   return <InternalRoute allowedRoles={["admin", "partner"]} title="파트너 운영 접근"><PartnerCaseBoard /></InternalRoute>;
 }
@@ -87,6 +97,8 @@ function Router() {
       <Route path="/admin/cases" component={CaseDashboardRoute} />
       <Route path="/admin/quote-booking" component={QuoteBookingRoute} />
       <Route path="/admin/reservation-calendar" component={ReservationCalendarRoute} />
+      <Route path="/admin/providers" component={AdminProviderRegistryRoute} />
+      <Route path="/admin/partners" component={AdminPartnerRegistryRoute} />
       <Route path="/admin/landing-routes" component={AdminLandingRoutesRoute} />
       <Route path="/admin/ops-health" component={OpsHealthRoute} />
       <Route path="/partner/cases" component={PartnerCaseBoardRoute} />

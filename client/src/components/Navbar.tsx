@@ -33,6 +33,8 @@ export default function Navbar() {
     { href: "/provider/quotes", label: "병원 견적" },
     { href: "/admin/quote-booking", label: "견적/예약" },
     { href: "/admin/reservation-calendar", label: "예약 캘린더" },
+    { href: "/admin/providers", label: "병원등록" },
+    { href: "/admin/partners", label: "에이전트등록" },
     { href: "/admin/beta", label: "베타 운영" },
     { href: "/admin/landing-routes", label: "랜딩 경로" },
   ];
@@ -56,7 +58,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className={cn("hidden items-center gap-1 md:flex", internalMode && "min-w-0 flex-1 justify-center overflow-x-auto")}>
             {navLinks.map((link) => {
               const active = link.href !== "/#process" && location === link.href;
               return (
@@ -64,7 +66,7 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     active ? "bg-ink-100 text-ink-950" : "text-ink-600 hover:bg-ink-50 hover:text-ink-950",
                   )}
                 >
