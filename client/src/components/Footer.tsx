@@ -1,28 +1,55 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { useI18n } from "@/contexts/I18nContext";
+import { getOpsNavigationItems } from "@/lib/opsNavigation";
+import {
+  OPS_SESSION_CHANGED_EVENT,
+  readAdminApiToken,
+  readOpsRole,
+} from "@/lib/partnerMvpApi";
 
 export default function Footer() {
   const { t } = useI18n();
   const [location] = useLocation();
-  const internalMode = location.startsWith("/admin") || location.startsWith("/partner") || location.startsWith("/provider");
+  const [opsSession, setOpsSession] = useState(() => ({
+    authenticated: Boolean(readAdminApiToken()),
+    role: readOpsRole(),
+  }));
+  const internalMode =
+    location.startsWith("/admin") ||
+    location.startsWith("/partner") ||
+    location.startsWith("/provider");
 
-  const internalLinks = [
-    { href: "/admin/ops-health", label: "운영 상태 점검" },
-    { href: "/admin/cases", label: "케이스 보드" },
-    { href: "/partner/cases", label: "파트너 보드" },
-    { href: "/provider/quotes", label: "병원 견적 데스크" },
-    { href: "/admin/quote-booking", label: "견적/예약 관리" },
-    { href: "/admin/reservation-calendar", label: "예약 캘린더" },
-    { href: "/admin/providers", label: "병원 등록" },
-    { href: "/admin/partners", label: "에이전트 등록" },
-  ];
+  const internalLinks = getOpsNavigationItems(
+    opsSession.role,
+    opsSession.authenticated
+  );
   const publicLinks = [
     { href: "/hospitals", label: t("nav.hospitals") },
     { href: "/treatments", label: t("nav.treatments") },
     { href: "/compare", label: t("nav.compare") },
     { href: "/consultation", label: t("nav.consultation") },
   ];
+
+  useEffect(() => {
+    if (!internalMode) return undefined;
+
+    const syncOpsSession = () => {
+      setOpsSession({
+        authenticated: Boolean(readAdminApiToken()),
+        role: readOpsRole(),
+      });
+    };
+
+    syncOpsSession();
+    window.addEventListener("storage", syncOpsSession);
+    window.addEventListener(OPS_SESSION_CHANGED_EVENT, syncOpsSession);
+    return () => {
+      window.removeEventListener("storage", syncOpsSession);
+      window.removeEventListener(OPS_SESSION_CHANGED_EVENT, syncOpsSession);
+    };
+  }, [internalMode, location]);
 
   return (
     <footer className="border-t border-ink-200 bg-ink-950 text-white">
@@ -34,8 +61,12 @@ export default function Footer() {
                 {internalMode ? "OPS" : "GCL"}
               </div>
               <div>
-                <div className="font-serif text-xl">{internalMode ? "GCL Ops" : "GCL"}</div>
-                <div className="text-sm text-teal-200">{internalMode ? "내부 운영 콘솔" : t("footer.tagline")}</div>
+                <div className="font-serif text-xl">
+                  {internalMode ? "GCL Ops" : "GCL"}
+                </div>
+                <div className="text-sm text-teal-200">
+                  {internalMode ? "내부 운영 콘솔" : t("footer.tagline")}
+                </div>
               </div>
             </div>
             <p className="max-w-md text-sm leading-6 text-ink-300">
@@ -46,10 +77,16 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-white">{internalMode ? "운영 메뉴" : t("footer.explore")}</h4>
+            <h4 className="mb-4 text-sm font-semibold text-white">
+              {internalMode ? "운영 메뉴" : t("footer.explore")}
+            </h4>
             <div className="grid gap-2 text-sm">
-              {(internalMode ? internalLinks : publicLinks).map((link) => (
-                <Link key={link.href} href={link.href} className="text-ink-300 hover:text-white">
+              {(internalMode ? internalLinks : publicLinks).map(link => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-ink-300 hover:text-white"
+                >
                   {link.label}
                 </Link>
               ))}
@@ -57,17 +94,25 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="mb-4 text-sm font-semibold text-white">{internalMode ? "운영 연락처" : t("footer.contact")}</h4>
+            <h4 className="mb-4 text-sm font-semibold text-white">
+              {internalMode ? "운영 연락처" : t("footer.contact")}
+            </h4>
             <div className="grid gap-3 text-sm text-ink-300">
               <div className="flex gap-2">
                 <MapPin className="mt-0.5 size-4 text-teal-300" />
                 {internalMode ? "Seoul operations" : t("footer.location")}
               </div>
-              <a href="tel:+82-2-6200-2026" className="flex gap-2 hover:text-white">
+              <a
+                href="tel:+82-2-6200-2026"
+                className="flex gap-2 hover:text-white"
+              >
                 <Phone className="size-4 text-teal-300" />
                 +82 2-6200-2026
               </a>
-              <a href="mailto:care@global-connected-lab.com" className="flex gap-2 hover:text-white">
+              <a
+                href="mailto:care@global-connected-lab.com"
+                className="flex gap-2 hover:text-white"
+              >
                 <Mail className="size-4 text-teal-300" />
                 care@global-connected-lab.com
               </a>

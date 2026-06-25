@@ -28,12 +28,13 @@ import ProviderQuoteDesk from "./pages/ProviderQuoteDesk";
 import OpsHealth from "./pages/OpsHealth";
 import ReservationCalendar from "./pages/ReservationCalendar";
 import { readOpsRole, type OpsRole } from "./lib/partnerMvpApi";
-
-const opsRoleHome: Record<OpsRole, string> = {
-  admin: "/admin/ops-health",
-  partner: "/partner/cases",
-  provider: "/provider/quotes",
-};
+import {
+  getOpsRoleHomePath,
+  OPS_ALL_ROLES,
+  OPS_PARTNER_ROLES,
+  OPS_PROVIDER_ROLES,
+  OPS_SHARED_WORKFLOW_ROLES,
+} from "./lib/opsNavigation";
 
 function InternalRoute({
   children,
@@ -42,22 +43,34 @@ function InternalRoute({
   allowLocalDemo = false,
 }: {
   children: ReactNode;
-  allowedRoles?: OpsRole[];
+  allowedRoles?: readonly OpsRole[];
   title?: string;
   allowLocalDemo?: boolean;
 }) {
-  return <InternalOpsGate allowedRoles={allowedRoles} title={title} allowLocalDemo={allowLocalDemo}>{children}</InternalOpsGate>;
+  return (
+    <InternalOpsGate
+      allowedRoles={allowedRoles}
+      title={title}
+      allowLocalDemo={allowLocalDemo}
+    >
+      {children}
+    </InternalOpsGate>
+  );
 }
 
 function ClosedBetaOpsRoute() {
-  return <InternalRoute><ClosedBetaOps /></InternalRoute>;
+  return (
+    <InternalRoute>
+      <ClosedBetaOps />
+    </InternalRoute>
+  );
 }
 
 function AdminEntryRedirect() {
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    navigate(opsRoleHome[readOpsRole()] ?? opsRoleHome.admin, { replace: true });
+    navigate(getOpsRoleHomePath(readOpsRole()), { replace: true });
   }, [navigate]);
 
   return (
@@ -69,46 +82,82 @@ function AdminEntryRedirect() {
 
 function AdminEntryRoute() {
   return (
-    <InternalRoute allowedRoles={["admin", "partner", "provider"]} title="운영 포털 로그인">
+    <InternalRoute allowedRoles={OPS_ALL_ROLES} title="운영 포털 로그인">
       <AdminEntryRedirect />
     </InternalRoute>
   );
 }
 
 function CaseDashboardRoute() {
-  return <InternalRoute><CaseDashboard /></InternalRoute>;
+  return (
+    <InternalRoute>
+      <CaseDashboard />
+    </InternalRoute>
+  );
 }
 
 function QuoteBookingRoute() {
-  return <InternalRoute><QuoteBookingMvp /></InternalRoute>;
+  return (
+    <InternalRoute allowedRoles={OPS_SHARED_WORKFLOW_ROLES}>
+      <QuoteBookingMvp />
+    </InternalRoute>
+  );
 }
 
 function ReservationCalendarRoute() {
-  return <InternalRoute allowLocalDemo><ReservationCalendar /></InternalRoute>;
+  return (
+    <InternalRoute allowedRoles={OPS_SHARED_WORKFLOW_ROLES} allowLocalDemo>
+      <ReservationCalendar />
+    </InternalRoute>
+  );
 }
 
 function AdminLandingRoutesRoute() {
-  return <InternalRoute><AdminLandingRoutes /></InternalRoute>;
+  return (
+    <InternalRoute>
+      <AdminLandingRoutes />
+    </InternalRoute>
+  );
 }
 
 function AdminProviderRegistryRoute() {
-  return <InternalRoute allowLocalDemo><AdminProviderRegistry /></InternalRoute>;
+  return (
+    <InternalRoute allowLocalDemo>
+      <AdminProviderRegistry />
+    </InternalRoute>
+  );
 }
 
 function AdminPartnerRegistryRoute() {
-  return <InternalRoute allowLocalDemo><AdminPartnerRegistry /></InternalRoute>;
+  return (
+    <InternalRoute allowLocalDemo>
+      <AdminPartnerRegistry />
+    </InternalRoute>
+  );
 }
 
 function PartnerCaseBoardRoute() {
-  return <InternalRoute allowedRoles={["admin", "partner"]} title="파트너 운영 접근"><PartnerCaseBoard /></InternalRoute>;
+  return (
+    <InternalRoute allowedRoles={OPS_PARTNER_ROLES} title="파트너 운영 접근">
+      <PartnerCaseBoard />
+    </InternalRoute>
+  );
 }
 
 function ProviderQuoteDeskRoute() {
-  return <InternalRoute allowedRoles={["admin", "provider"]} title="병원 운영 접근"><ProviderQuoteDesk /></InternalRoute>;
+  return (
+    <InternalRoute allowedRoles={OPS_PROVIDER_ROLES} title="병원 운영 접근">
+      <ProviderQuoteDesk />
+    </InternalRoute>
+  );
 }
 
 function OpsHealthRoute() {
-  return <InternalRoute><OpsHealth /></InternalRoute>;
+  return (
+    <InternalRoute>
+      <OpsHealth />
+    </InternalRoute>
+  );
 }
 
 function Router() {
@@ -126,7 +175,10 @@ function Router() {
       <Route path="/admin/beta" component={ClosedBetaOpsRoute} />
       <Route path="/admin/cases" component={CaseDashboardRoute} />
       <Route path="/admin/quote-booking" component={QuoteBookingRoute} />
-      <Route path="/admin/reservation-calendar" component={ReservationCalendarRoute} />
+      <Route
+        path="/admin/reservation-calendar"
+        component={ReservationCalendarRoute}
+      />
       <Route path="/admin/providers" component={AdminProviderRegistryRoute} />
       <Route path="/admin/partners" component={AdminPartnerRegistryRoute} />
       <Route path="/admin/landing-routes" component={AdminLandingRoutesRoute} />
