@@ -1,4 +1,8 @@
-import type { BetaCase, BetaPartner, BetaProviderCandidate } from "@/lib/betaData";
+import type {
+  BetaCase,
+  BetaPartner,
+  BetaProviderCandidate,
+} from "@/lib/betaData";
 
 export interface PartnerMvpSnapshot {
   cases: BetaCase[];
@@ -104,7 +108,12 @@ export interface ProviderOperatingProfile {
   priceRangeUsdMax?: number | null;
   quoteTemplateReady: boolean;
   depositPolicyReady: boolean;
-  slaContractStatus: "draft" | "sent" | "negotiating" | "pending_docs" | "signed";
+  slaContractStatus:
+    | "draft"
+    | "sent"
+    | "negotiating"
+    | "pending_docs"
+    | "signed";
   verificationSummary?: string | null;
   sourceNotes?: string | null;
   lastVerifiedAt?: string | null;
@@ -176,7 +185,13 @@ export interface BookingReservation {
   providerId: string;
   scheduledAt: string;
   visitType: VisitType;
-  status: "requested" | "confirmed" | "rescheduled" | "completed" | "cancelled" | "no_show";
+  status:
+    | "requested"
+    | "confirmed"
+    | "rescheduled"
+    | "completed"
+    | "cancelled"
+    | "no_show";
   confirmedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -252,7 +267,11 @@ export interface AdminProviderInput {
   nameDisplayKo: string;
   nameDisplayEn?: string;
   opsEmail?: string;
-  facilityType: "clinic" | "hospital" | "general_hospital" | "tertiary_hospital";
+  facilityType:
+    | "clinic"
+    | "hospital"
+    | "general_hospital"
+    | "tertiary_hospital";
   address: string;
   city: string;
   district?: string;
@@ -271,7 +290,12 @@ export interface AdminProviderInput {
   priceRangeUsdMax?: number | null;
   quoteTemplateReady: boolean;
   depositPolicyReady: boolean;
-  slaContractStatus: "draft" | "sent" | "negotiating" | "pending_docs" | "signed";
+  slaContractStatus:
+    | "draft"
+    | "sent"
+    | "negotiating"
+    | "pending_docs"
+    | "signed";
   verificationSummary?: string;
   sourceNotes?: string;
   nextStep?: string;
@@ -327,6 +351,7 @@ const OPS_ROLE_KEY = "gcl_ops_role";
 const LEGACY_ADMIN_TOKEN_KEY = "gcl_admin_api_token";
 const ADMIN_API_TIMEOUT_MS = 15000;
 const PARTNER_MVP_SNAPSHOT_CACHE_TTL_MS = 30000;
+export const OPS_SESSION_CHANGED_EVENT = "gcl:ops-session-changed";
 
 interface PartnerMvpSnapshotCache {
   token: string;
@@ -335,7 +360,15 @@ interface PartnerMvpSnapshotCache {
 }
 
 let partnerMvpSnapshotCache: PartnerMvpSnapshotCache | null = null;
-let partnerMvpSnapshotRequest: { token: string; promise: Promise<PartnerMvpSnapshot> } | null = null;
+let partnerMvpSnapshotRequest: {
+  token: string;
+  promise: Promise<PartnerMvpSnapshot>;
+} | null = null;
+
+function notifyOpsSessionChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(OPS_SESSION_CHANGED_EVENT));
+}
 
 export function normalizeOpsRole(value: string | null | undefined): OpsRole {
   return value === "partner" || value === "provider" ? value : "admin";
@@ -359,17 +392,27 @@ export function readOpsEmail() {
 
 export function readAdminApiToken() {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem(OPS_ACCESS_TOKEN_KEY) ?? localStorage.getItem(LEGACY_ADMIN_TOKEN_KEY) ?? "";
+  return (
+    localStorage.getItem(OPS_ACCESS_TOKEN_KEY) ??
+    localStorage.getItem(LEGACY_ADMIN_TOKEN_KEY) ??
+    ""
+  );
 }
 
-export function saveOpsSession(token: string, role: OpsRole, email?: string | null) {
+export function saveOpsSession(
+  token: string,
+  role: OpsRole,
+  email?: string | null
+) {
   if (typeof window === "undefined") return;
   if (token.trim()) localStorage.setItem(OPS_ACCESS_TOKEN_KEY, token.trim());
   else localStorage.removeItem(OPS_ACCESS_TOKEN_KEY);
   localStorage.setItem(OPS_ROLE_KEY, role);
-  if (email?.trim()) localStorage.setItem(OPS_EMAIL_KEY, email.trim().toLowerCase());
+  if (email?.trim())
+    localStorage.setItem(OPS_EMAIL_KEY, email.trim().toLowerCase());
   else if (email === null) localStorage.removeItem(OPS_EMAIL_KEY);
   localStorage.removeItem(LEGACY_ADMIN_TOKEN_KEY);
+  notifyOpsSessionChanged();
 }
 
 export function saveAdminApiToken(token: string) {
@@ -383,18 +426,31 @@ export function clearAdminApiToken() {
   localStorage.removeItem(OPS_ROLE_KEY);
   localStorage.removeItem(LEGACY_ADMIN_TOKEN_KEY);
   invalidatePartnerMvpSnapshotCache();
+  notifyOpsSessionChanged();
 }
 
-function cacheMatches(token: string, maxAgeMs = PARTNER_MVP_SNAPSHOT_CACHE_TTL_MS) {
-  if (!partnerMvpSnapshotCache || partnerMvpSnapshotCache.token !== token) return false;
+function cacheMatches(
+  token: string,
+  maxAgeMs = PARTNER_MVP_SNAPSHOT_CACHE_TTL_MS
+) {
+  if (!partnerMvpSnapshotCache || partnerMvpSnapshotCache.token !== token)
+    return false;
   return Date.now() - partnerMvpSnapshotCache.cachedAt <= maxAgeMs;
 }
 
-export function getCachedPartnerMvpSnapshot(token: string, maxAgeMs = PARTNER_MVP_SNAPSHOT_CACHE_TTL_MS) {
-  return cacheMatches(token, maxAgeMs) ? partnerMvpSnapshotCache?.snapshot ?? null : null;
+export function getCachedPartnerMvpSnapshot(
+  token: string,
+  maxAgeMs = PARTNER_MVP_SNAPSHOT_CACHE_TTL_MS
+) {
+  return cacheMatches(token, maxAgeMs)
+    ? (partnerMvpSnapshotCache?.snapshot ?? null)
+    : null;
 }
 
-export function setPartnerMvpSnapshotCache(token: string, snapshot: PartnerMvpSnapshot) {
+export function setPartnerMvpSnapshotCache(
+  token: string,
+  snapshot: PartnerMvpSnapshot
+) {
   partnerMvpSnapshotCache = { token, snapshot, cachedAt: Date.now() };
 }
 
@@ -408,13 +464,20 @@ async function fetchAdminApi(init?: RequestInit): Promise<Response> {
   const timeoutId = setTimeout(() => controller.abort(), ADMIN_API_TIMEOUT_MS);
 
   try {
-    return await fetch("/api/admin/partner-mvp", { ...init, signal: controller.signal });
+    return await fetch("/api/admin/partner-mvp", {
+      ...init,
+      signal: controller.signal,
+    });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("관리자 API 응답 시간이 초과했습니다. 잠시 후 다시 시도하세요.");
+      throw new Error(
+        "관리자 API 응답 시간이 초과했습니다. 잠시 후 다시 시도하세요."
+      );
     }
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("관리자 API 응답 시간이 초과했습니다. 잠시 후 다시 시도하세요.");
+      throw new Error(
+        "관리자 API 응답 시간이 초과했습니다. 잠시 후 다시 시도하세요."
+      );
     }
     throw error;
   } finally {
@@ -422,7 +485,10 @@ async function fetchAdminApi(init?: RequestInit): Promise<Response> {
   }
 }
 
-async function requestPartnerMvpJson<T>(token: string, init?: RequestInit): Promise<T> {
+async function requestPartnerMvpJson<T>(
+  token: string,
+  init?: RequestInit
+): Promise<T> {
   const response = await fetchAdminApi({
     ...init,
     headers: {
@@ -435,34 +501,48 @@ async function requestPartnerMvpJson<T>(token: string, init?: RequestInit): Prom
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.error || `Partner MVP API failed with ${response.status}`);
+    throw new Error(
+      payload.error || `Partner MVP API failed with ${response.status}`
+    );
   }
 
   return payload as T;
 }
 
-async function requestPartnerMvp(token: string, init?: RequestInit): Promise<PartnerMvpSnapshot> {
+async function requestPartnerMvp(
+  token: string,
+  init?: RequestInit
+): Promise<PartnerMvpSnapshot> {
   const payload = await requestPartnerMvpJson<PartnerMvpSnapshot>(token, init);
-  if (!Array.isArray(payload.cases) || !Array.isArray(payload.partners) || !Array.isArray(payload.providers)) {
+  if (
+    !Array.isArray(payload.cases) ||
+    !Array.isArray(payload.partners) ||
+    !Array.isArray(payload.providers)
+  ) {
     throw new Error("운영 API 응답 형식이 올바르지 않습니다.");
   }
   return payload;
 }
 
-export function fetchPartnerMvpSnapshot(token: string, options: { force?: boolean; maxAgeMs?: number } = {}) {
+export function fetchPartnerMvpSnapshot(
+  token: string,
+  options: { force?: boolean; maxAgeMs?: number } = {}
+) {
   if (!options.force) {
     const cachedSnapshot = getCachedPartnerMvpSnapshot(token, options.maxAgeMs);
     if (cachedSnapshot) return Promise.resolve(cachedSnapshot);
-    if (partnerMvpSnapshotRequest?.token === token) return partnerMvpSnapshotRequest.promise;
+    if (partnerMvpSnapshotRequest?.token === token)
+      return partnerMvpSnapshotRequest.promise;
   }
 
   const promise = requestPartnerMvp(token)
-    .then((snapshot) => {
+    .then(snapshot => {
       setPartnerMvpSnapshotCache(token, snapshot);
       return snapshot;
     })
     .finally(() => {
-      if (partnerMvpSnapshotRequest?.promise === promise) partnerMvpSnapshotRequest = null;
+      if (partnerMvpSnapshotRequest?.promise === promise)
+        partnerMvpSnapshotRequest = null;
     });
 
   partnerMvpSnapshotRequest = { token, promise };
@@ -470,55 +550,89 @@ export function fetchPartnerMvpSnapshot(token: string, options: { force?: boolea
 }
 
 function requestPartnerMvpAction(token: string, init: RequestInit) {
-  return requestPartnerMvp(token, init).then((snapshot) => {
+  return requestPartnerMvp(token, init).then(snapshot => {
     setPartnerMvpSnapshotCache(token, snapshot);
     return snapshot;
   });
 }
 
 function invalidatePartnerMvpSnapshotAfter<T>(promise: Promise<T>) {
-  return promise.then((payload) => {
+  return promise.then(payload => {
     invalidatePartnerMvpSnapshotCache();
     return payload;
   });
 }
 
-export function assignPartnerMvp(token: string, caseId: string, partnerId: string) {
+export function assignPartnerMvp(
+  token: string,
+  caseId: string,
+  partnerId: string
+) {
   return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "assignPartner", caseId, partnerId }),
   });
 }
 
-export function advanceCaseStatusMvp(token: string, caseId: string, status: string) {
+export function advanceCaseStatusMvp(
+  token: string,
+  caseId: string,
+  status: string
+) {
   return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "advanceCaseStatus", caseId, status }),
   });
 }
 
-export function setPartnerShortlistMvp(token: string, caseId: string, partnerId: string, providerIds: string[]) {
+export function setPartnerShortlistMvp(
+  token: string,
+  caseId: string,
+  partnerId: string,
+  providerIds: string[]
+) {
   return requestPartnerMvpAction(token, {
     method: "POST",
-    body: JSON.stringify({ action: "setShortlist", caseId, partnerId, providerIds }),
+    body: JSON.stringify({
+      action: "setShortlist",
+      caseId,
+      partnerId,
+      providerIds,
+    }),
   });
 }
 
-export function requestPartnerQuoteMvp(token: string, caseId: string, partnerId: string, providerIds: string[]) {
+export function requestPartnerQuoteMvp(
+  token: string,
+  caseId: string,
+  partnerId: string,
+  providerIds: string[]
+) {
   return requestPartnerMvpAction(token, {
     method: "POST",
-    body: JSON.stringify({ action: "requestQuotes", caseId, partnerId, providerIds }),
+    body: JSON.stringify({
+      action: "requestQuotes",
+      caseId,
+      partnerId,
+      providerIds,
+    }),
   });
 }
 
-export function submitProviderQuoteMvp(token: string, input: ProviderQuoteInput) {
+export function submitProviderQuoteMvp(
+  token: string,
+  input: ProviderQuoteInput
+) {
   return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "submitProviderQuote", ...input }),
   });
 }
 
-export function upsertLandingRouteMvp(token: string, route: ManagedLandingRoute) {
+export function upsertLandingRouteMvp(
+  token: string,
+  route: ManagedLandingRoute
+) {
   return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "upsertLandingRoute", route }),
@@ -526,10 +640,12 @@ export function upsertLandingRouteMvp(token: string, route: ManagedLandingRoute)
 }
 
 export function queueNotificationMvp(token: string, input: NotificationInput) {
-  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<NotificationResult>(token, {
-    method: "POST",
-    body: JSON.stringify({ action: "queueNotification", ...input }),
-  })).then((payload) => {
+  return invalidatePartnerMvpSnapshotAfter(
+    requestPartnerMvpJson<NotificationResult>(token, {
+      method: "POST",
+      body: JSON.stringify({ action: "queueNotification", ...input }),
+    })
+  ).then(payload => {
     if (!payload?.notificationId || !payload.status) {
       throw new Error("알림 API 응답 형식이 올바르지 않습니다.");
     }
@@ -537,11 +653,16 @@ export function queueNotificationMvp(token: string, input: NotificationInput) {
   });
 }
 
-export function createDepositCheckoutMvp(token: string, input: DepositCheckoutInput) {
-  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<DepositCheckoutResult>(token, {
-    method: "POST",
-    body: JSON.stringify({ action: "createDepositCheckout", ...input }),
-  })).then((payload) => {
+export function createDepositCheckoutMvp(
+  token: string,
+  input: DepositCheckoutInput
+) {
+  return invalidatePartnerMvpSnapshotAfter(
+    requestPartnerMvpJson<DepositCheckoutResult>(token, {
+      method: "POST",
+      body: JSON.stringify({ action: "createDepositCheckout", ...input }),
+    })
+  ).then(payload => {
     if (!payload?.checkoutUrl || !payload.sessionId) {
       throw new Error("예약금 결제 API 응답 형식이 올바르지 않습니다.");
     }
@@ -549,11 +670,16 @@ export function createDepositCheckoutMvp(token: string, input: DepositCheckoutIn
   });
 }
 
-export function createAvailabilitySlotMvp(token: string, input: AvailabilitySlotInput) {
-  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<ReservationActionResult>(token, {
-    method: "POST",
-    body: JSON.stringify({ action: "createAvailabilitySlot", ...input }),
-  }));
+export function createAvailabilitySlotMvp(
+  token: string,
+  input: AvailabilitySlotInput
+) {
+  return invalidatePartnerMvpSnapshotAfter(
+    requestPartnerMvpJson<ReservationActionResult>(token, {
+      method: "POST",
+      body: JSON.stringify({ action: "createAvailabilitySlot", ...input }),
+    })
+  );
 }
 
 export function createProviderMvp(token: string, input: AdminProviderInput) {
@@ -563,10 +689,18 @@ export function createProviderMvp(token: string, input: AdminProviderInput) {
   });
 }
 
-export function updateProviderMvp(token: string, providerId: string, input: AdminProviderInput) {
+export function updateProviderMvp(
+  token: string,
+  providerId: string,
+  input: AdminProviderInput
+) {
   return requestPartnerMvpAction(token, {
     method: "POST",
-    body: JSON.stringify({ action: "updateProvider", providerId, provider: input }),
+    body: JSON.stringify({
+      action: "updateProvider",
+      providerId,
+      provider: input,
+    }),
   });
 }
 
@@ -584,10 +718,18 @@ export function createPartnerMvp(token: string, input: AdminPartnerInput) {
   });
 }
 
-export function updatePartnerMvp(token: string, partnerId: string, input: AdminPartnerInput) {
+export function updatePartnerMvp(
+  token: string,
+  partnerId: string,
+  input: AdminPartnerInput
+) {
   return requestPartnerMvpAction(token, {
     method: "POST",
-    body: JSON.stringify({ action: "updatePartner", partnerId, partner: input }),
+    body: JSON.stringify({
+      action: "updatePartner",
+      partnerId,
+      partner: input,
+    }),
   });
 }
 
@@ -598,23 +740,38 @@ export function deletePartnerMvp(token: string, partnerId: string) {
   });
 }
 
-export function holdAvailabilitySlotMvp(token: string, input: HoldAvailabilitySlotInput) {
-  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<ReservationActionResult>(token, {
-    method: "POST",
-    body: JSON.stringify({ action: "holdAvailabilitySlot", ...input }),
-  }));
+export function holdAvailabilitySlotMvp(
+  token: string,
+  input: HoldAvailabilitySlotInput
+) {
+  return invalidatePartnerMvpSnapshotAfter(
+    requestPartnerMvpJson<ReservationActionResult>(token, {
+      method: "POST",
+      body: JSON.stringify({ action: "holdAvailabilitySlot", ...input }),
+    })
+  );
 }
 
-export function releaseAvailabilitySlotMvp(token: string, input: ReleaseAvailabilitySlotInput) {
-  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<ReservationActionResult>(token, {
-    method: "POST",
-    body: JSON.stringify({ action: "releaseAvailabilitySlot", ...input }),
-  }));
+export function releaseAvailabilitySlotMvp(
+  token: string,
+  input: ReleaseAvailabilitySlotInput
+) {
+  return invalidatePartnerMvpSnapshotAfter(
+    requestPartnerMvpJson<ReservationActionResult>(token, {
+      method: "POST",
+      body: JSON.stringify({ action: "releaseAvailabilitySlot", ...input }),
+    })
+  );
 }
 
-export function confirmHeldBookingMvp(token: string, input: ConfirmHeldBookingInput) {
-  return invalidatePartnerMvpSnapshotAfter(requestPartnerMvpJson<ReservationActionResult>(token, {
-    method: "POST",
-    body: JSON.stringify({ action: "confirmHeldBooking", ...input }),
-  }));
+export function confirmHeldBookingMvp(
+  token: string,
+  input: ConfirmHeldBookingInput
+) {
+  return invalidatePartnerMvpSnapshotAfter(
+    requestPartnerMvpJson<ReservationActionResult>(token, {
+      method: "POST",
+      body: JSON.stringify({ action: "confirmHeldBooking", ...input }),
+    })
+  );
 }

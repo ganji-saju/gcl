@@ -47,6 +47,20 @@ Closed beta operating artifacts:
 - Provider registration: `/admin/providers`
 - Partner/agent registration: `/admin/partners`
 
+Operations role menu matrix:
+
+| Role              | Visible menus                                                                                                     | Hidden menus                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Admin             | 운영 점검, 케이스, 파트너 케이스, 병원 견적, 견적/예약, 예약 캘린더, 병원등록, 에이전트등록, 베타 운영, 랜딩 경로 | None                                                                           |
+| Provider/hospital | 병원 견적, 견적/예약, 예약 캘린더                                                                                 | 운영 점검, 케이스, 파트너 케이스, 병원등록, 에이전트등록, 베타 운영, 랜딩 경로 |
+| Partner/agency    | 파트너 케이스, 견적/예약, 예약 캘린더                                                                             | 운영 점검, 케이스, 병원 견적, 병원등록, 에이전트등록, 베타 운영, 랜딩 경로     |
+
+Role action boundaries:
+
+- Provider/hospital users can submit their own provider quotes and create their own availability slots.
+- Partner/agency users can manage their assigned partner cases and shortlist providers.
+- Only admins can register/delete providers or agents, create payment links, queue notifications, place/release temporary holds, and confirm bookings.
+
 For backend implementation, apply the additive core schema migration after the POC schema:
 
 ```powershell
