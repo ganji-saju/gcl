@@ -38,15 +38,19 @@ Closed beta operating artifacts:
 - Beta command center: `/admin/beta`
 - Case dashboard: `/admin/cases`
 - Quote/deposit/booking MVP: `/admin/quote-booking`
+- Reservation slot calendar: `/admin/reservation-calendar`
 
 For backend implementation, apply the additive core schema migration after the POC schema:
 
 ```powershell
 supabase/migrations/20260609_0001_core_marketplace_schema.sql
+supabase/migrations/20260625_0007_reservation_calendar_holds.sql
 ```
 
-That migration adds the provider verification, patient eligibility, case CRM,
+Those migrations add the provider verification, patient eligibility, case CRM,
 matching, quote, booking, payment, compliance, settlement, and reporting tables.
+The reservation calendar migration extends slots with case/quote hold ownership
+and links scheduled notification outbox rows to bookings.
 
 ## Vercel Setup
 

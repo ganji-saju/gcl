@@ -491,6 +491,39 @@ function normalizeQuote(row) {
   };
 }
 
+function normalizeAvailabilitySlot(row) {
+  return {
+    id: row.id,
+    providerId: row.provider_id,
+    doctorId: row.doctor_id || null,
+    procedureId: row.procedure_id || null,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    status: row.status,
+    languageSupport: row.language_support || [],
+    holdExpiresAt: row.hold_expires_at || null,
+    holdCaseId: row.hold_case_id || null,
+    holdQuoteId: row.hold_quote_id || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function normalizeBooking(row) {
+  return {
+    id: row.id,
+    caseId: row.case_id,
+    quoteId: row.quote_id,
+    providerId: row.provider_id,
+    scheduledAt: row.scheduled_at,
+    visitType: row.visit_type,
+    status: row.status,
+    confirmedAt: row.confirmed_at || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function normalizeProviderQuoteRequest({ quoteRequest, caseRow, lead, intake, provider, quote }) {
   return {
     id: quoteRequest.id,
@@ -623,7 +656,7 @@ function paymentMode() {
 }
 
 function scopeSnapshot(config, snapshot) {
-  let { cases, partners, providers, providerQuoteRequests, quotes, activities } = snapshot;
+  let { cases, partners, providers, providerQuoteRequests, quotes, availabilitySlots = [], bookings = [], activities } = snapshot;
 
   if (config.role === "partner" && config.partnerId) {
     partners = partners.filter((row) => row.id === config.partnerId);
@@ -631,6 +664,9 @@ function scopeSnapshot(config, snapshot) {
     const caseIds = new Set(cases.map((row) => row.id));
     providerQuoteRequests = providerQuoteRequests.filter((row) => caseIds.has(row.caseId));
     quotes = quotes.filter((row) => caseIds.has(row.caseId));
+    bookings = bookings.filter((row) => caseIds.has(row.caseId));
+    const providerIds = new Set(bookings.map((row) => row.providerId));
+    availabilitySlots = availabilitySlots.filter((row) => providerIds.has(row.providerId));
     activities = activities.filter((row) => caseIds.has(row.caseId));
   }
 
@@ -640,11 +676,13 @@ function scopeSnapshot(config, snapshot) {
     const caseIds = new Set(providerQuoteRequests.map((row) => row.caseId));
     cases = cases.filter((row) => caseIds.has(row.id));
     quotes = quotes.filter((row) => row.providerId === config.providerId);
+    availabilitySlots = availabilitySlots.filter((row) => row.providerId === config.providerId);
+    bookings = bookings.filter((row) => row.providerId === config.providerId);
     activities = activities.filter((row) => caseIds.has(row.caseId));
     partners = [];
   }
 
-  return { cases, partners, providers, providerQuoteRequests, quotes, activities };
+  return { cases, partners, providers, providerQuoteRequests, quotes, availabilitySlots, bookings, activities };
 }
 
 async function getSnapshot(config) {
@@ -656,6 +694,8 @@ async function getSnapshot(config) {
 
   const caseIds = Array.from(new Set(requests.map((row) => row.case_id).filter(Boolean)));
   const leadIds = Array.from(new Set(requests.map((row) => row.lead_id).filter(Boolean)));
+  const reservationWindowStart = encodeURIComponent(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+  const reservationWindowEnd = encodeURIComponent(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString());
 
   const [
     cases,
@@ -670,6 +710,8 @@ async function getSnapshot(config) {
     providersRaw,
     relationships,
     providerOperatingProfilesRaw,
+    availabilitySlotsRaw,
+    bookingsRaw,
   ] = await Promise.all([
     caseIds.length ? list(config, "cases", `select=id,lead_id,patient_id,status,priority,source,created_at,updated_at&id=${inFilter(caseIds)}`) : [],
     leadIds.length ? list(config, "leads", `select=id,name,nationality,residence_country,preferred_language,treatment_interest,budget_min,budget_max,currency,source,attribution,created_at,updated_at&id=${inFilter(leadIds)}`) : [],
@@ -698,6 +740,16 @@ async function getSnapshot(config) {
       config,
       "provider_operating_profiles",
       "select=provider_id,public_exposure_status,data_source_status,supported_markets,supported_languages,standard_sla_hours,urgent_sla_hours,quote_template_ready,deposit_policy_ready,sla_contract_status,next_step",
+    ),
+    safeList(
+      config,
+      "availability_slots",
+      `select=*&starts_at=gte.${reservationWindowStart}&starts_at=lt.${reservationWindowEnd}&order=starts_at.asc&limit=240`,
+    ),
+    safeList(
+      config,
+      "bookings",
+      `select=*&scheduled_at=gte.${reservationWindowStart}&scheduled_at=lt.${reservationWindowEnd}&order=scheduled_at.asc&limit=240`,
     ),
   ]);
 
@@ -771,6 +823,8 @@ async function getSnapshot(config) {
     providers,
     providerQuoteRequests,
     quotes: quotes.map(normalizeQuote),
+    availabilitySlots: availabilitySlotsRaw.map(normalizeAvailabilitySlot),
+    bookings: bookingsRaw.map(normalizeBooking),
     activities: activities.map(normalizeActivity),
   });
   const [leadStorageHealth, adminPersistenceHealth, adminOperationsData] = await Promise.all([
@@ -1140,6 +1194,11 @@ function sanitizeText(value, fallback = "") {
   return String(value || fallback).trim().slice(0, 400);
 }
 
+function sanitizeTimestamp(value) {
+  const parsed = Date.parse(String(value || ""));
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+}
+
 async function tryStoreNotification(config, event) {
   try {
     await supabaseFetch(config, "notification_outbox", {
@@ -1148,12 +1207,15 @@ async function tryStoreNotification(config, event) {
         id: event.id,
         case_id: event.caseId,
         quote_id: event.quoteId || null,
+        booking_id: event.bookingId || null,
         channel: event.channel,
         recipient: event.recipient,
         template: event.template,
         status: event.status,
         payload: event.payload,
         dispatch_result: event.dispatchResult,
+        send_after: event.sendAfter,
+        delivery_key: event.deliveryKey || null,
         created_at: event.createdAt,
       }),
       prefer: "return=minimal",
@@ -1161,12 +1223,37 @@ async function tryStoreNotification(config, event) {
     });
     return "notification_outbox";
   } catch (error) {
-    console.warn("Optional notification outbox insert skipped.", error);
-    return "case_activity_events";
+    try {
+      await supabaseFetch(config, "notification_outbox", {
+        method: "POST",
+        body: JSON.stringify({
+          id: event.id,
+          case_id: event.caseId,
+          quote_id: event.quoteId || null,
+          channel: event.channel,
+          recipient: event.recipient,
+          template: event.template,
+          status: event.status,
+          payload: event.payload,
+          dispatch_result: event.dispatchResult,
+          created_at: event.createdAt,
+        }),
+        prefer: "return=minimal",
+        timeoutMs: ACTIVITY_LOG_TIMEOUT_MS,
+      });
+      return "notification_outbox";
+    } catch (fallbackError) {
+      console.warn("Optional notification outbox insert skipped.", fallbackError);
+      return "case_activity_events";
+    }
   }
 }
 
 async function dispatchNotification(event) {
+  if (Date.parse(event.sendAfter) > Date.now()) {
+    return { status: "queued", result: { gateway: "scheduled", send_after: event.sendAfter } };
+  }
+
   const webhookUrl = process.env.NOTIFICATION_WEBHOOK_URL;
   if (!webhookUrl) {
     return { status: "queued", result: { gateway: "not_configured" } };
@@ -1202,9 +1289,12 @@ async function queueNotification(config, body) {
     id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     caseId,
     quoteId: sanitizeText(body.quoteId),
+    bookingId: sanitizeText(body.bookingId),
     channel: sanitizeText(body.channel, "email"),
     recipient: sanitizeText(body.recipient, "case_contact"),
     template: sanitizeText(body.template, "quote_ready"),
+    sendAfter: sanitizeTimestamp(body.sendAfter) || new Date().toISOString(),
+    deliveryKey: sanitizeText(body.deliveryKey),
     status: "queued",
     payload: body.payload && typeof body.payload === "object" ? body.payload : {},
     dispatchResult: {},
@@ -1314,15 +1404,281 @@ async function createDepositCheckout(config, req, body) {
   return { ok: true, checkoutUrl: payload.url, sessionId: payload.id, paymentMode: paymentMode() };
 }
 
+const SLOT_STATUSES = new Set(["available", "held", "booked", "unavailable"]);
+const VISIT_TYPES = new Set(["consultation", "procedure", "surgery", "checkup"]);
+
+function cleanLanguageSupport(value) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.map((item) => sanitizeText(item).toLowerCase()).filter(Boolean))).slice(0, 8);
+}
+
+function assertProviderAccess(config, providerId) {
+  if (config.role === "provider" && config.providerId && providerId !== config.providerId) {
+    throw new HttpError(403, "This provider token can only manage its own slots.");
+  }
+}
+
+async function readAvailabilitySlot(config, slotId) {
+  if (!isUuid(slotId)) throw new HttpError(400, "A valid slotId is required.");
+  const rows = await list(config, "availability_slots", `select=*&id=eq.${slotId}&limit=1`);
+  const slot = rows[0];
+  if (!slot) throw new HttpError(404, "Availability slot not found.");
+  assertProviderAccess(config, slot.provider_id);
+  return slot;
+}
+
+async function patchAvailabilitySlot(config, slotId, patch) {
+  try {
+    const rows = await supabaseFetch(config, `availability_slots?id=eq.${slotId}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+      prefer: "return=representation",
+    });
+    if (!rows?.[0]) throw new HttpError(409, "Availability slot could not be updated.");
+    return rows[0];
+  } catch (error) {
+    const hasHoldColumns = "hold_case_id" in patch || "hold_quote_id" in patch;
+    if (!hasHoldColumns) throw error;
+
+    const { hold_case_id, hold_quote_id, ...compatiblePatch } = patch;
+    const rows = await supabaseFetch(config, `availability_slots?id=eq.${slotId}`, {
+      method: "PATCH",
+      body: JSON.stringify(compatiblePatch),
+      prefer: "return=representation",
+    });
+    if (!rows?.[0]) throw new HttpError(409, "Availability slot could not be updated.");
+    return rows[0];
+  }
+}
+
+async function createAvailabilitySlot(config, body) {
+  const providerId = sanitizeText(body.providerId);
+  const status = sanitizeText(body.status, "available").toLowerCase();
+  const startsAt = sanitizeTimestamp(body.startsAt);
+  const endsAt = sanitizeTimestamp(body.endsAt);
+
+  if (!isUuid(providerId)) throw new HttpError(400, "A valid providerId is required.");
+  assertProviderAccess(config, providerId);
+  if (!startsAt || !endsAt || Date.parse(endsAt) <= Date.parse(startsAt)) throw new HttpError(400, "A valid slot time range is required.");
+  if (!SLOT_STATUSES.has(status)) throw new HttpError(400, "A valid slot status is required.");
+
+  const rows = await supabaseFetch(config, "availability_slots", {
+    method: "POST",
+    body: JSON.stringify({
+      provider_id: providerId,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      status,
+      language_support: cleanLanguageSupport(body.languageSupport),
+    }),
+    prefer: "return=representation",
+  });
+
+  return { ok: true, slot: normalizeAvailabilitySlot(rows[0]) };
+}
+
+async function holdAvailabilitySlot(config, body) {
+  const slotId = sanitizeText(body.slotId);
+  const caseId = sanitizeText(body.caseId);
+  const quoteId = sanitizeText(body.quoteId);
+  if (!isUuid(caseId)) throw new HttpError(400, "A valid caseId is required.");
+  if (quoteId && !isUuid(quoteId)) throw new HttpError(400, "quoteId must be a valid UUID.");
+
+  const slot = await readAvailabilitySlot(config, slotId);
+  const nowMs = Date.now();
+  const heldExpired = slot.status === "held" && slot.hold_expires_at && Date.parse(slot.hold_expires_at) <= nowMs;
+  if (slot.status === "booked" || slot.status === "unavailable") throw new HttpError(409, "This slot is not available.");
+  if (slot.status === "held" && !heldExpired) throw new HttpError(409, "This slot is already temporarily held.");
+
+  const holdMinutes = Math.max(5, Math.min(120, numberOrDefault(body.holdMinutes, 15)));
+  const holdExpiresAt = new Date(nowMs + holdMinutes * 60 * 1000).toISOString();
+  const updated = await patchAvailabilitySlot(config, slot.id, {
+    status: "held",
+    hold_expires_at: holdExpiresAt,
+    hold_case_id: caseId,
+    hold_quote_id: quoteId || null,
+    updated_at: new Date().toISOString(),
+  });
+
+  const notification = await queueNotification(config, {
+    caseId,
+    quoteId,
+    channel: sanitizeText(body.channel, "email"),
+    recipient: sanitizeText(body.recipient, "case_contact"),
+    template: "slot_hold_created",
+    deliveryKey: `slot:${slot.id}:hold:${caseId}`,
+    payload: {
+      slot_id: slot.id,
+      provider_id: slot.provider_id,
+      starts_at: slot.starts_at,
+      ends_at: slot.ends_at,
+      hold_expires_at: holdExpiresAt,
+    },
+  });
+
+  await logActivity(config, {
+    caseId,
+    eventType: "availability_slot_held",
+    eventPayload: { slot_id: slot.id, quote_id: quoteId || null, provider_id: slot.provider_id, hold_expires_at: holdExpiresAt },
+  });
+
+  return { ok: true, slot: normalizeAvailabilitySlot(updated), notifications: [notification] };
+}
+
+async function releaseAvailabilitySlot(config, body) {
+  const slot = await readAvailabilitySlot(config, sanitizeText(body.slotId));
+  const caseId = sanitizeText(body.caseId) || slot.hold_case_id || "";
+  const quoteId = sanitizeText(body.quoteId) || slot.hold_quote_id || "";
+
+  if (slot.status === "booked") throw new HttpError(409, "Booked slots cannot be released from the hold flow.");
+
+  const updated = await patchAvailabilitySlot(config, slot.id, {
+    status: "available",
+    hold_expires_at: null,
+    hold_case_id: null,
+    hold_quote_id: null,
+    updated_at: new Date().toISOString(),
+  });
+
+  await logActivity(config, {
+    caseId,
+    eventType: "availability_slot_released",
+    eventPayload: { slot_id: slot.id, quote_id: quoteId || null, provider_id: slot.provider_id },
+  });
+
+  return { ok: true, slot: normalizeAvailabilitySlot(updated), notifications: [] };
+}
+
+async function confirmHeldBooking(config, body) {
+  const slot = await readAvailabilitySlot(config, sanitizeText(body.slotId));
+  const caseId = sanitizeText(body.caseId);
+  const quoteId = sanitizeText(body.quoteId);
+  const visitType = sanitizeText(body.visitType, "procedure").toLowerCase();
+
+  if (!isUuid(caseId) || !isUuid(quoteId)) throw new HttpError(400, "Valid caseId and quoteId are required.");
+  if (!VISIT_TYPES.has(visitType)) throw new HttpError(400, "A valid visitType is required.");
+  if (slot.status === "booked" || slot.status === "unavailable") throw new HttpError(409, "This slot cannot be booked.");
+  if (slot.status === "held" && slot.hold_expires_at && Date.parse(slot.hold_expires_at) <= Date.now()) {
+    throw new HttpError(409, "The temporary hold has expired.");
+  }
+
+  const quoteRows = await list(config, "quotes", `select=id,case_id,provider_id&id=eq.${quoteId}&limit=1`);
+  const quote = quoteRows[0];
+  if (!quote) throw new HttpError(404, "Quote not found.");
+  if (quote.case_id !== caseId || quote.provider_id !== slot.provider_id) throw new HttpError(409, "Quote, case, and provider do not match the selected slot.");
+
+  const bookingRows = await supabaseFetch(config, "bookings?on_conflict=idempotency_key", {
+    method: "POST",
+    body: JSON.stringify({
+      case_id: caseId,
+      quote_id: quoteId,
+      provider_id: slot.provider_id,
+      scheduled_at: slot.starts_at,
+      visit_type: visitType,
+      status: "confirmed",
+      confirmed_at: new Date().toISOString(),
+      idempotency_key: `slot:${slot.id}:case:${caseId}:quote:${quoteId}`,
+    }),
+    prefer: "resolution=merge-duplicates,return=representation",
+  });
+  const booking = bookingRows[0];
+
+  const updatedSlot = await patchAvailabilitySlot(config, slot.id, {
+    status: "booked",
+    hold_expires_at: null,
+    hold_case_id: null,
+    hold_quote_id: null,
+    updated_at: new Date().toISOString(),
+  });
+
+  await supabaseFetch(config, `cases?id=eq.${caseId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "booking_confirmed", updated_at: new Date().toISOString() }),
+    prefer: "return=minimal",
+  });
+
+  const notifications = [];
+  notifications.push(
+    await queueNotification(config, {
+      caseId,
+      quoteId,
+      bookingId: booking.id,
+      channel: sanitizeText(body.channel, "email"),
+      recipient: sanitizeText(body.recipient, "case_contact"),
+      template: "booking_confirmed_patient",
+      deliveryKey: `booking:${booking.id}:confirmed:patient`,
+      payload: {
+        booking_id: booking.id,
+        slot_id: slot.id,
+        provider_id: slot.provider_id,
+        scheduled_at: slot.starts_at,
+        visit_type: visitType,
+      },
+    }),
+  );
+  notifications.push(
+    await queueNotification(config, {
+      caseId,
+      quoteId,
+      bookingId: booking.id,
+      channel: "email",
+      recipient: "provider_ops",
+      template: "booking_confirmed_provider",
+      deliveryKey: `booking:${booking.id}:confirmed:provider`,
+      payload: {
+        booking_id: booking.id,
+        slot_id: slot.id,
+        provider_id: slot.provider_id,
+        scheduled_at: slot.starts_at,
+      },
+    }),
+  );
+
+  const reminderAt = new Date(Date.parse(slot.starts_at) - 24 * 60 * 60 * 1000).toISOString();
+  if (Date.parse(reminderAt) > Date.now()) {
+    notifications.push(
+      await queueNotification(config, {
+        caseId,
+        quoteId,
+        bookingId: booking.id,
+        channel: sanitizeText(body.channel, "email"),
+        recipient: sanitizeText(body.recipient, "case_contact"),
+        template: "booking_reminder_24h",
+        sendAfter: reminderAt,
+        deliveryKey: `booking:${booking.id}:reminder:24h`,
+        payload: {
+          booking_id: booking.id,
+          slot_id: slot.id,
+          provider_id: slot.provider_id,
+          scheduled_at: slot.starts_at,
+          send_after: reminderAt,
+        },
+      }),
+    );
+  }
+
+  await logActivity(config, {
+    caseId,
+    eventType: "booking_confirmed_from_slot",
+    eventPayload: { slot_id: slot.id, booking_id: booking.id, quote_id: quoteId, provider_id: slot.provider_id },
+  });
+
+  return { ok: true, slot: normalizeAvailabilitySlot(updatedSlot), booking: normalizeBooking(booking), notifications };
+}
+
 function allowedRolesForAction(action) {
   if (action === "setShortlist") return ["admin", "partner"];
   if (action === "submitProviderQuote") return ["admin", "provider"];
+  if (action === "createAvailabilitySlot") return ["admin", "provider"];
   if (
     action === "assignPartner" ||
     action === "advanceCaseStatus" ||
     action === "requestQuotes" ||
     action === "queueNotification" ||
     action === "createDepositCheckout" ||
+    action === "holdAvailabilitySlot" ||
+    action === "releaseAvailabilitySlot" ||
+    action === "confirmHeldBooking" ||
     action === "upsertLandingRoute"
   ) {
     return ["admin"];
@@ -1353,6 +1709,10 @@ export default async function handler(req, res) {
       else if (body.action === "submitProviderQuote") await submitProviderQuote(config, body);
       else if (body.action === "queueNotification") return json(res, 200, await queueNotification(config, body));
       else if (body.action === "createDepositCheckout") return json(res, 200, await createDepositCheckout(config, req, body));
+      else if (body.action === "createAvailabilitySlot") return json(res, 200, await createAvailabilitySlot(config, body));
+      else if (body.action === "holdAvailabilitySlot") return json(res, 200, await holdAvailabilitySlot(config, body));
+      else if (body.action === "releaseAvailabilitySlot") return json(res, 200, await releaseAvailabilitySlot(config, body));
+      else if (body.action === "confirmHeldBooking") return json(res, 200, await confirmHeldBooking(config, body));
       else if (body.action === "upsertLandingRoute") await upsertLandingRoute(config, body);
 
       return json(res, 200, await getSnapshot(config));

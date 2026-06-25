@@ -13,6 +13,7 @@ export default function Footer() {
     { href: "/partner/cases", label: "파트너 보드" },
     { href: "/provider/quotes", label: "병원 견적 데스크" },
     { href: "/admin/quote-booking", label: "견적/예약 관리" },
+    { href: "/admin/reservation-calendar", label: "예약 캘린더" },
   ];
   const publicLinks = [
     { href: "/hospitals", label: t("nav.hospitals") },

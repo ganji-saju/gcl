@@ -24,10 +24,21 @@ import AdminLandingRoutes from "./pages/AdminLandingRoutes";
 import PartnerCaseBoard from "./pages/PartnerCaseBoard";
 import ProviderQuoteDesk from "./pages/ProviderQuoteDesk";
 import OpsHealth from "./pages/OpsHealth";
+import ReservationCalendar from "./pages/ReservationCalendar";
 import type { OpsRole } from "./lib/partnerMvpApi";
 
-function InternalRoute({ children, allowedRoles = ["admin"], title }: { children: ReactNode; allowedRoles?: OpsRole[]; title?: string }) {
-  return <InternalOpsGate allowedRoles={allowedRoles} title={title}>{children}</InternalOpsGate>;
+function InternalRoute({
+  children,
+  allowedRoles = ["admin"],
+  title,
+  allowLocalDemo = false,
+}: {
+  children: ReactNode;
+  allowedRoles?: OpsRole[];
+  title?: string;
+  allowLocalDemo?: boolean;
+}) {
+  return <InternalOpsGate allowedRoles={allowedRoles} title={title} allowLocalDemo={allowLocalDemo}>{children}</InternalOpsGate>;
 }
 
 function ClosedBetaOpsRoute() {
@@ -40,6 +51,10 @@ function CaseDashboardRoute() {
 
 function QuoteBookingRoute() {
   return <InternalRoute><QuoteBookingMvp /></InternalRoute>;
+}
+
+function ReservationCalendarRoute() {
+  return <InternalRoute allowLocalDemo><ReservationCalendar /></InternalRoute>;
 }
 
 function AdminLandingRoutesRoute() {
@@ -71,6 +86,7 @@ function Router() {
       <Route path="/admin/beta" component={ClosedBetaOpsRoute} />
       <Route path="/admin/cases" component={CaseDashboardRoute} />
       <Route path="/admin/quote-booking" component={QuoteBookingRoute} />
+      <Route path="/admin/reservation-calendar" component={ReservationCalendarRoute} />
       <Route path="/admin/landing-routes" component={AdminLandingRoutesRoute} />
       <Route path="/admin/ops-health" component={OpsHealthRoute} />
       <Route path="/partner/cases" component={PartnerCaseBoardRoute} />
