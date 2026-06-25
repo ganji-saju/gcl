@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "wouter";
-import { KeyRound, Loader2, LockKeyhole, Mail, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Loader2, LockKeyhole, Mail, ShieldCheck, TriangleAlert } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,6 @@ import {
   onOpsAuthStateChange,
   requestOpsEmailSignIn,
   signOutOpsEmail,
-  verifyOpsEmailOtp,
   type OpsEmailSession,
 } from "@/lib/opsAuth";
 
@@ -47,7 +46,6 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
   const validationRunRef = useRef(0);
   const [token, setToken] = useState(initialToken);
   const [email, setEmail] = useState(initialEmail);
-  const [code, setCode] = useState("");
   const [validatedEmail, setValidatedEmail] = useState(initialEmail);
   const [validatedRole, setValidatedRole] = useState<OpsRole | null>(() => (hasStoredAllowedSession ? initialRole : null));
   const [status, setStatus] = useState<GateStatus>(() => (hasStoredAllowedSession ? "valid" : initialToken ? "validating" : "booting"));
@@ -173,33 +171,16 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
     try {
       const cleanEmail = await requestOpsEmailSignIn(email);
       setEmail(cleanEmail);
-      setCode("");
       setStatus("sent");
-      setMessage("인증 메일을 보냈습니다. 메일의 로그인 링크를 열거나 6자리 코드를 입력하세요.");
+      setMessage("인증 메일을 보냈습니다. 메일함에서 로그인 링크를 열면 운영 화면으로 이동합니다.");
     } catch (error) {
       setStatus("invalid");
       setMessage(error instanceof Error ? error.message : "인증 메일을 보내지 못했습니다.");
     }
   }
 
-  async function verifyCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("validating");
-    setMessage("인증 코드를 확인하는 중입니다.");
-
-    try {
-      const session = await verifyOpsEmailOtp(email, code);
-      if (!session) throw new Error("인증 세션을 만들지 못했습니다.");
-      await validateSession(session);
-    } catch (error) {
-      setStatus("invalid");
-      setMessage(error instanceof Error ? error.message : "인증 코드 확인에 실패했습니다.");
-    }
-  }
-
   function disconnect() {
     clearAdminApiToken();
-    setCode("");
     setToken("");
     setValidatedRole(null);
     setStatus("idle");
@@ -242,7 +223,6 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
 
   const busy = status === "booting" || status === "sending" || status === "validating";
   const emailReady = email.trim().includes("@");
-  const codeReady = code.trim().length >= 6;
 
   return (
     <Layout>
@@ -287,26 +267,7 @@ export default function InternalOpsGate({ children, title = "내부 운영 접�
 
             <Button type="submit" disabled={!emailReady || busy} className="h-11 bg-teal-700 text-white hover:bg-teal-800 disabled:bg-ink-300">
               {status === "sending" ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
-              인증 메일 보내기
-            </Button>
-          </form>
-
-          <form className="mt-4 grid gap-3" onSubmit={verifyCode}>
-            <label className="grid gap-1.5 text-sm font-semibold text-ink-800">
-              인증 코드
-              <Input
-                inputMode="numeric"
-                value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\s+/g, ""))}
-                placeholder="123456"
-                className="h-11"
-                autoComplete="one-time-code"
-              />
-            </label>
-
-            <Button type="submit" variant="outline" disabled={!emailReady || !codeReady || busy} className="h-11 border-ink-300 text-ink-800 disabled:bg-ink-100">
-              {status === "validating" ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
-              코드 확인 후 운영 화면 열기
+              인증 링크 보내기
             </Button>
           </form>
 
