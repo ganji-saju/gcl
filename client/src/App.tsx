@@ -64,11 +64,11 @@ function AdminLandingRoutesRoute() {
 }
 
 function AdminProviderRegistryRoute() {
-  return <InternalRoute><AdminProviderRegistry /></InternalRoute>;
+  return <InternalRoute allowLocalDemo><AdminProviderRegistry /></InternalRoute>;
 }
 
 function AdminPartnerRegistryRoute() {
-  return <InternalRoute><AdminPartnerRegistry /></InternalRoute>;
+  return <InternalRoute allowLocalDemo><AdminPartnerRegistry /></InternalRoute>;
 }
 
 function PartnerCaseBoardRoute() {

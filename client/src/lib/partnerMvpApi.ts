@@ -563,10 +563,38 @@ export function createProviderMvp(token: string, input: AdminProviderInput) {
   });
 }
 
+export function updateProviderMvp(token: string, providerId: string, input: AdminProviderInput) {
+  return requestPartnerMvpAction(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "updateProvider", providerId, provider: input }),
+  });
+}
+
+export function deleteProviderMvp(token: string, providerId: string) {
+  return requestPartnerMvpAction(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "deleteProvider", providerId }),
+  });
+}
+
 export function createPartnerMvp(token: string, input: AdminPartnerInput) {
   return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "createPartner", partner: input }),
+  });
+}
+
+export function updatePartnerMvp(token: string, partnerId: string, input: AdminPartnerInput) {
+  return requestPartnerMvpAction(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "updatePartner", partnerId, partner: input }),
+  });
+}
+
+export function deletePartnerMvp(token: string, partnerId: string) {
+  return requestPartnerMvpAction(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "deletePartner", partnerId }),
   });
 }
 
