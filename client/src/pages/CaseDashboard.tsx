@@ -17,7 +17,6 @@ import {
   fetchPartnerMvpSnapshot,
   readAdminApiToken,
   requestPartnerQuoteMvp,
-  saveAdminApiToken,
   setPartnerShortlistMvp,
   type CaseActivityEvent,
   type PartnerMvpSnapshot,
@@ -144,8 +143,7 @@ export default function CaseDashboard() {
   const [statusFilter, setStatusFilter] = useState<BetaCaseStatus | "all">("all");
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(cases[0]?.id ?? "");
-  const [adminToken, setAdminToken] = useState(() => readAdminApiToken());
-  const [adminTokenInput, setAdminTokenInput] = useState(() => readAdminApiToken());
+  const [adminToken] = useState(() => readAdminApiToken());
   const [apiStatus, setApiStatus] = useState<"demo" | "loading" | "live" | "saving" | "error">(adminToken ? "loading" : "demo");
   const [apiMessage, setApiMessage] = useState(adminToken ? "Supabase 운영 데이터에 연결 중..." : "데모 보드");
 
@@ -195,21 +193,6 @@ export default function CaseDashboard() {
     if (adminToken) void refreshOps(adminToken);
   }, [adminToken]);
 
-  function connectOps() {
-    const token = adminTokenInput.trim();
-    saveAdminApiToken(token);
-    setAdminToken(token);
-    if (!token) {
-      setCases(betaCases);
-      setPartners(betaPartners);
-      setProviders(betaProviders);
-      setQuoteRequests([]);
-      setActivities([]);
-      setApiStatus("demo");
-      setApiMessage("데모 보드");
-    }
-  }
-
   function applySnapshotAfterSave(snapshot: PartnerMvpSnapshot) {
     applySnapshot(snapshot);
     setApiMessage("Supabase에 저장되었습니다");
@@ -233,7 +216,7 @@ export default function CaseDashboard() {
       setApiMessage(`${caseStatusLabel(target)} 단계로 저장되었습니다.`);
     } catch (error) {
       setApiStatus("error");
-      setApiMessage("상태 변경 실패: 관리자 연결 토큰, Vercel 환경변수, Supabase 권한 설정을 확인하세요.");
+      setApiMessage("상태 변경 실패: 이메일 인증, Vercel 환경변수, Supabase 권한 설정을 확인하세요.");
     }
   }
 
@@ -344,20 +327,16 @@ export default function CaseDashboard() {
                   <Database className="size-3.5" />
                   운영 데이터
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="password"
-                    value={adminTokenInput}
-                    onChange={(event) => setAdminTokenInput(event.target.value)}
-                    placeholder="관리자 연결 토큰"
-                    className="h-10 min-w-0 flex-1 rounded-md border border-ink-200 bg-white px-3 text-sm"
-                  />
-                  <Button type="button" variant="outline" onClick={connectOps} className="border-ink-300 text-ink-800">
-                    {adminTokenInput.trim() ? "연결" : "데모"}
+                <div className="flex items-center justify-between gap-3">
+                  <div className={cn("text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
+                    {apiMessage}
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void refreshOps()} disabled={!adminToken || apiStatus === "loading"} className="border-ink-300 text-ink-800">
+                    새로고침
                   </Button>
                 </div>
                 <div className={cn("mt-2 text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
-                  {apiMessage}
+                  이메일 인증 세션으로 서버 API에 연결합니다.
                 </div>
               </div>
               <div className="flex flex-wrap gap-3">

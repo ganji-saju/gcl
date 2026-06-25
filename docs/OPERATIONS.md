@@ -1,4 +1,6 @@
-# Global Patient Hub Operations
+# GCL Operations
+
+GCL stands for global-connected-lab.
 
 ## Recommended Architecture
 
@@ -15,8 +17,10 @@
 4. Set Vercel environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 
 The app will store demo inquiries in browser local storage until those variables are configured.
+Internal operations access is email-based through Supabase Auth. After applying migrations, add each allowed admin, partner, and provider email to `public.ops_user_access`.
 
 ## v1 Marketplace Design Pack
 
@@ -44,13 +48,45 @@ For backend implementation, apply the additive core schema migration after the P
 
 ```powershell
 supabase/migrations/20260609_0001_core_marketplace_schema.sql
+supabase/migrations/20260610_0003_partner_assisted_mvp.sql
+supabase/migrations/20260610_0004_partner_mvp_seed.sql
+supabase/migrations/20260610_0005_phase2_case_activity_events.sql
+supabase/migrations/20260610_0006_admin_ops_persistence.sql
 supabase/migrations/20260625_0007_reservation_calendar_holds.sql
+supabase/migrations/20260625_0008_ops_email_access.sql
 ```
 
 Those migrations add the provider verification, patient eligibility, case CRM,
 matching, quote, booking, payment, compliance, settlement, and reporting tables.
 The reservation calendar migration extends slots with case/quote hold ownership
 and links scheduled notification outbox rows to bookings.
+The operations email migration maps Supabase Auth emails to admin, partner, or provider scopes without issuing manual API tokens.
+
+Example access rows:
+
+```sql
+-- First find the real account IDs to scope partner/provider users.
+select id, name
+from public.partners
+order by name;
+
+select id, name_legal, name_display
+from public.providers
+order by name_legal;
+
+insert into public.ops_user_access (email, role)
+values ('admin@example.com', 'admin');
+
+-- Replace the UUID below with an actual id returned from public.partners.
+insert into public.ops_user_access (email, role, partner_id)
+values ('agency-ops@example.com', 'partner', '11111111-1111-1111-1111-111111111111');
+
+-- Replace the UUID below with an actual id returned from public.providers.
+insert into public.ops_user_access (email, role, provider_id)
+values ('hospital-ops@example.com', 'provider', '22222222-2222-2222-2222-222222222222');
+```
+
+Supabase Auth can send a magic link with the default email template. If you want users to enter the six-digit code in the app, include `{{ .Token }}` in the Supabase email template as well.
 
 ## Vercel Setup
 
@@ -68,8 +104,8 @@ Use these settings when importing the GitHub repository:
 ```powershell
 git init
 git add .
-git commit -m "Create global patient hub"
-gh repo create global-patient-hub --private --source . --remote origin --push
+git commit -m "Create GCL"
+gh repo create gcl --private --source . --remote origin --push
 ```
 
 Change `--private` to `--public` only when you are ready to expose the code.

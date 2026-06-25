@@ -28,11 +28,11 @@ export default function Footer() {
         <div className="grid gap-10 md:grid-cols-4">
           <div className="md:col-span-2">
             <div className="mb-4 flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-md bg-white text-sm font-semibold text-ink-950">
-                {internalMode ? "OPS" : "GP"}
+              <div className="grid size-9 place-items-center rounded-md bg-white text-xs font-semibold text-ink-950">
+                {internalMode ? "OPS" : "GCL"}
               </div>
               <div>
-                <div className="font-serif text-xl">{internalMode ? "Global Patient Hub Ops" : "Global Patient Hub"}</div>
+                <div className="font-serif text-xl">{internalMode ? "GCL Ops" : "GCL"}</div>
                 <div className="text-sm text-teal-200">{internalMode ? "내부 운영 콘솔" : t("footer.tagline")}</div>
               </div>
             </div>
@@ -65,9 +65,9 @@ export default function Footer() {
                 <Phone className="size-4 text-teal-300" />
                 +82 2-6200-2026
               </a>
-              <a href="mailto:care@globalpatienthub.com" className="flex gap-2 hover:text-white">
+              <a href="mailto:care@global-connected-lab.com" className="flex gap-2 hover:text-white">
                 <Mail className="size-4 text-teal-300" />
-                care@globalpatienthub.com
+                care@global-connected-lab.com
               </a>
             </div>
           </div>
@@ -77,8 +77,8 @@ export default function Footer() {
         <div className="container-wide flex flex-col gap-3 py-5 text-xs text-ink-400 sm:flex-row sm:items-center sm:justify-between">
           <p>
             {internalMode
-              ? `${new Date().getFullYear()} Global Patient Hub Ops. All rights reserved.`
-              : `Copyright ${new Date().getFullYear()} Global Patient Hub. ${t("footer.rights")}`}
+              ? `${new Date().getFullYear()} GCL Ops. All rights reserved.`
+              : `Copyright ${new Date().getFullYear()} GCL. ${t("footer.rights")}`}
           </p>
           <p>
             {internalMode

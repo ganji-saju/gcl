@@ -1,12 +1,12 @@
-# Global Patient Hub Progress & Maintenance Manual
+# GCL Progress & Maintenance Manual
 
 Last updated: 2026-06-10  
-Current production URL: https://global-patient-hub.vercel.app  
+Current production URL: https://gcl.vercel.app
 Latest verified app commit before Supabase operations API work: `705d85e`
 
 ## 1. Current Product State
 
-Global Patient Hub is now a React + Vite static web app for a Korea-based international patient acquisition platform. The site is positioned as a regulated international patient marketplace plus coordinator CRM and quote/booking engine, with the first wedge focused on Japan/Taiwan skin package demand.
+GCL (global-connected-lab) is now a React + Vite static web app for a Korea-based international patient acquisition platform. The site is positioned as a regulated international patient marketplace plus coordinator CRM and quote/booking engine, with the first wedge focused on Japan/Taiwan skin package demand.
 
 The product plan has been expanded from a patient-hospital hub into a future multi-sided network: patient - partner operator - hospital. Partner operators include agencies, individual agents, interpreters, travel agencies, concierge services, and recovery/travel support vendors. The platform should remain the compliance, consent, audit, matching, and settlement layer while partners receive scoped case access and can support patient service requests and hospital shortlisting.
 
@@ -41,7 +41,7 @@ Important: `/admin/*`, `/partner/*`, and `/provider/*` now render through `Inter
 
 ### Foundation
 
-- Created the `global-patient-hub` project as a React + Vite app.
+- Created the `gcl` project as a React + Vite app.
 - Added Vercel-compatible static deployment settings.
 - Added Supabase lead-capture integration with local demo fallback.
 - Added product, API, database, and operating documentation under `docs/`.
@@ -569,19 +569,19 @@ git push origin main
 Then check Vercel:
 
 ```powershell
-vercel ls global-patient-hub
+vercel ls gcl
 ```
 
 Production URL:
 
 ```txt
-https://global-patient-hub.vercel.app
+https://gcl.vercel.app
 ```
 
 Quick HTTP check:
 
 ```powershell
-curl.exe -I -L https://global-patient-hub.vercel.app
+curl.exe -I -L https://gcl.vercel.app
 ```
 
 ## 7. Verification Checklist

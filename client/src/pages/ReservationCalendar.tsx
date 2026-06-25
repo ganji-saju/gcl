@@ -34,7 +34,6 @@ import {
   holdAvailabilitySlotMvp,
   readAdminApiToken,
   releaseAvailabilitySlotMvp,
-  saveAdminApiToken,
   type AvailabilitySlot,
   type BookingReservation,
   type NotificationResult,
@@ -230,8 +229,7 @@ export default function ReservationCalendar() {
   const [holdMinutes, setHoldMinutes] = useState(SLOT_HOLD_MINUTES);
   const [visitType, setVisitType] = useState<VisitType>("procedure");
   const [channel, setChannel] = useState<"email" | "whatsapp" | "kakao" | "line" | "sms">("email");
-  const [adminToken, setAdminToken] = useState(() => readAdminApiToken());
-  const [adminTokenInput, setAdminTokenInput] = useState(() => readAdminApiToken());
+  const [adminToken] = useState(() => readAdminApiToken());
   const [apiStatus, setApiStatus] = useState<ApiStatus>(adminToken ? "loading" : "demo");
   const [apiMessage, setApiMessage] = useState(adminToken ? "Supabase 예약 캘린더 연결 중..." : "데모 예약 캘린더");
   const [busy, setBusy] = useState<BusyAction>(adminToken ? "refresh" : null);
@@ -372,26 +370,6 @@ export default function ReservationCalendar() {
       setSelectedQuoteId(quoteOptions[0].id);
     }
   }, [quoteOptions, selectedQuoteId]);
-
-  function connectOps() {
-    const token = adminTokenInput.trim();
-    saveAdminApiToken(token);
-    setAdminToken(token);
-    if (!token) {
-      setProviders(betaProviders);
-      setCases(betaCases);
-      setQuotes(betaQuotes);
-      setSlots(buildDemoSlots());
-      setBookings([]);
-      setNotifications([]);
-      setProviderId(betaProviders[0]?.id ?? "");
-      setWeekStart("2026-07-06");
-      setSelectedSlotId("demo-slot-002");
-      setApiStatus("demo");
-      setApiMessage("데모 예약 캘린더");
-      setBusy(null);
-    }
-  }
 
   async function createSlot(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -573,22 +551,13 @@ export default function ReservationCalendar() {
                 <Database className="size-3.5" />
                 운영 데이터
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={adminTokenInput}
-                  onChange={(event) => setAdminTokenInput(event.target.value)}
-                  placeholder="관리자 연결 토큰"
-                  className="h-10 min-w-0 flex-1 rounded-md border border-ink-200 bg-white px-3 text-sm"
-                />
-                <Button type="button" variant="outline" onClick={connectOps} className="border-ink-300 text-ink-800">
-                  {adminTokenInput.trim() ? "연결" : "데모"}
-                </Button>
+              <div className="flex items-center justify-between gap-3">
+                <div className={cn("text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>{apiMessage}</div>
                 <Button type="button" variant="outline" onClick={() => void refreshOps()} disabled={!adminToken || busy === "refresh"} className="border-ink-300 text-ink-800">
                   {busy === "refresh" ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
                 </Button>
               </div>
-              <div className={cn("mt-2 text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>{apiMessage}</div>
+              <div className="mt-2 text-xs font-semibold text-ink-500">이메일 인증 세션으로 예약 API에 연결합니다.</div>
             </div>
           </div>
 

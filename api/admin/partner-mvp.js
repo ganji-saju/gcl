@@ -3,6 +3,7 @@ const JSON_HEADERS = {
   "Cache-Control": "no-store",
 };
 const SUPABASE_TIMEOUT_MS = 10000;
+const SUPABASE_AUTH_TIMEOUT_MS = 7000;
 const ACTIVITY_LOG_TIMEOUT_MS = 3000;
 const EXTERNAL_REQUEST_TIMEOUT_MS = 10000;
 
@@ -92,49 +93,127 @@ function readRoleTokenConfig() {
   };
 }
 
-function resolveRoleAccess(req) {
+async function verifySupabaseAuthUser(config, accessToken) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SUPABASE_AUTH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${config.supabaseUrl}/auth/v1/user`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (response.status === 401 || response.status === 403) return null;
+
+    const text = await response.text();
+    const body = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+      throw new Error(body?.message || body?.error_description || text || `Supabase Auth verification failed with ${response.status}`);
+    }
+
+    const user = body?.user || body;
+    const email = String(user?.email || "").trim().toLowerCase();
+    if (!user?.id || !email) return null;
+    return { id: user.id, email };
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("Supabase Auth verification timed out.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function normalizeAccessRole(value) {
+  return value === "partner" || value === "provider" ? value : value === "admin" ? "admin" : "";
+}
+
+async function readEmailRoleAccess(config, email) {
+  try {
+    const rows = await supabaseFetch(
+      config,
+      `ops_user_access?select=id,email,role,partner_id,provider_id,active&email=eq.${encodeURIComponent(email)}&active=eq.true&limit=1`,
+    );
+    return rows[0] || null;
+  } catch (error) {
+    if (String(error?.message || "").includes("ops_user_access")) {
+      throw new HttpError(503, "ops_user_access migration is not applied.");
+    }
+    throw error;
+  }
+}
+
+async function resolveRoleAccess(req, config) {
   const roleTokens = readRoleTokenConfig();
   const suppliedToken = readToken(req);
-
-  if (!roleTokens.adminToken) {
-    return { error: "ADMIN_API_TOKEN is not configured.", status: 503 };
-  }
 
   if (!suppliedToken) {
     return { error: "Unauthorized.", status: 401 };
   }
 
-  if (suppliedToken === roleTokens.adminToken) {
-    return { role: "admin", roleTokens, scopedAccountId: null };
+  if (roleTokens.adminToken && suppliedToken === roleTokens.adminToken) {
+    return { role: "admin", roleTokens, scopedAccountId: null, authMethod: "legacy_token", authEmail: null };
   }
 
   if (roleTokens.partnerMap.has(suppliedToken)) {
-    return { role: "partner", roleTokens, partnerId: roleTokens.partnerMap.get(suppliedToken), scopedAccountId: roleTokens.partnerMap.get(suppliedToken) };
+    return {
+      role: "partner",
+      roleTokens,
+      partnerId: roleTokens.partnerMap.get(suppliedToken),
+      scopedAccountId: roleTokens.partnerMap.get(suppliedToken),
+      authMethod: "legacy_token",
+      authEmail: null,
+    };
   }
 
   if (roleTokens.providerMap.has(suppliedToken)) {
-    return { role: "provider", roleTokens, providerId: roleTokens.providerMap.get(suppliedToken), scopedAccountId: roleTokens.providerMap.get(suppliedToken) };
+    return {
+      role: "provider",
+      roleTokens,
+      providerId: roleTokens.providerMap.get(suppliedToken),
+      scopedAccountId: roleTokens.providerMap.get(suppliedToken),
+      authMethod: "legacy_token",
+      authEmail: null,
+    };
   }
 
   if (roleTokens.partnerToken && suppliedToken === roleTokens.partnerToken) {
-    return { role: "partner", roleTokens, scopedAccountId: null };
+    return { role: "partner", roleTokens, scopedAccountId: null, authMethod: "legacy_token", authEmail: null };
   }
 
   if (roleTokens.providerToken && suppliedToken === roleTokens.providerToken) {
-    return { role: "provider", roleTokens, scopedAccountId: null };
+    return { role: "provider", roleTokens, scopedAccountId: null, authMethod: "legacy_token", authEmail: null };
   }
 
-  return { error: "Unauthorized.", status: 401 };
+  const user = await verifySupabaseAuthUser(config, suppliedToken);
+  if (!user) return { error: "Unauthorized.", status: 401 };
+
+  const access = await readEmailRoleAccess(config, user.email);
+  if (!access) return { error: "This email is not allowed for operations access.", status: 403 };
+
+  const role = normalizeAccessRole(access.role);
+  if (!role) return { error: "This email has an unsupported operations role.", status: 403 };
+  if (role === "partner" && !access.partner_id) return { error: "Partner operations access requires a partner_id.", status: 403 };
+  if (role === "provider" && !access.provider_id) return { error: "Provider operations access requires a provider_id.", status: 403 };
+
+  return {
+    role,
+    roleTokens,
+    partnerId: access.partner_id || undefined,
+    providerId: access.provider_id || undefined,
+    scopedAccountId: access.partner_id || access.provider_id || null,
+    authMethod: "email",
+    authEmail: user.email,
+  };
 }
 
-function requireConfig(req, allowedRoles = ["admin"]) {
-  const access = resolveRoleAccess(req);
-  if (access.error) return access;
-
-  if (access.role !== "admin" && !allowedRoles.includes(access.role)) {
-    return { error: "This role is not allowed to perform this operation.", status: 403 };
-  }
-
+async function requireConfig(req, allowedRoles = ["admin"]) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -142,14 +221,27 @@ function requireConfig(req, allowedRoles = ["admin"]) {
     return { error: "Supabase server credentials are not configured.", status: 503 };
   }
 
-  return {
+  const baseConfig = {
     supabaseUrl: supabaseUrl.replace(/\/$/, ""),
     serviceRoleKey,
+  };
+
+  const access = await resolveRoleAccess(req, baseConfig);
+  if (access.error) return access;
+
+  if (access.role !== "admin" && !allowedRoles.includes(access.role)) {
+    return { error: "This role is not allowed to perform this operation.", status: 403 };
+  }
+
+  return {
+    ...baseConfig,
     role: access.role,
     partnerId: access.partnerId,
     providerId: access.providerId,
     scopedAccountId: access.scopedAccountId,
     roleTokens: access.roleTokens,
+    authMethod: access.authMethod,
+    authEmail: access.authEmail,
   };
 }
 
@@ -841,6 +933,9 @@ async function getSnapshot(config) {
       role: config.role,
       scopedAccountId: config.scopedAccountId,
       scopedAccountEnabled: Boolean(config.scopedAccountId),
+      authMethod: config.authMethod || "email",
+      authEmail: config.authEmail || null,
+      emailAccessConfigured: config.authMethod === "email",
       roleTokensConfigured: {
         admin: Boolean(config.roleTokens.adminToken),
         partner: Boolean(config.roleTokens.partnerToken || config.roleTokens.partnerMap.size),
@@ -986,7 +1081,7 @@ async function setShortlist(config, body) {
   const { caseId, partnerId, providerIds = [] } = body;
   if (!isUuid(caseId) || !isUuid(partnerId)) throw new Error("Valid caseId and partnerId are required.");
   if (config.role === "partner" && config.partnerId && partnerId !== config.partnerId) {
-    throw new HttpError(403, "This partner token can only update its own cases.");
+    throw new HttpError(403, "This partner account can only update its own cases.");
   }
 
   const cleanProviderIds = providerIds.filter(isUuid);
@@ -1108,7 +1203,7 @@ async function submitProviderQuote(config, body) {
     throw new Error("Valid quoteRequestId, caseId, and providerId are required.");
   }
   if (config.role === "provider" && config.providerId && providerId !== config.providerId) {
-    throw new HttpError(403, "This provider token can only submit its own quotes.");
+    throw new HttpError(403, "This provider account can only submit its own quotes.");
   }
 
   const providerRows = await list(config, "providers", `select=id,default_commission_cap_rate&id=eq.${providerId}&limit=1`);
@@ -1357,7 +1452,7 @@ async function createDepositCheckout(config, req, body) {
   params.append("line_items[0][quantity]", "1");
   params.append("line_items[0][price_data][currency]", "usd");
   params.append("line_items[0][price_data][unit_amount]", String(unitAmount));
-  params.append("line_items[0][price_data][product_data][name]", `Global Patient Hub deposit ${quoteId}`);
+  params.append("line_items[0][price_data][product_data][name]", `GCL deposit ${quoteId}`);
   params.append("line_items[0][price_data][product_data][description]", "Patient deposit for provider quote and booking coordination.");
   params.append("metadata[case_id]", caseId);
   params.append("metadata[quote_id]", quoteId);
@@ -1414,7 +1509,7 @@ function cleanLanguageSupport(value) {
 
 function assertProviderAccess(config, providerId) {
   if (config.role === "provider" && config.providerId && providerId !== config.providerId) {
-    throw new HttpError(403, "This provider token can only manage its own slots.");
+    throw new HttpError(403, "This provider account can only manage its own slots.");
   }
 }
 
@@ -1689,7 +1784,7 @@ function allowedRolesForAction(action) {
 export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      const config = requireConfig(req, ["admin", "partner", "provider"]);
+      const config = await requireConfig(req, ["admin", "partner", "provider"]);
       if (config.error) return json(res, config.status, { error: config.error });
       return json(res, 200, await getSnapshot(config));
     }
@@ -1699,7 +1794,7 @@ export default async function handler(req, res) {
       const allowedRoles = allowedRolesForAction(body.action);
       if (!allowedRoles) return json(res, 400, { error: "Unsupported action." });
 
-      const config = requireConfig(req, allowedRoles);
+      const config = await requireConfig(req, allowedRoles);
       if (config.error) return json(res, config.status, { error: config.error });
 
       if (body.action === "assignPartner") await assignPartner(config, body);

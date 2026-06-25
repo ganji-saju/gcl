@@ -324,16 +324,16 @@ Weekly decision cadence:
 
 | ID | Type | Priority | Owner | Estimate | Title |
 |---|---|---:|---|---:|---|
-| GPH-BETA-001 | Task | P0 | Ops | 3 | Create Closed Beta Master Sheet workbook |
-| GPH-BETA-002 | Task | P0 | Biz | 5 | Sign 5 provider SLA agreements |
-| GPH-BETA-003 | Task | P0 | Ops | 3 | Finalize coordinator qualification and follow-up scripts |
-| GPH-BETA-004 | Story | P0 | FE/BE | 8 | Build Quote MVP with commission cap validation |
-| GPH-BETA-005 | Story | P0 | FE/BE | 8 | Build Deposit logging and status workflow |
-| GPH-BETA-006 | Story | P0 | FE/BE | 5 | Build Booking confirmation workflow |
-| GPH-BETA-007 | Story | P0 | FE | 8 | Build Case Dashboard MVP |
-| GPH-BETA-008 | Task | P0 | Growth | 5 | Run EN/JP 300-lead acquisition test |
-| GPH-BETA-009 | Task | P0 | Finance | 5 | Reconcile settlement ledger for every deposit-paid case |
-| GPH-BETA-010 | Task | P1 | Data | 3 | Build provider and channel ranking report |
+| GCL-BETA-001 | Task | P0 | Ops | 3 | Create Closed Beta Master Sheet workbook |
+| GCL-BETA-002 | Task | P0 | Biz | 5 | Sign 5 provider SLA agreements |
+| GCL-BETA-003 | Task | P0 | Ops | 3 | Finalize coordinator qualification and follow-up scripts |
+| GCL-BETA-004 | Story | P0 | FE/BE | 8 | Build Quote MVP with commission cap validation |
+| GCL-BETA-005 | Story | P0 | FE/BE | 8 | Build Deposit logging and status workflow |
+| GCL-BETA-006 | Story | P0 | FE/BE | 5 | Build Booking confirmation workflow |
+| GCL-BETA-007 | Story | P0 | FE | 8 | Build Case Dashboard MVP |
+| GCL-BETA-008 | Task | P0 | Growth | 5 | Run EN/JP 300-lead acquisition test |
+| GCL-BETA-009 | Task | P0 | Finance | 5 | Reconcile settlement ledger for every deposit-paid case |
+| GCL-BETA-010 | Task | P1 | Data | 3 | Build provider and channel ranking report |
 
 ## Day 1 Kickoff
 

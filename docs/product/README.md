@@ -1,8 +1,8 @@
-# Global Patient Hub Product Design Pack
+# GCL Product Design Pack
 
 Last updated: 2026-06-25
 
-This folder contains the v1 product and implementation design for a Korean international patient acquisition platform.
+This folder contains the v1 product and implementation design for GCL (global-connected-lab), a Korean international patient acquisition platform.
 
 ## Documents
 

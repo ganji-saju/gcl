@@ -1598,11 +1598,11 @@ export const T: TranslationMap = {
     ar: "دعم الفندق والتعافي",
   },
   "consult.partnerShareConsent": {
-    en: "I agree that Global Patient Hub may share the minimum necessary case, travel, and contact details with assigned partner operators for the selected non-medical services.",
-    ko: "선택한 비의료 서비스 제공을 위해 Global Patient Hub가 필요한 최소한의 케이스, 방문 일정, 연락처 정보를 배정된 파트너 운영자와 공유하는 데 동의합니다.",
-    zh: "我同意 Global Patient Hub 为所选非医疗服务与指定合作伙伴共享最低必要的个案、行程和联系方式。",
-    ja: "選択した非医療サービスのため、Global Patient Hubが必要最小限のケース、渡航日程、連絡先情報を割り当て済みパートナー運営者と共有することに同意します。",
-    ar: "أوافق على أن يشارك Global Patient Hub الحد الأدنى اللازم من تفاصيل الحالة والسفر والتواصل مع مشغلي الشركاء المعينين للخدمات غير الطبية المختارة.",
+    en: "I agree that GCL may share the minimum necessary case, travel, and contact details with assigned partner operators for the selected non-medical services.",
+    ko: "선택한 비의료 서비스 제공을 위해 GCL이 필요한 최소한의 케이스, 방문 일정, 연락처 정보를 배정된 파트너 운영자와 공유하는 데 동의합니다.",
+    zh: "我同意 GCL 为所选非医疗服务与指定合作伙伴共享最低必要的个案、行程和联系方式。",
+    ja: "選択した非医療サービスのため、GCLが必要最小限のケース、渡航日程、連絡先情報を割り当て済みパートナー運営者と共有することに同意します。",
+    ar: "أوافق على أن يشارك GCL الحد الأدنى اللازم من تفاصيل الحالة والسفر والتواصل مع مشغلي الشركاء المعينين للخدمات غير الطبية المختارة.",
   },
   "consult.selectedPackagePrefix": {
     en: "Selected package:",
@@ -1626,11 +1626,11 @@ export const T: TranslationMap = {
     ar: "أخبرنا بأهدافك وتوقيتك والإجراءات السابقة وأي مخاوف.",
   },
   "consult.consent": {
-    en: "I agree that Global Patient Hub may store this request and share it with relevant coordinators or providers for consultation follow-up.",
-    ko: "Global Patient Hub가 이 요청을 저장하고 상담 후속 조치를 위해 관련 코디네이터 또는 의료기관과 공유하는 데 동의합니다.",
-    zh: "我同意 Global Patient Hub 保存此请求，并为咨询跟进与相关协调员或机构共享。",
-    ja: "Global Patient Hubがこの依頼を保存し、相談フォローのため関連コーディネーターまたは医療機関と共有することに同意します。",
-    ar: "أوافق على أن يحفظ Global Patient Hub هذا الطلب ويشاركه مع المنسقين أو المزوّدين المعنيين للمتابعة.",
+    en: "I agree that GCL may store this request and share it with relevant coordinators or providers for consultation follow-up.",
+    ko: "GCL이 이 요청을 저장하고 상담 후속 조치를 위해 관련 코디네이터 또는 의료기관과 공유하는 데 동의합니다.",
+    zh: "我同意 GCL 保存此请求，并为咨询跟进与相关协调员或机构共享。",
+    ja: "GCLがこの依頼を保存し、相談フォローのため関連コーディネーターまたは医療機関と共有することに同意します。",
+    ar: "أوافق على أن يحفظ GCL هذا الطلب ويشاركه مع المنسقين أو المزوّدين المعنيين للمتابعة.",
   },
   "consult.marketingConsent": {
     en: "I agree to receive package updates and follow-up messages about this validation request.",
@@ -1949,13 +1949,13 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
-    const stored = localStorage.getItem("gph_lang") as Language | null;
+    const stored = localStorage.getItem("gcl_lang") as Language | null;
     return stored && LANGUAGES.some((language) => language.code === stored) ? stored : "en";
   });
 
   const setLang = useCallback((newLang: Language) => {
     setLangState(newLang);
-    localStorage.setItem("gph_lang", newLang);
+    localStorage.setItem("gcl_lang", newLang);
   }, []);
 
   const currentLang = LANGUAGES.find((language) => language.code === lang) ?? LANGUAGES[0];

@@ -86,7 +86,7 @@ export default function AdminLandingRoutes() {
   async function refreshRoutes(token = adminToken) {
     if (!token) {
       setApiStatus("static");
-      setApiMessage("운영 토큰이 없어 코드에 포함된 기본 EN/JP route만 표시합니다.");
+      setApiMessage("이메일 인증 세션이 없어 코드에 포함된 기본 EN/JP route만 표시합니다.");
       return;
     }
 
@@ -153,7 +153,7 @@ export default function AdminLandingRoutes() {
       setLocalDrafts((current) => [...current.filter((route) => routeKey(route) !== routeKey(nextRoute)), nextRoute]);
       setDraft(defaultDraft);
       setApiStatus("static");
-      setApiMessage("운영 토큰이 없어 현재 브라우저 세션에만 초안을 보관했습니다.");
+      setApiMessage("이메일 인증 세션이 없어 현재 브라우저 세션에만 초안을 보관했습니다.");
       return;
     }
 

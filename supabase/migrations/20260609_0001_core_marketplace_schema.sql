@@ -1,4 +1,4 @@
--- Global Patient Hub v1 core schema
+-- GCL v1 core schema
 -- Scope: compliant international patient marketplace + coordinator CRM + quote/booking engine.
 -- This migration is additive and does not remove the existing public.inquiries POC table.
 

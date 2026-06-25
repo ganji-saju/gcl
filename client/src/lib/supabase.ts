@@ -122,7 +122,7 @@ function toRecord(input: InquiryInput) {
 }
 
 function saveLocalDemoInquiry(input: InquiryInput) {
-  const key = "gph_demo_inquiries";
+  const key = "gcl_demo_inquiries";
   const previous = JSON.parse(localStorage.getItem(key) ?? "[]") as unknown[];
   previous.unshift({
     id: crypto.randomUUID(),

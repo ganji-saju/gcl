@@ -5,7 +5,7 @@
 - Admin route: `/admin/reservation-calendar`
 - Primary users: operations coordinators who already handle quote, deposit, and booking follow-up.
 - Default local behavior: demo mode in Vite dev only, so the calendar can be reviewed without live credentials.
-- Production behavior: internal gate requires a validated admin token before the route opens.
+- Production behavior: internal gate requires a Supabase email-auth session whose email is active in `ops_user_access`.
 
 ## Data Structure
 

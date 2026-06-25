@@ -39,7 +39,7 @@ export default function Navbar() {
   const navLinks = internalMode ? internalNavLinks : publicNavLinks;
 
   useEffect(() => {
-    document.title = internalMode ? "Global Patient Hub | 내부 운영" : "Global Patient Hub | Korea Medical Tourism Network";
+    document.title = internalMode ? "GCL | 내부 운영" : "GCL | Korea Medical Tourism Network";
   }, [internalMode]);
 
   return (
@@ -47,11 +47,11 @@ export default function Navbar() {
       <div className="container-wide">
         <div className="flex h-16 items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-md bg-ink-950 text-sm font-semibold text-white">
-              {internalMode ? "OPS" : "GP"}
+            <div className="grid size-9 place-items-center rounded-md bg-ink-950 text-xs font-semibold text-white">
+              {internalMode ? "OPS" : "GCL"}
             </div>
             <div className="leading-tight">
-              <div className="font-serif text-lg text-ink-950">{internalMode ? "Global Patient Hub Ops" : "Global Patient Hub"}</div>
+              <div className="font-serif text-lg text-ink-950">{internalMode ? "GCL Ops" : "GCL"}</div>
               <div className="text-xs font-medium text-teal-700">{internalMode ? "내부 운영 콘솔" : "Korea care network"}</div>
             </div>
           </Link>
