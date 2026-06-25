@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import InternalOpsGate from "./components/InternalOpsGate";
 import ScrollManager from "./components/ScrollManager";
@@ -27,7 +27,13 @@ import PartnerCaseBoard from "./pages/PartnerCaseBoard";
 import ProviderQuoteDesk from "./pages/ProviderQuoteDesk";
 import OpsHealth from "./pages/OpsHealth";
 import ReservationCalendar from "./pages/ReservationCalendar";
-import type { OpsRole } from "./lib/partnerMvpApi";
+import { readOpsRole, type OpsRole } from "./lib/partnerMvpApi";
+
+const opsRoleHome: Record<OpsRole, string> = {
+  admin: "/admin/ops-health",
+  partner: "/partner/cases",
+  provider: "/provider/quotes",
+};
 
 function InternalRoute({
   children,
@@ -45,6 +51,28 @@ function InternalRoute({
 
 function ClosedBetaOpsRoute() {
   return <InternalRoute><ClosedBetaOps /></InternalRoute>;
+}
+
+function AdminEntryRedirect() {
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    navigate(opsRoleHome[readOpsRole()] ?? opsRoleHome.admin, { replace: true });
+  }, [navigate]);
+
+  return (
+    <div className="grid min-h-[60vh] place-items-center bg-ink-50 px-4 text-sm font-semibold text-ink-600">
+      권한을 확인하고 운영 화면으로 이동하는 중입니다.
+    </div>
+  );
+}
+
+function AdminEntryRoute() {
+  return (
+    <InternalRoute allowedRoles={["admin", "partner", "provider"]} title="운영 포털 로그인">
+      <AdminEntryRedirect />
+    </InternalRoute>
+  );
 }
 
 function CaseDashboardRoute() {
@@ -93,6 +121,8 @@ function Router() {
       <Route path="/treatments/:slug" component={TreatmentDetail} />
       <Route path="/compare" component={Compare} />
       <Route path="/consultation" component={Consultation} />
+      <Route path="/admin" component={AdminEntryRoute} />
+      <Route path="/admin/" component={AdminEntryRoute} />
       <Route path="/admin/beta" component={ClosedBetaOpsRoute} />
       <Route path="/admin/cases" component={CaseDashboardRoute} />
       <Route path="/admin/quote-booking" component={QuoteBookingRoute} />
