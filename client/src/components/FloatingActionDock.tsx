@@ -14,19 +14,19 @@ const CONTACT_LINKS = [
   {
     label: "LINE",
     shortLabel: "LINE",
-    href: import.meta.env.VITE_CONTACT_LINE_URL || "https://line.me/R/ti/p/@globalpatienthub",
+    href: import.meta.env.VITE_CONTACT_LINE_URL || "https://line.me/R/ti/p/@global-connected-lab",
     className: "bg-[#06C755] text-white hover:bg-[#05aa49]",
   },
   {
     label: "WeChat",
     shortLabel: "WC",
-    href: import.meta.env.VITE_CONTACT_WECHAT_URL || "weixin://dl/chat?globalpatienthub",
+    href: import.meta.env.VITE_CONTACT_WECHAT_URL || "weixin://dl/chat?global-connected-lab",
     className: "bg-[#07C160] text-white hover:bg-[#06a653]",
   },
   {
     label: "KakaoTalk",
     shortLabel: "KO",
-    href: import.meta.env.VITE_CONTACT_KAKAO_URL || "https://pf.kakao.com/_globalpatienthub/chat",
+    href: import.meta.env.VITE_CONTACT_KAKAO_URL || "https://pf.kakao.com/_global-connected-lab/chat",
     className: "bg-[#FEE500] text-ink-950 hover:bg-[#f3d900]",
   },
 ].filter((link) => Boolean(link.href));

@@ -1,14 +1,14 @@
 openapi: 3.1.0
 info:
-  title: Global Patient Hub API
+  title: GCL API
   version: 1.0.0
   summary: International patient marketplace, coordinator CRM, quote and booking API.
   description: >
-    v1 API for a compliance-first Korean international patient acquisition platform.
+    v1 API for GCL (global-connected-lab), a compliance-first Korean international patient acquisition platform.
     The API separates public patient flows, provider workflows, admin/coordinator operations,
     and partner referral operations.
 servers:
-  - url: https://api.globalpatienthub.example.com
+  - url: https://api.global-connected-lab.example.com
     description: Production
   - url: http://localhost:8787
     description: Local development

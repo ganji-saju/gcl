@@ -153,7 +153,7 @@ export default function QuoteBookingMvp() {
 
   async function queueQuoteNotice(quote: BetaQuote) {
     if (!opsToken) {
-      setQuoteMessages((current) => ({ ...current, [quote.id]: "운영 토큰 연결 후 알림을 저장할 수 있습니다." }));
+      setQuoteMessages((current) => ({ ...current, [quote.id]: "이메일 인증 후 알림을 저장할 수 있습니다." }));
       return;
     }
 
@@ -185,7 +185,7 @@ export default function QuoteBookingMvp() {
 
   async function createCheckoutLink(quote: BetaQuote) {
     if (!opsToken) {
-      setQuoteMessages((current) => ({ ...current, [quote.id]: "운영 토큰 연결 후 예약금 링크를 생성할 수 있습니다." }));
+      setQuoteMessages((current) => ({ ...current, [quote.id]: "이메일 인증 후 예약금 링크를 생성할 수 있습니다." }));
       return;
     }
 

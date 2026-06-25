@@ -4,7 +4,7 @@ Last updated: 2026-06-10
 
 Ticket format is Jira/Linear-ready:
 
-- ID: `GPH-{number}`
+- ID: `GCL-{number}`
 - Type: Epic, Story, Task, Spike
 - Priority: P0, P1, P2
 - Estimate: story points
@@ -24,7 +24,7 @@ Do not start the full Sprint 1 build until the validation roadmap in
 
 The tickets below remain the implementation backlog once those validation gates pass.
 
-Planning update: `GPH-008 Partner Referral` is no longer only a link-based
+Planning update: `GCL-008 Partner Referral` is no longer only a link-based
 referral/commission feature. It should expand into the multi-sided partner
 network described in `07-multi-sided-partner-network-plan.md`, where agencies,
 individual agents, interpreters, and travel agencies can be assigned to cases,
@@ -35,70 +35,70 @@ platform guardrails.
 
 | ID | Type | Priority | Epic | Outcome |
 |---|---|---:|---|---|
-| GPH-001 | Epic | P0 | Regulatory Foundation | Eligibility, provider verification, content review, commission cap, auditability are enforceable |
-| GPH-002 | Epic | P0 | Patient Lead and Intake | International patient can submit lead, pass eligibility, complete intake |
-| GPH-003 | Epic | P0 | Provider Supply | Verified providers, doctors, packages, slots, and compliance docs are managed |
-| GPH-004 | Epic | P0 | Case CRM | Coordinators can qualify, assign, message, and progress cases |
-| GPH-005 | Epic | P0 | Matching Engine | Coordinator can run score-based matching and request quotes |
-| GPH-006 | Epic | P0 | Quote and Booking | Provider can quote; patient can accept; booking/deposit can be tracked |
-| GPH-007 | Epic | P1 | Settlement and Reporting | Provider/partner settlement and annual performance report can be exported |
-| GPH-008 | Epic | P1 | Partner Referral | Partners can create links and track attributed leads/commissions |
-| GPH-009 | Epic | P1 | Analytics and Attribution | Marketing funnel and source performance are measurable |
-| GPH-010 | Epic | P1 | Portal UX | Admin/Provider portal screens support MVP workflows |
-| GPH-043 | Epic | P1 | Partner-Assisted Care Network | Patients can request partner services and partners can support hospital shortlisting under compliance controls |
+| GCL-001 | Epic | P0 | Regulatory Foundation | Eligibility, provider verification, content review, commission cap, auditability are enforceable |
+| GCL-002 | Epic | P0 | Patient Lead and Intake | International patient can submit lead, pass eligibility, complete intake |
+| GCL-003 | Epic | P0 | Provider Supply | Verified providers, doctors, packages, slots, and compliance docs are managed |
+| GCL-004 | Epic | P0 | Case CRM | Coordinators can qualify, assign, message, and progress cases |
+| GCL-005 | Epic | P0 | Matching Engine | Coordinator can run score-based matching and request quotes |
+| GCL-006 | Epic | P0 | Quote and Booking | Provider can quote; patient can accept; booking/deposit can be tracked |
+| GCL-007 | Epic | P1 | Settlement and Reporting | Provider/partner settlement and annual performance report can be exported |
+| GCL-008 | Epic | P1 | Partner Referral | Partners can create links and track attributed leads/commissions |
+| GCL-009 | Epic | P1 | Analytics and Attribution | Marketing funnel and source performance are measurable |
+| GCL-010 | Epic | P1 | Portal UX | Admin/Provider portal screens support MVP workflows |
+| GCL-043 | Epic | P1 | Partner-Assisted Care Network | Patients can request partner services and partners can support hospital shortlisting under compliance controls |
 
 ## P0 Stories
 
 | ID | Epic | Type | Priority | Owner | Estimate | Title |
 |---|---|---|---:|---|---:|---|
-| GPH-011 | GPH-001 | Story | P0 | BE | 5 | Apply v1 PostgreSQL core schema migration |
-| GPH-012 | GPH-001 | Story | P0 | BE | 5 | Implement RBAC middleware for patient/provider/coordinator/admin/partner |
-| GPH-013 | GPH-001 | Story | P0 | BE | 3 | Implement audit log writer for sensitive actions |
-| GPH-014 | GPH-001 | Story | P0 | BE | 3 | Implement commission cap validation service |
-| GPH-015 | GPH-001 | Story | P0 | BE | 3 | Implement provider public-exposure guard |
-| GPH-016 | GPH-001 | Story | P0 | BE | 3 | Implement content approval guard |
-| GPH-017 | GPH-002 | Story | P0 | FE/BE | 5 | Create lead capture API and connect existing consultation form |
-| GPH-018 | GPH-002 | Story | P0 | BE | 5 | Implement patient eligibility-check endpoint |
-| GPH-019 | GPH-002 | Story | P0 | FE/BE | 5 | Build medical intake submission flow |
-| GPH-020 | GPH-004 | Story | P0 | BE | 5 | Implement case state machine service |
-| GPH-021 | GPH-004 | Story | P0 | FE | 8 | Build Admin Case Board MVP |
-| GPH-022 | GPH-004 | Story | P0 | FE | 8 | Build Admin Case Detail MVP |
-| GPH-023 | GPH-003 | Story | P0 | BE | 5 | Implement provider, doctor, and package CRUD APIs |
-| GPH-024 | GPH-003 | Story | P0 | FE | 8 | Build Provider Compliance Documents screen |
-| GPH-025 | GPH-005 | Story | P0 | BE | 8 | Implement matching engine v1 scoring |
-| GPH-026 | GPH-005 | Story | P0 | FE | 5 | Build Matching Workbench MVP |
-| GPH-027 | GPH-006 | Story | P0 | BE | 8 | Implement quote request and quote creation APIs |
-| GPH-028 | GPH-006 | Story | P0 | FE | 5 | Build Provider Quote Composer MVP |
-| GPH-029 | GPH-006 | Story | P0 | BE | 5 | Implement booking API with idempotency |
-| GPH-030 | GPH-006 | Story | P0 | BE | 5 | Implement deposit payment log API with idempotency |
-| GPH-031 | GPH-001 | Story | P0 | FE | 5 | Build Content Review Queue MVP |
-| GPH-032 | GPH-007 | Story | P0 | BE | 3 | Build annual performance report export query |
+| GCL-011 | GCL-001 | Story | P0 | BE | 5 | Apply v1 PostgreSQL core schema migration |
+| GCL-012 | GCL-001 | Story | P0 | BE | 5 | Implement RBAC middleware for patient/provider/coordinator/admin/partner |
+| GCL-013 | GCL-001 | Story | P0 | BE | 3 | Implement audit log writer for sensitive actions |
+| GCL-014 | GCL-001 | Story | P0 | BE | 3 | Implement commission cap validation service |
+| GCL-015 | GCL-001 | Story | P0 | BE | 3 | Implement provider public-exposure guard |
+| GCL-016 | GCL-001 | Story | P0 | BE | 3 | Implement content approval guard |
+| GCL-017 | GCL-002 | Story | P0 | FE/BE | 5 | Create lead capture API and connect existing consultation form |
+| GCL-018 | GCL-002 | Story | P0 | BE | 5 | Implement patient eligibility-check endpoint |
+| GCL-019 | GCL-002 | Story | P0 | FE/BE | 5 | Build medical intake submission flow |
+| GCL-020 | GCL-004 | Story | P0 | BE | 5 | Implement case state machine service |
+| GCL-021 | GCL-004 | Story | P0 | FE | 8 | Build Admin Case Board MVP |
+| GCL-022 | GCL-004 | Story | P0 | FE | 8 | Build Admin Case Detail MVP |
+| GCL-023 | GCL-003 | Story | P0 | BE | 5 | Implement provider, doctor, and package CRUD APIs |
+| GCL-024 | GCL-003 | Story | P0 | FE | 8 | Build Provider Compliance Documents screen |
+| GCL-025 | GCL-005 | Story | P0 | BE | 8 | Implement matching engine v1 scoring |
+| GCL-026 | GCL-005 | Story | P0 | FE | 5 | Build Matching Workbench MVP |
+| GCL-027 | GCL-006 | Story | P0 | BE | 8 | Implement quote request and quote creation APIs |
+| GCL-028 | GCL-006 | Story | P0 | FE | 5 | Build Provider Quote Composer MVP |
+| GCL-029 | GCL-006 | Story | P0 | BE | 5 | Implement booking API with idempotency |
+| GCL-030 | GCL-006 | Story | P0 | BE | 5 | Implement deposit payment log API with idempotency |
+| GCL-031 | GCL-001 | Story | P0 | FE | 5 | Build Content Review Queue MVP |
+| GCL-032 | GCL-007 | Story | P0 | BE | 3 | Build annual performance report export query |
 
 ## P1 Stories
 
 | ID | Epic | Type | Priority | Owner | Estimate | Title |
 |---|---|---|---:|---|---:|---|
-| GPH-033 | GPH-006 | Story | P1 | FE | 5 | Build Booking and Payment Monitor |
-| GPH-034 | GPH-007 | Story | P1 | BE | 5 | Implement settlement draft generation |
-| GPH-035 | GPH-007 | Story | P1 | FE | 5 | Build Settlement screen |
-| GPH-036 | GPH-008 | Story | P1 | BE | 5 | Implement partner referral link APIs |
-| GPH-037 | GPH-008 | Story | P1 | FE | 5 | Build Partner Dashboard MVP |
-| GPH-038 | GPH-009 | Story | P1 | BE/Data | 5 | Implement attribution event ingestion |
-| GPH-039 | GPH-009 | Story | P1 | FE | 5 | Build Attribution report screen |
-| GPH-040 | GPH-003 | Story | P1 | FE | 5 | Build Provider Package Management screen |
-| GPH-041 | GPH-003 | Story | P1 | FE | 5 | Build Provider Availability screen |
-| GPH-042 | GPH-004 | Story | P1 | BE | 5 | Implement external message adapter abstraction |
-| GPH-044 | GPH-043 | Story | P1 | Product/Compliance | 3 | Define agency/agent/interpreter/travel partner compliance rules |
-| GPH-045 | GPH-043 | Story | P1 | FE/BE | 5 | Add partner-support request fields to consultation intake |
-| GPH-046 | GPH-043 | Story | P1 | BE | 5 | Add partner service request and case partner assignment model |
-| GPH-047 | GPH-043 | Story | P1 | BE | 5 | Implement partner-scoped RBAC and audit rules |
-| GPH-048 | GPH-043 | Story | P1 | FE | 5 | Build admin partner assignment MVP |
-| GPH-049 | GPH-043 | Story | P1 | BE | 5 | Build partner verification and service catalog APIs |
-| GPH-050 | GPH-043 | Story | P1 | FE | 8 | Build Partner Dashboard MVP |
+| GCL-033 | GCL-006 | Story | P1 | FE | 5 | Build Booking and Payment Monitor |
+| GCL-034 | GCL-007 | Story | P1 | BE | 5 | Implement settlement draft generation |
+| GCL-035 | GCL-007 | Story | P1 | FE | 5 | Build Settlement screen |
+| GCL-036 | GCL-008 | Story | P1 | BE | 5 | Implement partner referral link APIs |
+| GCL-037 | GCL-008 | Story | P1 | FE | 5 | Build Partner Dashboard MVP |
+| GCL-038 | GCL-009 | Story | P1 | BE/Data | 5 | Implement attribution event ingestion |
+| GCL-039 | GCL-009 | Story | P1 | FE | 5 | Build Attribution report screen |
+| GCL-040 | GCL-003 | Story | P1 | FE | 5 | Build Provider Package Management screen |
+| GCL-041 | GCL-003 | Story | P1 | FE | 5 | Build Provider Availability screen |
+| GCL-042 | GCL-004 | Story | P1 | BE | 5 | Implement external message adapter abstraction |
+| GCL-044 | GCL-043 | Story | P1 | Product/Compliance | 3 | Define agency/agent/interpreter/travel partner compliance rules |
+| GCL-045 | GCL-043 | Story | P1 | FE/BE | 5 | Add partner-support request fields to consultation intake |
+| GCL-046 | GCL-043 | Story | P1 | BE | 5 | Add partner service request and case partner assignment model |
+| GCL-047 | GCL-043 | Story | P1 | BE | 5 | Implement partner-scoped RBAC and audit rules |
+| GCL-048 | GCL-043 | Story | P1 | FE | 5 | Build admin partner assignment MVP |
+| GCL-049 | GCL-043 | Story | P1 | BE | 5 | Build partner verification and service catalog APIs |
+| GCL-050 | GCL-043 | Story | P1 | FE | 8 | Build Partner Dashboard MVP |
 
 ## Story Details
 
-### GPH-011 - Apply v1 PostgreSQL core schema migration
+### GCL-011 - Apply v1 PostgreSQL core schema migration
 
 Owner: BE  
 Estimate: 5  
@@ -112,11 +112,11 @@ Acceptance criteria:
 - `bookings.idempotency_key` and `payments.idempotency_key` are unique.
 - Migration can be run on a clean Supabase Postgres project.
 
-### GPH-012 - Implement RBAC middleware
+### GCL-012 - Implement RBAC middleware
 
 Owner: BE  
 Estimate: 5  
-Dependencies: GPH-011
+Dependencies: GCL-011
 
 Acceptance criteria:
 
@@ -126,11 +126,11 @@ Acceptance criteria:
 - Coordinator access is case-assignment scoped unless admin override is present.
 - Forbidden actions return `ERR_FORBIDDEN`.
 
-### GPH-013 - Implement audit log writer
+### GCL-013 - Implement audit log writer
 
 Owner: BE  
 Estimate: 3  
-Dependencies: GPH-011, GPH-012
+Dependencies: GCL-011, GCL-012
 
 Acceptance criteria:
 
@@ -138,11 +138,11 @@ Acceptance criteria:
 - Case status change, quote creation/update, commission check, booking change, content approval, and provider verification use the writer.
 - Audit log records are append-only in API behavior.
 
-### GPH-014 - Implement commission cap validation service
+### GCL-014 - Implement commission cap validation service
 
 Owner: BE  
 Estimate: 3  
-Dependencies: GPH-011
+Dependencies: GCL-011
 
 Acceptance criteria:
 
@@ -151,11 +151,11 @@ Acceptance criteria:
 - Every pass/fail writes `commission_checks`.
 - Tests cover clinic 30%, hospital/general 20%, tertiary 15%.
 
-### GPH-015 - Implement provider public-exposure guard
+### GCL-015 - Implement provider public-exposure guard
 
 Owner: BE  
 Estimate: 3  
-Dependencies: GPH-011
+Dependencies: GCL-011
 
 Acceptance criteria:
 
@@ -164,11 +164,11 @@ Acceptance criteria:
 - Package requires approved content status and active flag.
 - Blocked results are not silently mixed with public results.
 
-### GPH-016 - Implement content approval guard
+### GCL-016 - Implement content approval guard
 
 Owner: BE  
 Estimate: 3  
-Dependencies: GPH-011
+Dependencies: GCL-011
 
 Acceptance criteria:
 
@@ -176,11 +176,11 @@ Acceptance criteria:
 - Rejected and revision-required content cannot be published.
 - Admin approval/rejection writes audit logs.
 
-### GPH-017 - Create lead capture API and connect existing consultation form
+### GCL-017 - Create lead capture API and connect existing consultation form
 
 Owner: FE/BE  
 Estimate: 5  
-Dependencies: GPH-011, GPH-012
+Dependencies: GCL-011, GCL-012
 
 Acceptance criteria:
 
@@ -189,11 +189,11 @@ Acceptance criteria:
 - UTM, referral code, source path, and locale are captured.
 - Missing consent returns `ERR_BAD_REQUEST`.
 
-### GPH-018 - Implement patient eligibility-check endpoint
+### GCL-018 - Implement patient eligibility-check endpoint
 
 Owner: BE  
 Estimate: 5  
-Dependencies: GPH-011
+Dependencies: GCL-011
 
 Acceptance criteria:
 
@@ -202,11 +202,11 @@ Acceptance criteria:
 - Eligible result updates patient eligibility when patient ID is provided.
 - All checks write `patient_eligibility_checks`.
 
-### GPH-019 - Build medical intake submission flow
+### GCL-019 - Build medical intake submission flow
 
 Owner: FE/BE  
 Estimate: 5  
-Dependencies: GPH-018
+Dependencies: GCL-018
 
 Acceptance criteria:
 
@@ -215,11 +215,11 @@ Acceptance criteria:
 - Submitted intake moves case to `intake_completed` if allowed by state machine.
 - Risk flags are stored as JSON.
 
-### GPH-020 - Implement case state machine service
+### GCL-020 - Implement case state machine service
 
 Owner: BE  
 Estimate: 5  
-Dependencies: GPH-011, GPH-013
+Dependencies: GCL-011, GCL-013
 
 Acceptance criteria:
 
@@ -228,11 +228,11 @@ Acceptance criteria:
 - Terminal case reopen requires admin override with reason.
 - Every transition writes audit log.
 
-### GPH-021 - Build Admin Case Board MVP
+### GCL-021 - Build Admin Case Board MVP
 
 Owner: FE  
 Estimate: 8  
-Dependencies: GPH-020
+Dependencies: GCL-020
 
 Acceptance criteria:
 
@@ -241,11 +241,11 @@ Acceptance criteria:
 - Assign owner and priority update actions are available based on RBAC.
 - Invalid transition buttons are disabled.
 
-### GPH-022 - Build Admin Case Detail MVP
+### GCL-022 - Build Admin Case Detail MVP
 
 Owner: FE  
 Estimate: 8  
-Dependencies: GPH-020
+Dependencies: GCL-020
 
 Acceptance criteria:
 
@@ -254,11 +254,11 @@ Acceptance criteria:
 - Coordinator can run match and request quote when state allows it.
 - Compliance blockers are visible.
 
-### GPH-023 - Implement provider, doctor, and package CRUD APIs
+### GCL-023 - Implement provider, doctor, and package CRUD APIs
 
 Owner: BE  
 Estimate: 5  
-Dependencies: GPH-011, GPH-012
+Dependencies: GCL-011, GCL-012
 
 Acceptance criteria:
 
@@ -267,11 +267,11 @@ Acceptance criteria:
 - Public exposure guards are not bypassed by CRUD status.
 - Package edits create or update content review state.
 
-### GPH-024 - Build Provider Compliance Documents screen
+### GCL-024 - Build Provider Compliance Documents screen
 
 Owner: FE  
 Estimate: 8  
-Dependencies: GPH-023
+Dependencies: GCL-023
 
 Acceptance criteria:
 
@@ -280,11 +280,11 @@ Acceptance criteria:
 - Rejected document shows reason and resubmit action.
 - Public exposure disabled state is visible to provider.
 
-### GPH-025 - Implement matching engine v1 scoring
+### GCL-025 - Implement matching engine v1 scoring
 
 Owner: BE  
 Estimate: 8  
-Dependencies: GPH-014, GPH-015
+Dependencies: GCL-014, GCL-015
 
 Acceptance criteria:
 
@@ -293,11 +293,11 @@ Acceptance criteria:
 - Score breakdown is persisted in `case_matches`.
 - API matches `POST /v1/admin/cases/{id}/match`.
 
-### GPH-026 - Build Matching Workbench MVP
+### GCL-026 - Build Matching Workbench MVP
 
 Owner: FE  
 Estimate: 5  
-Dependencies: GPH-025
+Dependencies: GCL-025
 
 Acceptance criteria:
 
@@ -306,11 +306,11 @@ Acceptance criteria:
 - Excluded providers show reason.
 - Coordinator can request quote from selected providers.
 
-### GPH-027 - Implement quote request and quote creation APIs
+### GCL-027 - Implement quote request and quote creation APIs
 
 Owner: BE  
 Estimate: 8  
-Dependencies: GPH-014, GPH-020
+Dependencies: GCL-014, GCL-020
 
 Acceptance criteria:
 
@@ -320,11 +320,11 @@ Acceptance criteria:
 - Quote response matches OpenAPI `QuoteCreateResponse`.
 - Successful sent quote can move case to `quote_sent`.
 
-### GPH-028 - Build Provider Quote Composer MVP
+### GCL-028 - Build Provider Quote Composer MVP
 
 Owner: FE  
 Estimate: 5  
-Dependencies: GPH-027
+Dependencies: GCL-027
 
 Acceptance criteria:
 
@@ -333,11 +333,11 @@ Acceptance criteria:
 - Required price-change disclaimer is present.
 - Over-cap submission is blocked client-side and still validated server-side.
 
-### GPH-029 - Implement booking API with idempotency
+### GCL-029 - Implement booking API with idempotency
 
 Owner: BE  
 Estimate: 5  
-Dependencies: GPH-020, GPH-027
+Dependencies: GCL-020, GCL-027
 
 Acceptance criteria:
 
@@ -346,11 +346,11 @@ Acceptance criteria:
 - Same key and different payload returns `ERR_IDEMPOTENCY_CONFLICT`.
 - Provider confirmation can move case to `booking_confirmed`.
 
-### GPH-030 - Implement deposit payment log API with idempotency
+### GCL-030 - Implement deposit payment log API with idempotency
 
 Owner: BE  
 Estimate: 5  
-Dependencies: GPH-029
+Dependencies: GCL-029
 
 Acceptance criteria:
 
@@ -359,11 +359,11 @@ Acceptance criteria:
 - Failed payment leaves case in `deposit_pending`.
 - Payment status changes write audit logs.
 
-### GPH-031 - Build Content Review Queue MVP
+### GCL-031 - Build Content Review Queue MVP
 
 Owner: FE  
 Estimate: 5  
-Dependencies: GPH-016
+Dependencies: GCL-016
 
 Acceptance criteria:
 
@@ -372,11 +372,11 @@ Acceptance criteria:
 - Reject requires reason.
 - Approved content becomes eligible for public exposure.
 
-### GPH-032 - Build annual performance report export query
+### GCL-032 - Build annual performance report export query
 
 Owner: BE  
 Estimate: 3  
-Dependencies: GPH-011
+Dependencies: GCL-011
 
 Acceptance criteria:
 
@@ -393,15 +393,15 @@ Sprint goal: establish the production-grade backend contract and compliance gate
 
 | Ticket | Owner | Estimate | Reason |
 |---|---|---:|---|
-| GPH-011 | BE | 5 | Core schema foundation |
-| GPH-012 | BE | 5 | Role and scope enforcement |
-| GPH-013 | BE | 3 | Auditability from the start |
-| GPH-014 | BE | 3 | Commission cap is a hard legal/business guard |
-| GPH-015 | BE | 3 | Verified-provider exposure gate |
-| GPH-016 | BE | 3 | Content approval gate |
-| GPH-018 | BE | 5 | Eligibility is the first patient compliance gate |
-| GPH-020 | BE | 5 | Case workflow must be deterministic |
-| GPH-017 | FE/BE | 5 | Connect existing lead form to new model if capacity allows |
+| GCL-011 | BE | 5 | Core schema foundation |
+| GCL-012 | BE | 5 | Role and scope enforcement |
+| GCL-013 | BE | 3 | Auditability from the start |
+| GCL-014 | BE | 3 | Commission cap is a hard legal/business guard |
+| GCL-015 | BE | 3 | Verified-provider exposure gate |
+| GCL-016 | BE | 3 | Content approval gate |
+| GCL-018 | BE | 5 | Eligibility is the first patient compliance gate |
+| GCL-020 | BE | 5 | Case workflow must be deterministic |
+| GCL-017 | FE/BE | 5 | Connect existing lead form to new model if capacity allows |
 
 Total: 37 points
 

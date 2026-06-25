@@ -4,7 +4,7 @@ import { ArrowLeft, Building2, Database, Handshake, Languages, Send } from "luci
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { betaCases, betaPartners, betaProviders, formatUsd, type BetaCase } from "@/lib/betaData";
-import { fetchPartnerMvpSnapshot, readAdminApiToken, saveAdminApiToken, setPartnerShortlistMvp } from "@/lib/partnerMvpApi";
+import { fetchPartnerMvpSnapshot, readAdminApiToken, setPartnerShortlistMvp } from "@/lib/partnerMvpApi";
 import { languageLabel, languageListLabel, marketLabel, partnerServiceLabel, statusLabel } from "@/lib/adminLabels";
 import { cn } from "@/lib/utils";
 
@@ -43,8 +43,7 @@ export default function PartnerCaseBoard() {
   const [partners, setPartners] = useState(betaPartners);
   const [providers, setProviders] = useState(betaProviders);
   const [partnerId, setPartnerId] = useState(betaPartners[0]?.id ?? "");
-  const [adminToken, setAdminToken] = useState(() => readAdminApiToken());
-  const [adminTokenInput, setAdminTokenInput] = useState(() => readAdminApiToken());
+  const [adminToken] = useState(() => readAdminApiToken());
   const [apiStatus, setApiStatus] = useState<"demo" | "loading" | "live" | "saving" | "error">(adminToken ? "loading" : "demo");
   const [apiMessage, setApiMessage] = useState(adminToken ? "Supabase 운영 데이터에 연결 중..." : "데모 보드");
   const partner = partners.find((item) => item.id === partnerId) ?? partners[0];
@@ -85,20 +84,6 @@ export default function PartnerCaseBoard() {
       setSelectedId(visibleCases[0].id);
     }
   }, [visibleCases, selectedId]);
-
-  function connectOps() {
-    const token = adminTokenInput.trim();
-    saveAdminApiToken(token);
-    setAdminToken(token);
-    if (!token) {
-      setCases(betaCases);
-      setPartners(betaPartners);
-      setProviders(betaProviders);
-      setPartnerId(betaPartners[0]?.id ?? "");
-      setApiStatus("demo");
-      setApiMessage("데모 보드");
-    }
-  }
 
   async function toggleShortlist(providerId: string) {
     if (!selected) return;
@@ -167,20 +152,13 @@ export default function PartnerCaseBoard() {
               <Database className="size-3.5" />
               운영 데이터
             </div>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={adminTokenInput}
-                onChange={(event) => setAdminTokenInput(event.target.value)}
-                placeholder="관리자 연결 토큰"
-                className="h-10 min-w-0 flex-1 rounded-md border border-ink-200 bg-white px-3 text-sm"
-              />
-              <Button type="button" variant="outline" onClick={connectOps} className="border-ink-300 text-ink-800">
-                {adminTokenInput.trim() ? "연결" : "데모"}
+            <div className="flex items-center justify-between gap-3">
+              <div className={cn("text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
+                {apiMessage}
+              </div>
+              <Button type="button" size="sm" variant="outline" onClick={() => void refreshOps()} disabled={!adminToken || apiStatus === "loading"} className="border-ink-300 text-ink-800">
+                새로고침
               </Button>
-            </div>
-            <div className={cn("mt-2 text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
-              {apiMessage}
             </div>
           </div>
 

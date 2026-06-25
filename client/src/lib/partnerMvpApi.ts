@@ -24,6 +24,9 @@ export interface PartnerMvpSnapshot {
       partnerScoped: boolean;
       providerScoped: boolean;
     };
+    emailAccessConfigured?: boolean;
+    authMethod?: "email" | "legacy_token";
+    authEmail?: string | null;
     leadStorageHealth?: {
       patients: number | null;
       leads: number | null;
@@ -275,8 +278,10 @@ export interface ReservationActionResult {
   notifications?: NotificationResult[];
 }
 
-const ADMIN_TOKEN_KEY = "gph_admin_api_token";
-const OPS_ROLE_KEY = "gph_ops_role";
+const OPS_ACCESS_TOKEN_KEY = "gcl_ops_access_token:v1";
+const OPS_EMAIL_KEY = "gcl_ops_email:v1";
+const OPS_ROLE_KEY = "gcl_ops_role";
+const LEGACY_ADMIN_TOKEN_KEY = "gcl_admin_api_token";
 const ADMIN_API_TIMEOUT_MS = 15000;
 
 export function normalizeOpsRole(value: string | null | undefined): OpsRole {
@@ -294,26 +299,36 @@ export function readOpsRole() {
   return normalizeOpsRole(localStorage.getItem(OPS_ROLE_KEY));
 }
 
-export function readAdminApiToken() {
+export function readOpsEmail() {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem(ADMIN_TOKEN_KEY) ?? "";
+  return localStorage.getItem(OPS_EMAIL_KEY) ?? "";
 }
 
-export function saveOpsSession(token: string, role: OpsRole) {
+export function readAdminApiToken() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(OPS_ACCESS_TOKEN_KEY) ?? localStorage.getItem(LEGACY_ADMIN_TOKEN_KEY) ?? "";
+}
+
+export function saveOpsSession(token: string, role: OpsRole, email?: string | null) {
   if (typeof window === "undefined") return;
-  if (token.trim()) localStorage.setItem(ADMIN_TOKEN_KEY, token.trim());
-  else localStorage.removeItem(ADMIN_TOKEN_KEY);
+  if (token.trim()) localStorage.setItem(OPS_ACCESS_TOKEN_KEY, token.trim());
+  else localStorage.removeItem(OPS_ACCESS_TOKEN_KEY);
   localStorage.setItem(OPS_ROLE_KEY, role);
+  if (email?.trim()) localStorage.setItem(OPS_EMAIL_KEY, email.trim().toLowerCase());
+  else if (email === null) localStorage.removeItem(OPS_EMAIL_KEY);
+  localStorage.removeItem(LEGACY_ADMIN_TOKEN_KEY);
 }
 
 export function saveAdminApiToken(token: string) {
-  saveOpsSession(token, readOpsRole());
+  saveOpsSession(token, readOpsRole(), readOpsEmail() || undefined);
 }
 
 export function clearAdminApiToken() {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.removeItem(OPS_ACCESS_TOKEN_KEY);
+  localStorage.removeItem(OPS_EMAIL_KEY);
   localStorage.removeItem(OPS_ROLE_KEY);
+  localStorage.removeItem(LEGACY_ADMIN_TOKEN_KEY);
 }
 
 async function fetchAdminApi(init?: RequestInit): Promise<Response> {

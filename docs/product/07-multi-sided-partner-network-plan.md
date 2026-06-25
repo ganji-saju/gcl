@@ -4,13 +4,13 @@ Last updated: 2026-06-10
 
 ## Strategic Change
 
-Global Patient Hub should evolve from a two-sided patient-provider hub into a
+GCL should evolve from a two-sided patient-provider hub into a
 multi-sided care network:
 
 ```mermaid
 flowchart LR
   Patient["Patient"]
-  Platform["Global Patient Hub"]
+  Platform["GCL"]
   Partner["Agency / Agent / Interpreter / Travel Agency"]
   Provider["Hospital / Clinic"]
 
@@ -362,20 +362,20 @@ Core guardrails:
 
 | ID | Type | Priority | Owner | Title |
 |---|---|---:|---|---|
-| GPH-043 | Epic | P0 | Product/Compliance | Partner-assisted care operating model |
-| GPH-044 | Story | P0 | Product/Legal | Define partner subtype compliance rules |
-| GPH-045 | Story | P0 | FE/BE | Add partner-support request fields to consultation intake |
-| GPH-046 | Story | P0 | BE | Add partner service request and case partner assignment model |
-| GPH-047 | Story | P0 | BE | Implement partner-scoped RBAC and audit rules |
-| GPH-048 | Story | P1 | FE | Build admin partner assignment MVP |
-| GPH-049 | Story | P1 | BE | Build partner verification and service catalog APIs |
-| GPH-050 | Story | P1 | FE | Build Partner Dashboard MVP |
-| GPH-051 | Story | P1 | FE/BE | Build partner-safe case board and case detail |
-| GPH-052 | Story | P1 | BE | Add partner-provider relationship model |
-| GPH-053 | Story | P1 | FE/BE | Build partner provider-shortlist workflow |
-| GPH-054 | Story | P1 | FE/BE | Add partner service quote workflow |
-| GPH-055 | Story | P2 | FE/BE | Add itinerary and logistics task board |
-| GPH-056 | Story | P2 | Finance/BE | Add partner payout and dispute workflow |
+| GCL-043 | Epic | P0 | Product/Compliance | Partner-assisted care operating model |
+| GCL-044 | Story | P0 | Product/Legal | Define partner subtype compliance rules |
+| GCL-045 | Story | P0 | FE/BE | Add partner-support request fields to consultation intake |
+| GCL-046 | Story | P0 | BE | Add partner service request and case partner assignment model |
+| GCL-047 | Story | P0 | BE | Implement partner-scoped RBAC and audit rules |
+| GCL-048 | Story | P1 | FE | Build admin partner assignment MVP |
+| GCL-049 | Story | P1 | BE | Build partner verification and service catalog APIs |
+| GCL-050 | Story | P1 | FE | Build Partner Dashboard MVP |
+| GCL-051 | Story | P1 | FE/BE | Build partner-safe case board and case detail |
+| GCL-052 | Story | P1 | BE | Add partner-provider relationship model |
+| GCL-053 | Story | P1 | FE/BE | Build partner provider-shortlist workflow |
+| GCL-054 | Story | P1 | FE/BE | Add partner service quote workflow |
+| GCL-055 | Story | P2 | FE/BE | Add itinerary and logistics task board |
+| GCL-056 | Story | P2 | Finance/BE | Add partner payout and dispute workflow |
 
 ## Open Decisions
 

@@ -7,7 +7,6 @@ import { betaCases, betaProviders, formatUsd } from "@/lib/betaData";
 import {
   fetchPartnerMvpSnapshot,
   readAdminApiToken,
-  saveAdminApiToken,
   submitProviderQuoteMvp,
   type ProviderQuoteRequest,
 } from "@/lib/partnerMvpApi";
@@ -65,8 +64,7 @@ export default function ProviderQuoteDesk() {
   const [quoteRequests, setQuoteRequests] = useState<ProviderQuoteRequest[]>(demoProviderQuoteRequests());
   const [providerId, setProviderId] = useState(betaProviders[0]?.id ?? "");
   const [selectedId, setSelectedId] = useState(quoteRequests[0]?.id ?? "");
-  const [adminToken, setAdminToken] = useState(() => readAdminApiToken());
-  const [adminTokenInput, setAdminTokenInput] = useState(() => readAdminApiToken());
+  const [adminToken] = useState(() => readAdminApiToken());
   const [apiStatus, setApiStatus] = useState<"demo" | "loading" | "live" | "saving" | "error">(adminToken ? "loading" : "demo");
   const [apiMessage, setApiMessage] = useState(adminToken ? "Supabase 운영 데이터에 연결 중..." : "데모 견적 화면");
 
@@ -124,19 +122,6 @@ export default function ProviderQuoteDesk() {
     setValidUntil(selected.quote.validUntil?.slice(0, 10) ?? "2026-07-01");
     setNotes(selected.quote.notes);
   }, [selected?.id]);
-
-  function connectOps() {
-    const token = adminTokenInput.trim();
-    saveAdminApiToken(token);
-    setAdminToken(token);
-    if (!token) {
-      setProviders(betaProviders);
-      setQuoteRequests(demoProviderQuoteRequests());
-      setProviderId(betaProviders[0]?.id ?? "");
-      setApiStatus("demo");
-      setApiMessage("데모 견적 화면");
-    }
-  }
 
   async function submitQuote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -214,20 +199,13 @@ export default function ProviderQuoteDesk() {
                   <Database className="size-3.5" />
                   운영 데이터
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="password"
-                    value={adminTokenInput}
-                    onChange={(event) => setAdminTokenInput(event.target.value)}
-                    placeholder="관리자 연결 토큰"
-                    className="h-10 min-w-0 flex-1 rounded-md border border-ink-200 bg-white px-3 text-sm"
-                  />
-                  <Button type="button" variant="outline" onClick={connectOps} className="border-ink-300 text-ink-800">
-                    {adminTokenInput.trim() ? "연결" : "데모"}
+                <div className="flex items-center justify-between gap-3">
+                  <div className={cn("text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
+                    {apiMessage}
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void refreshOps()} disabled={!adminToken || apiStatus === "loading"} className="border-ink-300 text-ink-800">
+                    새로고침
                   </Button>
-                </div>
-                <div className={cn("mt-2 text-xs font-semibold", apiStatus === "error" ? "text-coral-700" : liveMode ? "text-teal-700" : "text-ink-500")}>
-                  {apiMessage}
                 </div>
               </div>
             </div>

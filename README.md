@@ -1,6 +1,6 @@
-# Global Patient Hub
+# GCL
 
-Independent global patient acquisition hub for Korean medical tourism.
+GCL (global-connected-lab) is an independent global patient acquisition hub for Korean medical tourism.
 
 The site lets international patients compare Korean hospitals, treatment programs, language support, estimated prices, and submit consultation requests. It is designed as a separate deployable project for GitHub, Vercel, and Supabase.
 
@@ -38,9 +38,14 @@ Without these values, the consultation form saves locally in demo mode.
 For the internal partner-assisted operations API, also set these only in Vercel project environment variables:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `ADMIN_API_TOKEN`
 
 Do not prefix `SUPABASE_SERVICE_ROLE_KEY` with `VITE_`. It must stay server-only and is used by `/api/admin/partner-mvp`.
+
+Internal admin, partner, and provider access uses Supabase Auth email login. Apply the migrations, then insert allowed emails into `public.ops_user_access` with one of these role/scope shapes:
+
+- Admin: `email`, `role = 'admin'`
+- Partner: `email`, `role = 'partner'`, `partner_id`
+- Provider: `email`, `role = 'provider'`, `provider_id`
 
 ## Supabase
 
@@ -57,6 +62,7 @@ For the partner-assisted MVP, apply:
 - `supabase/migrations/20260610_0003_partner_assisted_mvp.sql`
 - `supabase/migrations/20260610_0004_partner_mvp_seed.sql`
 - `supabase/migrations/20260610_0005_phase2_case_activity_events.sql`
+- `supabase/migrations/20260625_0008_ops_email_access.sql`
 
 The seed migration creates starter partner operators, provider candidates, and partner-provider relationships for the first operating test.
 The Phase 2 migration adds the case activity timeline used by partner/provider operating actions.

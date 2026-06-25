@@ -58,7 +58,7 @@ export default function OpsHealth() {
   async function refresh() {
     if (!token) {
       setStatus("error");
-      setMessage("운영 토큰이 없습니다. 다시 로그인해 주세요.");
+      setMessage("이메일 인증 세션이 없습니다. 다시 로그인해 주세요.");
       return;
     }
 
@@ -87,8 +87,8 @@ export default function OpsHealth() {
   const quoteResponseCount = meta?.quoteResponseCount ?? snapshot?.quotes?.length ?? 0;
   const generatedAt = formatDate(meta?.generatedAt);
   const activeRole = meta?.role ?? role;
-  const roleTokensReady = Boolean(meta?.roleTokensConfigured?.admin && (meta.roleTokensConfigured.partner || meta.roleTokensConfigured.provider));
-  const accountScopingReady = Boolean(meta?.roleTokensConfigured?.partnerScoped || meta?.roleTokensConfigured?.providerScoped);
+  const emailAccessReady = Boolean(meta?.emailAccessConfigured);
+  const accountScopingReady = Boolean(meta?.authEmail && (meta?.scopedAccountEnabled || activeRole === "admin"));
   const notificationReady = Boolean(meta?.notificationDispatchConfigured || meta?.notificationOutboxConfigured);
   const stripeReady = Boolean(meta?.stripeConfigured);
   const v1StorageReady = Boolean(storage?.v1PipelineReady);
@@ -154,14 +154,14 @@ export default function OpsHealth() {
                 <Database className="size-5 text-teal-700" />
                 운영 체크리스트
               </div>
-              <CheckRow label="관리자 API 인증" ok={status === "ready"} detail="운영 토큰이 서버에서 실제로 검증되어야 내부 화면이 열립니다." />
+              <CheckRow label="이메일 운영 인증" ok={status === "ready"} detail={`Supabase Auth 세션과 ops_user_access 허용 이메일을 함께 확인합니다. 현재 이메일: ${meta?.authEmail ?? "확인 전"}`} />
               <CheckRow label="Supabase v1 lead 저장 구조" ok={v1StorageReady} detail={`patients/leads/cases/medical_intakes row count를 확인합니다. 최신 lead: ${formatDate(storage?.latestLeadAt)}`} />
               <CheckRow label="Admin 데이터 persistence" ok={adminPersistenceReady} detail="admin_landing_routes, contact_channel_settings, provider_operating_profiles, provider_data_quality_checks, notification_outbox 테이블을 확인합니다." />
               <CheckRow label="파트너 서비스 요청 테이블" ok={partnerRequestCount > 0} detail="상담 신청에서 파트너 지원 요청이 생성되면 이 수치가 증가합니다." />
               <CheckRow label="파트너/병원 기준 데이터" ok={Boolean(meta?.hasDbPartners && meta?.hasDbProviders)} detail="운영 파트너와 병원 후보 데이터가 Supabase에 등록되어 있어야 합니다." />
               <CheckRow label="견적 요청 흐름" ok={quoteRequestCount > 0} detail="코디네이터가 병원 후보를 골라 견적 요청을 생성하면 증가합니다." />
-              <CheckRow label="역할별 운영 토큰" ok={roleTokensReady} detail="ADMIN_API_TOKEN 외에 PARTNER_API_TOKEN 또는 PROVIDER_API_TOKEN이 분리되어야 합니다." />
-              <CheckRow label="계정별 데이터 스코프" ok={accountScopingReady} detail="PARTNER_TOKEN_MAP 또는 PROVIDER_TOKEN_MAP 설정 시 파트너/병원별 데이터 범위를 제한합니다." />
+              <CheckRow label="허용 이메일 테이블" ok={emailAccessReady} detail="ops_user_access에 관리자, 파트너, 병원 운영 이메일과 역할이 등록되어 있어야 합니다." />
+              <CheckRow label="계정별 데이터 스코프" ok={accountScopingReady} detail="파트너/병원 역할은 ops_user_access의 partner_id 또는 provider_id 기준으로 데이터 범위를 제한합니다." />
               <CheckRow label="알림 발송/저장" ok={notificationReady} detail="notification_outbox 또는 외부 알림 gateway 설정을 확인합니다." />
               <CheckRow label="Stripe 예약금 결제" ok={stripeReady} detail={`STRIPE_SECRET_KEY 기준으로 예약금 Checkout 세션을 생성합니다. 현재 모드: ${meta?.paymentMode ?? "확인 전"}`} />
             </div>
@@ -220,7 +220,7 @@ export default function OpsHealth() {
               </Link>
             </div>
             <div className="mt-5 rounded-md border border-coral-200 bg-coral-50 p-3 text-sm leading-6 text-coral-900">
-              운영 전에는 scoped token, 공식 연락 채널 URL, Stripe Secret Key, 알림 gateway 값을 Vercel 환경변수에 넣고 다시 점검하세요.
+              운영 전에는 허용 이메일, 공식 연락 채널 URL, Stripe Secret Key, 알림 gateway 값을 Vercel 환경변수와 Supabase에 넣고 다시 점검하세요.
             </div>
           </aside>
         </div>
