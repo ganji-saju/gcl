@@ -2,6 +2,7 @@ import { createClient, type AuthChangeEvent, type Session, type SupabaseClient }
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const opsAuthSiteUrl = import.meta.env.VITE_OPS_AUTH_SITE_URL as string | undefined;
 const OPS_AUTH_STORAGE_KEY = "gcl_ops_auth:v1";
 
 let opsClient: SupabaseClient | null = null;
@@ -53,7 +54,43 @@ function clearAuthCodeFromUrl() {
   const url = new URL(window.location.href);
   url.searchParams.delete("code");
   url.searchParams.delete("type");
+  if (url.hash.includes("access_token=") || url.hash.includes("refresh_token=")) {
+    url.hash = "";
+  }
   window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function normalizeSiteUrl(siteUrl?: string) {
+  const cleanSiteUrl = siteUrl?.trim();
+  if (!cleanSiteUrl) return null;
+
+  try {
+    const url = new URL(cleanSiteUrl);
+    url.hash = "";
+    url.search = "";
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function getCurrentOpsPath() {
+  if (typeof window === "undefined") return "/admin/ops-health";
+  return `${window.location.pathname}${window.location.search}`;
+}
+
+export function getOpsAuthRedirectUrl(redirectTo?: string) {
+  if (redirectTo) return redirectTo;
+
+  const configuredOrigin = normalizeSiteUrl(opsAuthSiteUrl);
+  if (configuredOrigin) {
+    return new URL(getCurrentOpsPath(), configuredOrigin).toString();
+  }
+
+  if (typeof window === "undefined") return undefined;
+  const url = new URL(window.location.href);
+  url.hash = "";
+  return url.toString();
 }
 
 async function exchangeRedirectCode() {
@@ -76,7 +113,7 @@ export async function requestOpsEmailSignIn(email: string, redirectTo?: string) 
   const { error } = await getOpsAuthClient().auth.signInWithOtp({
     email: cleanEmail,
     options: {
-      emailRedirectTo: redirectTo ?? window.location.href.split("#")[0],
+      emailRedirectTo: getOpsAuthRedirectUrl(redirectTo),
       shouldCreateUser: true,
     },
   });
@@ -112,7 +149,10 @@ export async function getCurrentOpsEmailSession() {
   const { data, error } = await getOpsAuthClient().auth.getSession();
   if (error) throw new Error(error.message);
   const session = toOpsSession(data.session);
-  if (session) return session;
+  if (session) {
+    clearAuthCodeFromUrl();
+    return session;
+  }
   if (redirectError) throw redirectError;
   return null;
 }
