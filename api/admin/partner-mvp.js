@@ -1076,7 +1076,7 @@ async function getAdminOperationsData(config) {
     safeList(
       config,
       "provider_public_treatments",
-      "select=id,provider_id,treatment_slug,title,price_min_krw,price_max_krw,recovery_days,duration_minutes,notes,active&order=created_at.asc&limit=480"
+      "select=id,provider_id,treatment_slug,title,price_min_krw,price_max_krw,recovery_days,duration_minutes,notes,active&order=created_at.asc&limit=5000"
     ),
   ]);
 

@@ -64,6 +64,7 @@ const selectClassName =
   "h-9 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/15";
 const textareaClassName =
   "h-20 min-h-20 w-full resize-none border-ink-200 bg-white text-sm text-ink-900 shadow-none";
+const doctorMaxRows = 20;
 
 const facilityOptions: Array<{
   value: AdminProviderInput["facilityType"];
@@ -273,82 +274,151 @@ function updateCoverUrl(profile: ProviderPublicProfileInput, url: string) {
   return [...coverRows, ...otherRows];
 }
 
-function doctorsToText(rows: ProviderPublicDoctor[]) {
-  return rows
-    .sort((a, b) => a.displayOrder - b.displayOrder)
-    .map(row =>
-      [
-        row.name,
-        row.title || "",
-        row.specialty || "",
-        row.yearsExperience ?? "",
-        row.bio || "",
-        row.photoUrl || "",
-      ].join(" | ")
+function orderedPublicRows<
+  T extends { displayOrder?: number; active?: boolean },
+>(rows: T[], limit?: number) {
+  return [...rows]
+    .sort((a, b) => Number(a.displayOrder || 0) - Number(b.displayOrder || 0))
+    .slice(0, limit)
+    .map((row, index) => ({
+      ...row,
+      displayOrder: index,
+      active: row.active !== false,
+    }));
+}
+
+function createPublicDoctorRow(index: number): ProviderPublicDoctor {
+  return {
+    name: "",
+    title: "",
+    specialty: "",
+    bio: "",
+    photoUrl: "",
+    yearsExperience: null,
+    displayOrder: index,
+    active: true,
+  };
+}
+
+function createPublicTreatmentRow(index: number): ProviderPublicTreatment {
+  return {
+    title: "",
+    treatmentSlug: "",
+    priceMinKrw: null,
+    priceMaxKrw: null,
+    recoveryDays: null,
+    durationMinutes: null,
+    notes: "",
+    active: true,
+  };
+}
+
+function optionalNumber(value: string) {
+  if (!value.trim()) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function optionalPriceNumber(value: string) {
+  const text = value.replace(/krw|₩|원/gi, "").trim();
+  if (!text) return null;
+  if (text.includes("만")) {
+    const manWon = Number(text.replace(/[^\d.-]/g, ""));
+    return Number.isFinite(manWon) ? Math.round(manWon * 10000) : null;
+  }
+  const number = Number(text.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(number) ? number : null;
+}
+
+function splitSpreadsheetLine(line: string) {
+  if (line.includes("\t")) return line.split("\t");
+  if (line.includes("|")) return line.split("|");
+  return line.split(",");
+}
+
+function normalizeSpreadsheetHeader(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function treatmentColumnFor(header: string) {
+  if (
+    [
+      "시술명",
+      "항목",
+      "치료명",
+      "상품명",
+      "procedure",
+      "treatment",
+      "title",
+      "name",
+    ].includes(header)
+  )
+    return "title";
+  if (["최소가", "최소가격", "가격하한", "pricemin", "min"].includes(header))
+    return "priceMinKrw";
+  if (["최대가", "최대가격", "가격상한", "pricemax", "max"].includes(header))
+    return "priceMaxKrw";
+  if (
+    ["회복일", "회복기간", "다운타임", "recovery", "recoverydays"].includes(
+      header
     )
-    .join("\n");
+  )
+    return "recoveryDays";
+  if (["소요분", "소요시간", "duration", "durationminutes"].includes(header))
+    return "durationMinutes";
+  if (["메모", "비고", "설명", "notes", "note"].includes(header))
+    return "notes";
+  if (["slug", "코드", "시술코드", "treatmentslug"].includes(header))
+    return "treatmentSlug";
+  return null;
 }
 
-function doctorsFromText(value: string): ProviderPublicDoctor[] {
-  return value
-    .split("\n")
-    .map((line, index) => {
-      const [name, title, specialty, years, bio, photoUrl] = line
-        .split("|")
-        .map(item => item.trim());
-      if (!name) return null;
-      return {
-        name,
-        title,
-        specialty,
-        bio,
-        photoUrl,
-        yearsExperience: years ? Number(years) : null,
-        displayOrder: index,
-        active: true,
-      };
-    })
-    .filter(Boolean) as ProviderPublicDoctor[];
-}
+function treatmentRowsFromSpreadsheet(
+  value: string
+): ProviderPublicTreatment[] {
+  const tableRows = value
+    .split(/\r?\n/)
+    .map(line => splitSpreadsheetLine(line).map(cell => cell.trim()))
+    .filter(row => row.some(Boolean));
 
-function treatmentsToText(rows: ProviderPublicTreatment[]) {
-  return rows
-    .map(row =>
-      [
-        row.title,
-        row.priceMinKrw ?? "",
-        row.priceMaxKrw ?? "",
-        row.recoveryDays ?? "",
-        row.durationMinutes ?? "",
-        row.notes || "",
-        row.treatmentSlug || "",
-      ].join(" | ")
-    )
-    .join("\n");
-}
+  if (!tableRows.length) return [];
 
-function treatmentsFromText(value: string): ProviderPublicTreatment[] {
-  return value
-    .split("\n")
-    .map(line => {
-      const [
-        title,
-        priceMin,
-        priceMax,
-        recoveryDays,
-        durationMinutes,
-        notes,
-        slug,
-      ] = line.split("|").map(item => item.trim());
+  const normalizedHeaders = tableRows[0].map(normalizeSpreadsheetHeader);
+  const headerFields = normalizedHeaders.map(treatmentColumnFor);
+  const hasHeader = headerFields.some(Boolean);
+  const dataRows = hasHeader ? tableRows.slice(1) : tableRows;
+
+  const indexFor = (
+    field: NonNullable<ReturnType<typeof treatmentColumnFor>>,
+    fallbackIndex: number
+  ) => {
+    if (!hasHeader) return fallbackIndex;
+    const index = headerFields.findIndex(item => item === field);
+    return index >= 0 ? index : fallbackIndex;
+  };
+
+  const indexes = {
+    title: indexFor("title", 0),
+    priceMinKrw: indexFor("priceMinKrw", 1),
+    priceMaxKrw: indexFor("priceMaxKrw", 2),
+    recoveryDays: indexFor("recoveryDays", 3),
+    durationMinutes: indexFor("durationMinutes", 4),
+    notes: indexFor("notes", 5),
+    treatmentSlug: indexFor("treatmentSlug", 6),
+  };
+
+  return dataRows
+    .map(row => {
+      const title = row[indexes.title]?.trim() || "";
       if (!title) return null;
       return {
         title,
-        priceMinKrw: priceMin ? Number(priceMin) : null,
-        priceMaxKrw: priceMax ? Number(priceMax) : null,
-        recoveryDays: recoveryDays ? Number(recoveryDays) : null,
-        durationMinutes: durationMinutes ? Number(durationMinutes) : null,
-        notes,
-        treatmentSlug: slug,
+        priceMinKrw: optionalPriceNumber(row[indexes.priceMinKrw] || ""),
+        priceMaxKrw: optionalPriceNumber(row[indexes.priceMaxKrw] || ""),
+        recoveryDays: optionalNumber(row[indexes.recoveryDays] || ""),
+        durationMinutes: optionalNumber(row[indexes.durationMinutes] || ""),
+        notes: row[indexes.notes] || "",
+        treatmentSlug: row[indexes.treatmentSlug] || "",
         active: true,
       };
     })
@@ -414,8 +484,8 @@ function publicProfileToDraft({
     featured: publicProfile?.featured ?? false,
     i18n: normalizedI18n,
     media,
-    doctors,
-    treatments,
+    doctors: orderedPublicRows(doctors, doctorMaxRows),
+    treatments: orderedPublicRows(treatments),
   };
 }
 
@@ -1361,6 +1431,7 @@ function PublicCmsFields({
 }) {
   const [activeLocale, setActiveLocale] =
     useState<ProviderPublicProfileI18n["locale"]>("ko");
+  const [treatmentPasteText, setTreatmentPasteText] = useState("");
   const activeLocaleOption =
     publicLocaleOptions.find(option => option.value === activeLocale) ??
     publicLocaleOptions[0];
@@ -1375,6 +1446,88 @@ function PublicCmsFields({
       specialties: [],
       highlights: [],
     } satisfies ProviderPublicProfileI18n);
+  const doctorRows = orderedPublicRows(publicDraft.doctors, doctorMaxRows);
+  const treatmentRows = orderedPublicRows(publicDraft.treatments);
+  const canAddDoctor = doctorRows.length < doctorMaxRows;
+
+  function updateDoctorRow(
+    index: number,
+    patch: Partial<ProviderPublicDoctor>
+  ) {
+    updatePublicDraft(
+      "doctors",
+      orderedPublicRows(
+        doctorRows.map((row, rowIndex) =>
+          rowIndex === index ? { ...row, ...patch } : row
+        ),
+        doctorMaxRows
+      )
+    );
+  }
+
+  function addDoctorRow() {
+    if (!canAddDoctor) return;
+    updatePublicDraft(
+      "doctors",
+      orderedPublicRows(
+        [...doctorRows, createPublicDoctorRow(doctorRows.length)],
+        doctorMaxRows
+      )
+    );
+  }
+
+  function removeDoctorRow(index: number) {
+    updatePublicDraft(
+      "doctors",
+      orderedPublicRows(
+        doctorRows.filter((_, rowIndex) => rowIndex !== index),
+        doctorMaxRows
+      )
+    );
+  }
+
+  function updateTreatmentRow(
+    index: number,
+    patch: Partial<ProviderPublicTreatment>
+  ) {
+    updatePublicDraft(
+      "treatments",
+      orderedPublicRows(
+        treatmentRows.map((row, rowIndex) =>
+          rowIndex === index ? { ...row, ...patch } : row
+        )
+      )
+    );
+  }
+
+  function addTreatmentRow() {
+    updatePublicDraft(
+      "treatments",
+      orderedPublicRows([
+        ...treatmentRows,
+        createPublicTreatmentRow(treatmentRows.length),
+      ])
+    );
+  }
+
+  function removeTreatmentRow(index: number) {
+    updatePublicDraft(
+      "treatments",
+      orderedPublicRows(
+        treatmentRows.filter((_, rowIndex) => rowIndex !== index)
+      )
+    );
+  }
+
+  function applyTreatmentPaste() {
+    const parsedRows = treatmentRowsFromSpreadsheet(treatmentPasteText);
+    if (!parsedRows.length) return;
+    updatePublicDraft(
+      "treatments",
+      orderedPublicRows([...treatmentRows, ...parsedRows])
+    );
+    setTreatmentPasteText("");
+  }
 
   return (
     <div className="border-t border-ink-200 pt-4 md:col-span-2">
@@ -1634,30 +1787,347 @@ function PublicCmsFields({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 border-t border-ink-200 pt-3">
-        <Field label="의료진 목록" span="full">
-          <Textarea
-            className="min-h-28 w-full resize-y border-ink-200 bg-white text-sm text-ink-900 shadow-none"
-            value={doctorsToText(publicDraft.doctors)}
-            onChange={event =>
-              updatePublicDraft("doctors", doctorsFromText(event.target.value))
-            }
-            placeholder="Dr. Kim | Dermatologist | Laser | 12 | Bio text | https://photo-url"
-          />
-        </Field>
-        <Field label="공개 시술/가격 목록" span="full">
-          <Textarea
-            className="min-h-28 w-full resize-y border-ink-200 bg-white text-sm text-ink-900 shadow-none"
-            value={treatmentsToText(publicDraft.treatments)}
-            onChange={event =>
-              updatePublicDraft(
-                "treatments",
-                treatmentsFromText(event.target.value)
-              )
-            }
-            placeholder="Laser toning | 200000 | 600000 | 0 | 40 | Per session | laser-toning"
-          />
-        </Field>
+      <div className="mt-4 grid gap-5 border-t border-ink-200 pt-4">
+        <div className="grid gap-3">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+            <div>
+              <div className="text-sm font-semibold text-ink-900">
+                의료진 목록
+              </div>
+              <p className="mt-1 text-xs leading-5 text-ink-500">
+                최대 {doctorMaxRows}명까지 등록할 수 있습니다. 병원 직접 입력
+                화면에서도 같은 구조로 사용할 수 있습니다.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 border-ink-200 px-3 text-xs"
+              onClick={addDoctorRow}
+              disabled={!canAddDoctor}
+            >
+              <Plus className="size-3.5" />
+              의료진 추가 ({doctorRows.length}/{doctorMaxRows})
+            </Button>
+          </div>
+
+          {doctorRows.length ? (
+            <div className="grid gap-3">
+              {doctorRows.map((doctor, index) => (
+                <div
+                  key={doctor.id ?? index}
+                  className="grid gap-3 rounded-lg border border-ink-200 bg-white p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-semibold text-ink-900">
+                      의료진 {index + 1}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-600">
+                        <input
+                          type="checkbox"
+                          checked={doctor.active !== false}
+                          onChange={event =>
+                            updateDoctorRow(index, {
+                              active: event.target.checked,
+                            })
+                          }
+                          className="size-3.5 rounded border-ink-300 accent-teal-700"
+                        />
+                        공개
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-rose-700 hover:bg-rose-50"
+                        onClick={() => removeDoctorRow(index)}
+                      >
+                        <Trash2 className="size-3.5" />
+                        삭제
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <Field label="이름">
+                      <Input
+                        className={controlClassName}
+                        value={doctor.name}
+                        onChange={event =>
+                          updateDoctorRow(index, { name: event.target.value })
+                        }
+                        placeholder="Dr. Kim"
+                      />
+                    </Field>
+                    <Field label="직책">
+                      <Input
+                        className={controlClassName}
+                        value={doctor.title ?? ""}
+                        onChange={event =>
+                          updateDoctorRow(index, { title: event.target.value })
+                        }
+                        placeholder="대표원장"
+                      />
+                    </Field>
+                    <Field label="전문분야">
+                      <Input
+                        className={controlClassName}
+                        value={doctor.specialty ?? ""}
+                        onChange={event =>
+                          updateDoctorRow(index, {
+                            specialty: event.target.value,
+                          })
+                        }
+                        placeholder="피부 레이저"
+                      />
+                    </Field>
+                    <Field label="경력(년)">
+                      <Input
+                        className={controlClassName}
+                        type="number"
+                        min={0}
+                        value={doctor.yearsExperience ?? ""}
+                        onChange={event =>
+                          updateDoctorRow(index, {
+                            yearsExperience: event.target.value
+                              ? Number(event.target.value)
+                              : null,
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="사진 URL" span="full">
+                      <Input
+                        className={controlClassName}
+                        value={doctor.photoUrl ?? ""}
+                        onChange={event =>
+                          updateDoctorRow(index, {
+                            photoUrl: event.target.value,
+                          })
+                        }
+                        placeholder="https://..."
+                      />
+                    </Field>
+                    <Field label="소개" span="full">
+                      <Textarea
+                        className={textareaClassName}
+                        value={doctor.bio ?? ""}
+                        onChange={event =>
+                          updateDoctorRow(index, { bio: event.target.value })
+                        }
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-ink-300 bg-white p-4 text-sm text-ink-500">
+              등록된 의료진이 없습니다. `의료진 추가` 버튼으로 행을 추가하세요.
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-3 border-t border-ink-200 pt-4">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+            <div>
+              <div className="text-sm font-semibold text-ink-900">
+                공개 시술/가격 목록
+              </div>
+              <p className="mt-1 text-xs leading-5 text-ink-500">
+                시술 항목은 개수 제한 없이 등록할 수 있습니다. 엑셀 붙여넣기는
+                표준 컬럼 또는 같은 순서의 값으로 반영됩니다.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 border-ink-200 px-3 text-xs"
+              onClick={addTreatmentRow}
+            >
+              <Plus className="size-3.5" />
+              시술 추가
+            </Button>
+          </div>
+
+          <div className="rounded-lg border border-ink-200 bg-white p-3">
+            <div className="mb-2 text-xs font-semibold text-ink-700">
+              엑셀 붙여넣기
+            </div>
+            <Textarea
+              className="min-h-24 w-full resize-y border-ink-200 bg-white text-sm text-ink-900 shadow-none"
+              value={treatmentPasteText}
+              onChange={event => setTreatmentPasteText(event.target.value)}
+              placeholder={
+                "시술명\t최소가\t최대가\t회복일\t소요분\t메모\tslug\nLaser toning\t200000\t600000\t0\t40\tPer session\tlaser-toning"
+              }
+            />
+            <div className="mt-2 flex flex-col justify-between gap-2 text-xs text-ink-500 sm:flex-row sm:items-center">
+              <span>
+                권장 컬럼: 시술명, 최소가, 최대가, 회복일, 소요분, 메모, slug
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 border-teal-200 px-3 text-xs text-teal-800"
+                onClick={applyTreatmentPaste}
+                disabled={!treatmentPasteText.trim()}
+              >
+                붙여넣기 반영
+              </Button>
+            </div>
+          </div>
+
+          {treatmentRows.length ? (
+            <div className="grid gap-2">
+              {treatmentRows.map((treatment, index) => (
+                <div
+                  key={treatment.id ?? index}
+                  className="grid gap-2 rounded-lg border border-ink-200 bg-white p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-semibold text-ink-900">
+                      시술 {index + 1}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-600">
+                        <input
+                          type="checkbox"
+                          checked={treatment.active !== false}
+                          onChange={event =>
+                            updateTreatmentRow(index, {
+                              active: event.target.checked,
+                            })
+                          }
+                          className="size-3.5 rounded border-ink-300 accent-teal-700"
+                        />
+                        공개
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-rose-700 hover:bg-rose-50"
+                        onClick={() => removeTreatmentRow(index)}
+                      >
+                        <Trash2 className="size-3.5" />
+                        삭제
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-[minmax(180px,1.4fr)_repeat(4,minmax(90px,0.65fr))_minmax(140px,1fr)]">
+                    <Field label="시술명">
+                      <Input
+                        className={controlClassName}
+                        value={treatment.title}
+                        onChange={event =>
+                          updateTreatmentRow(index, {
+                            title: event.target.value,
+                          })
+                        }
+                        placeholder="Laser toning"
+                      />
+                    </Field>
+                    <Field label="최소가">
+                      <Input
+                        className={controlClassName}
+                        type="number"
+                        min={0}
+                        value={treatment.priceMinKrw ?? ""}
+                        onChange={event =>
+                          updateTreatmentRow(index, {
+                            priceMinKrw: event.target.value
+                              ? Number(event.target.value)
+                              : null,
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="최대가">
+                      <Input
+                        className={controlClassName}
+                        type="number"
+                        min={0}
+                        value={treatment.priceMaxKrw ?? ""}
+                        onChange={event =>
+                          updateTreatmentRow(index, {
+                            priceMaxKrw: event.target.value
+                              ? Number(event.target.value)
+                              : null,
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="회복일">
+                      <Input
+                        className={controlClassName}
+                        type="number"
+                        min={0}
+                        value={treatment.recoveryDays ?? ""}
+                        onChange={event =>
+                          updateTreatmentRow(index, {
+                            recoveryDays: event.target.value
+                              ? Number(event.target.value)
+                              : null,
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="소요분">
+                      <Input
+                        className={controlClassName}
+                        type="number"
+                        min={0}
+                        value={treatment.durationMinutes ?? ""}
+                        onChange={event =>
+                          updateTreatmentRow(index, {
+                            durationMinutes: event.target.value
+                              ? Number(event.target.value)
+                              : null,
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field label="slug">
+                      <Input
+                        className={controlClassName}
+                        value={treatment.treatmentSlug ?? ""}
+                        onChange={event =>
+                          updateTreatmentRow(index, {
+                            treatmentSlug: event.target.value,
+                          })
+                        }
+                        placeholder="laser-toning"
+                      />
+                    </Field>
+                    <Field label="메모" span="full">
+                      <Input
+                        className={controlClassName}
+                        value={treatment.notes ?? ""}
+                        onChange={event =>
+                          updateTreatmentRow(index, {
+                            notes: event.target.value,
+                          })
+                        }
+                        placeholder="Per session"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-ink-300 bg-white p-4 text-sm text-ink-500">
+              등록된 시술 항목이 없습니다. `시술 추가` 또는 엑셀 붙여넣기로
+              입력하세요.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
