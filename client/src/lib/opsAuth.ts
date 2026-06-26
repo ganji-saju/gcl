@@ -1,9 +1,33 @@
-import { createClient, type AuthChangeEvent, type Session, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type AuthChangeEvent,
+  type Session,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-const opsAuthSiteUrl = import.meta.env.VITE_OPS_AUTH_SITE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as
+  | string
+  | undefined;
+const opsAuthSiteUrl = import.meta.env.VITE_OPS_AUTH_SITE_URL as
+  | string
+  | undefined;
 const OPS_AUTH_STORAGE_KEY = "gcl_ops_auth:v1";
+const AUTH_REDIRECT_PARAM_KEYS = [
+  "code",
+  "type",
+  "error",
+  "error_code",
+  "error_description",
+  "sb",
+] as const;
+const AUTH_HASH_TOKEN_PARAM_KEYS = [
+  "access_token",
+  "expires_at",
+  "expires_in",
+  "refresh_token",
+  "token_type",
+] as const;
 
 let opsClient: SupabaseClient | null = null;
 
@@ -52,12 +76,62 @@ export function getOpsAuthClient() {
 function clearAuthCodeFromUrl() {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
-  url.searchParams.delete("code");
-  url.searchParams.delete("type");
-  if (url.hash.includes("access_token=") || url.hash.includes("refresh_token=")) {
-    url.hash = "";
+
+  AUTH_REDIRECT_PARAM_KEYS.forEach(key => url.searchParams.delete(key));
+
+  const hashKeys = [...AUTH_REDIRECT_PARAM_KEYS, ...AUTH_HASH_TOKEN_PARAM_KEYS];
+  if (url.hash) {
+    const hashValue = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+    const hashParams = new URLSearchParams(hashValue);
+    const hasAuthHash = hashKeys.some(key => hashParams.has(key));
+    if (!hasAuthHash) {
+      window.history.replaceState(
+        null,
+        "",
+        `${url.pathname}${url.search}${url.hash}`
+      );
+      return;
+    }
+
+    hashKeys.forEach(key => hashParams.delete(key));
+    const cleanHash = hashParams.toString();
+    url.hash = cleanHash ? `#${cleanHash}` : "";
   }
-  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+
+  window.history.replaceState(
+    null,
+    "",
+    `${url.pathname}${url.search}${url.hash}`
+  );
+}
+
+function readAuthRedirectError() {
+  if (typeof window === "undefined") return null;
+
+  const url = new URL(window.location.href);
+  const hashParams = new URLSearchParams(
+    url.hash.startsWith("#") ? url.hash.slice(1) : url.hash
+  );
+  const code =
+    hashParams.get("error_code") ?? url.searchParams.get("error_code");
+  const description =
+    hashParams.get("error_description") ??
+    url.searchParams.get("error_description") ??
+    hashParams.get("error") ??
+    url.searchParams.get("error");
+
+  if (!code && !description) return null;
+
+  if (code === "otp_expired") {
+    return new Error(
+      "인증 메일 링크가 만료되었거나 이미 사용되었습니다. 최신 인증 메일에서 링크를 한 번만 열어 주세요. 새 인증 링크를 다시 요청할 수 있습니다."
+    );
+  }
+
+  return new Error(
+    description?.trim() ||
+      "인증 링크를 처리하지 못했습니다. 새 인증 링크를 다시 요청해 주세요."
+  );
 }
 
 function normalizeSiteUrl(siteUrl?: string) {
@@ -95,16 +169,26 @@ export function getOpsAuthRedirectUrl(redirectTo?: string) {
 
 async function exchangeRedirectCode() {
   if (typeof window === "undefined") return null;
+  const redirectError = readAuthRedirectError();
+  if (redirectError) {
+    clearAuthCodeFromUrl();
+    throw redirectError;
+  }
+
   const code = new URL(window.location.href).searchParams.get("code");
   if (!code) return null;
 
-  const { data, error } = await getOpsAuthClient().auth.exchangeCodeForSession(code);
+  const { data, error } =
+    await getOpsAuthClient().auth.exchangeCodeForSession(code);
   clearAuthCodeFromUrl();
   if (error) throw new Error(error.message);
   return toOpsSession(data.session);
 }
 
-export async function requestOpsEmailSignIn(email: string, redirectTo?: string) {
+export async function requestOpsEmailSignIn(
+  email: string,
+  redirectTo?: string
+) {
   const cleanEmail = normalizeEmail(email);
   if (!cleanEmail || !cleanEmail.includes("@")) {
     throw new Error("인증 메일을 받을 이메일 주소를 입력하세요.");
@@ -125,8 +209,11 @@ export async function requestOpsEmailSignIn(email: string, redirectTo?: string) 
 export async function getCurrentOpsEmailSession() {
   if (!isOpsEmailAuthConfigured()) return null;
   let redirectError: Error | null = null;
-  const redirectSession = await exchangeRedirectCode().catch((error) => {
-    redirectError = error instanceof Error ? error : new Error("인증 링크를 처리하지 못했습니다.");
+  const redirectSession = await exchangeRedirectCode().catch(error => {
+    redirectError =
+      error instanceof Error
+        ? error
+        : new Error("인증 링크를 처리하지 못했습니다.");
     return null;
   });
   if (redirectSession) return redirectSession;
@@ -148,7 +235,9 @@ export async function signOutOpsEmail() {
   if (error) throw new Error(error.message);
 }
 
-export function onOpsAuthStateChange(callback: (event: AuthChangeEvent, session: OpsEmailSession | null) => void) {
+export function onOpsAuthStateChange(
+  callback: (event: AuthChangeEvent, session: OpsEmailSession | null) => void
+) {
   if (!isOpsEmailAuthConfigured()) return () => {};
   const {
     data: { subscription },
