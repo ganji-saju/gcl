@@ -130,6 +130,9 @@ const LANGUAGE_LABELS: Record<string, string> = {
     LANDING_LOCALE_OPTIONS.map(option => [option.code, option.labelKo])
   ),
   ja: "일본어",
+  zh: "중국어",
+  "zh-hans": "중국어 간체",
+  "zh-hant": "중국어 번체",
 };
 
 const RISK_FLAG_LABELS: Record<string, string> = {
