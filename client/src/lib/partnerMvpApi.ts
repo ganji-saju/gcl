@@ -3,6 +3,7 @@ import type {
   BetaPartner,
   BetaProviderCandidate,
 } from "@/lib/betaData";
+import type { LandingLocale, WedgeMarket } from "@/lib/landingRouteOptions";
 
 export interface PartnerMvpSnapshot {
   cases: BetaCase[];
@@ -68,9 +69,9 @@ export type LandingRouteStatus = "draft" | "published" | "paused" | "archived";
 
 export interface ManagedLandingRoute {
   id?: string;
-  locale: "en" | "jp";
+  locale: LandingLocale;
   slug: string;
-  market: "japan" | "taiwan";
+  market: WedgeMarket;
   intent: string;
   title: string;
   subtitle: string;

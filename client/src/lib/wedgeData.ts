@@ -1,7 +1,6 @@
 import type { LanguageCode } from "./sampleData";
-
-export type WedgeMarket = "japan" | "taiwan";
-export type LandingLocale = "en" | "jp";
+import type { LandingLocale, WedgeMarket } from "./landingRouteOptions";
+export type { LandingLocale, WedgeMarket } from "./landingRouteOptions";
 
 export interface SkinPackageSku {
   id: string;
@@ -44,9 +43,16 @@ export const SKIN_PACKAGE_SKUS: SkinPackageSku[] = [
     durationDays: 1,
     recoveryWindow: "0-2 days",
     coordinatorLanguages: ["ja", "en"],
-    bestFor: "Short Seoul beauty trips and first-time Korea skin clinic visitors from Japan.",
-    includes: ["Skin analysis", "Laser toning estimate", "Low-downtime schedule", "Aftercare checklist"],
-    complianceNote: "Final treatment plan and price must be confirmed after provider consultation.",
+    bestFor:
+      "Short Seoul beauty trips and first-time Korea skin clinic visitors from Japan.",
+    includes: [
+      "Skin analysis",
+      "Laser toning estimate",
+      "Low-downtime schedule",
+      "Aftercare checklist",
+    ],
+    complianceNote:
+      "Final treatment plan and price must be confirmed after provider consultation.",
   },
   {
     id: "jp-skin-02",
@@ -59,9 +65,16 @@ export const SKIN_PACKAGE_SKUS: SkinPackageSku[] = [
     durationDays: 2,
     recoveryWindow: "1-3 days",
     coordinatorLanguages: ["ja", "en"],
-    bestFor: "Japanese patients comparing hydration, texture, and early anti-aging options.",
-    includes: ["Doctor review", "Booster estimate", "Recovery-light scheduling", "Japanese follow-up notes"],
-    complianceNote: "Injectable suitability depends on medical review and provider protocol.",
+    bestFor:
+      "Japanese patients comparing hydration, texture, and early anti-aging options.",
+    includes: [
+      "Doctor review",
+      "Booster estimate",
+      "Recovery-light scheduling",
+      "Japanese follow-up notes",
+    ],
+    complianceNote:
+      "Injectable suitability depends on medical review and provider protocol.",
   },
   {
     id: "jp-skin-03",
@@ -74,9 +87,16 @@ export const SKIN_PACKAGE_SKUS: SkinPackageSku[] = [
     durationDays: 3,
     recoveryWindow: "3-7 days",
     coordinatorLanguages: ["ja", "en"],
-    bestFor: "Patients who need structured expectations before booking a laser program.",
-    includes: ["Photo-based pre-screen", "Laser plan estimate", "Downtime guidance", "Provider quote comparison"],
-    complianceNote: "Improvement level cannot be guaranteed; provider review is required.",
+    bestFor:
+      "Patients who need structured expectations before booking a laser program.",
+    includes: [
+      "Photo-based pre-screen",
+      "Laser plan estimate",
+      "Downtime guidance",
+      "Provider quote comparison",
+    ],
+    complianceNote:
+      "Improvement level cannot be guaranteed; provider review is required.",
   },
   {
     id: "tw-skin-01",
@@ -89,9 +109,16 @@ export const SKIN_PACKAGE_SKUS: SkinPackageSku[] = [
     durationDays: 2,
     recoveryWindow: "1-3 days",
     coordinatorLanguages: ["en", "zh"],
-    bestFor: "Taiwan travelers comparing premium Korean dermatology programs through an English quote flow.",
-    includes: ["Clinic shortlist", "Skin booster or toning quote", "Travel-window matching", "English coordinator"],
-    complianceNote: "Traditional Chinese support is captured as an operating requirement, not a live landing locale in v1.",
+    bestFor:
+      "Taiwan travelers comparing premium Korean dermatology programs through an English quote flow.",
+    includes: [
+      "Clinic shortlist",
+      "Skin booster or toning quote",
+      "Travel-window matching",
+      "English coordinator",
+    ],
+    complianceNote:
+      "Traditional Chinese support is captured as an operating requirement, not a live landing locale in v1.",
   },
   {
     id: "tw-skin-02",
@@ -104,9 +131,16 @@ export const SKIN_PACKAGE_SKUS: SkinPackageSku[] = [
     durationDays: 3,
     recoveryWindow: "0-3 days",
     coordinatorLanguages: ["en", "zh"],
-    bestFor: "Patients who want treatment scheduling plus recovery and concierge options.",
-    includes: ["Skin treatment estimate", "Recovery care option", "Non-medical fee separation", "Deposit-ready schedule"],
-    complianceNote: "Medical and non-medical fees are quoted separately before deposit.",
+    bestFor:
+      "Patients who want treatment scheduling plus recovery and concierge options.",
+    includes: [
+      "Skin treatment estimate",
+      "Recovery care option",
+      "Non-medical fee separation",
+      "Deposit-ready schedule",
+    ],
+    complianceNote:
+      "Medical and non-medical fees are quoted separately before deposit.",
   },
 ];
 
@@ -130,7 +164,8 @@ export const SKIN_LANDING_PAGES: SkinLandingPage[] = [
     market: "japan",
     intent: "Korea laser toning package",
     title: "Laser toning packages with language-supported coordination",
-    subtitle: "Compare low-downtime laser toning estimates, provider response times, and travel windows.",
+    subtitle:
+      "Compare low-downtime laser toning estimates, provider response times, and travel windows.",
     searchTheme: "Laser toning package",
     cta: "Request laser quote",
     secondaryCta: "Compare providers",
@@ -142,7 +177,8 @@ export const SKIN_LANDING_PAGES: SkinLandingPage[] = [
     market: "taiwan",
     intent: "Korea skin booster price",
     title: "Skin booster quote matching for Seoul visits",
-    subtitle: "See price ranges, recovery windows, verified provider signals, and coordinator next steps.",
+    subtitle:
+      "See price ranges, recovery windows, verified provider signals, and coordinator next steps.",
     searchTheme: "Skin booster estimate",
     cta: "Request booster estimate",
     secondaryCta: "See packages",
@@ -154,7 +190,8 @@ export const SKIN_LANDING_PAGES: SkinLandingPage[] = [
     market: "japan",
     intent: "Seoul anti-aging treatment",
     title: "Anti-aging skin packages planned around short Seoul stays",
-    subtitle: "Match your dates, budget, and language needs with provider quote options before booking.",
+    subtitle:
+      "Match your dates, budget, and language needs with provider quote options before booking.",
     searchTheme: "Anti-aging weekend",
     cta: "Plan my Seoul skin trip",
     secondaryCta: "Start consultation",
@@ -166,7 +203,8 @@ export const SKIN_LANDING_PAGES: SkinLandingPage[] = [
     market: "japan",
     intent: "Korea acne scar laser",
     title: "Acne scar laser planning without unclear price surprises",
-    subtitle: "Submit goals and photos later; receive structured provider estimates and downtime guidance.",
+    subtitle:
+      "Submit goals and photos later; receive structured provider estimates and downtime guidance.",
     searchTheme: "Acne scar laser",
     cta: "Ask a coordinator",
     secondaryCta: "Review package",
@@ -240,11 +278,16 @@ export const SKIN_LANDING_PAGES: SkinLandingPage[] = [
 ];
 
 export function getSkinPackageById(id: string) {
-  return SKIN_PACKAGE_SKUS.find((item) => item.id === id);
+  return SKIN_PACKAGE_SKUS.find(item => item.id === id);
 }
 
-export function getSkinLandingPage(locale: string | undefined, slug: string | undefined) {
-  return SKIN_LANDING_PAGES.find((page) => page.locale === locale && page.slug === slug);
+export function getSkinLandingPage(
+  locale: string | undefined,
+  slug: string | undefined
+) {
+  return SKIN_LANDING_PAGES.find(
+    page => page.locale === locale && page.slug === slug
+  );
 }
 
 export function formatUsdRange(min: number, max: number) {
