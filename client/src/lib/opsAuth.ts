@@ -1,6 +1,7 @@
 import {
   createClient,
   type AuthChangeEvent,
+  type EmailOtpType,
   type Session,
   type SupabaseClient,
 } from "@supabase/supabase-js";
@@ -20,6 +21,7 @@ const AUTH_REDIRECT_PARAM_KEYS = [
   "error_code",
   "error_description",
   "sb",
+  "token_hash",
 ] as const;
 const AUTH_HASH_TOKEN_PARAM_KEYS = [
   "access_token",
@@ -167,6 +169,22 @@ export function getOpsAuthRedirectUrl(redirectTo?: string) {
   return url.toString();
 }
 
+export function getSafeOpsRedirectPath(redirectTo?: string | null) {
+  if (typeof window === "undefined") return "/admin";
+  if (!redirectTo) return "/admin";
+
+  try {
+    const redirectUrl = new URL(redirectTo, window.location.origin);
+    const allowedOrigins = new Set([window.location.origin]);
+    const configuredOrigin = normalizeSiteUrl(opsAuthSiteUrl);
+    if (configuredOrigin) allowedOrigins.add(configuredOrigin);
+    if (!allowedOrigins.has(redirectUrl.origin)) return "/admin";
+    return `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`;
+  } catch {
+    return "/admin";
+  }
+}
+
 async function exchangeRedirectCode() {
   if (typeof window === "undefined") return null;
   const redirectError = readAuthRedirectError();
@@ -183,6 +201,42 @@ async function exchangeRedirectCode() {
   clearAuthCodeFromUrl();
   if (error) throw new Error(error.message);
   return toOpsSession(data.session);
+}
+
+export async function verifyOpsEmailTokenHash(
+  tokenHash: string,
+  type: string,
+  redirectTo?: string | null
+) {
+  const cleanTokenHash = tokenHash.trim();
+  if (!cleanTokenHash)
+    throw new Error("인증 링크 정보가 없습니다. 새 인증 메일을 요청해 주세요.");
+
+  const otpType = (type || "email") as EmailOtpType;
+  const { data, error } = await getOpsAuthClient().auth.verifyOtp({
+    token_hash: cleanTokenHash,
+    type: otpType,
+  });
+
+  if (error) {
+    if ("code" in error && error.code === "otp_expired") {
+      throw new Error(
+        "인증 메일 링크가 만료되었거나 이미 사용되었습니다. 새 인증 메일을 요청한 뒤 최신 링크로 다시 시도해 주세요."
+      );
+    }
+    throw new Error(error.message);
+  }
+
+  const session = toOpsSession(data.session);
+  if (!session)
+    throw new Error(
+      "인증 세션을 만들지 못했습니다. 새 인증 메일을 요청해 주세요."
+    );
+
+  return {
+    session,
+    redirectPath: getSafeOpsRedirectPath(redirectTo),
+  };
 }
 
 export async function requestOpsEmailSignIn(

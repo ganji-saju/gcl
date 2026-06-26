@@ -17,6 +17,7 @@ import TreatmentDetail from "./pages/TreatmentDetail";
 import Compare from "./pages/Compare";
 import Consultation from "./pages/Consultation";
 import SkinPackageLanding from "./pages/SkinPackageLanding";
+import AuthConfirm from "./pages/AuthConfirm";
 import ClosedBetaOps from "./pages/ClosedBetaOps";
 import CaseDashboard from "./pages/CaseDashboard";
 import QuoteBookingMvp from "./pages/QuoteBookingMvp";
@@ -170,6 +171,7 @@ function Router() {
       <Route path="/treatments/:slug" component={TreatmentDetail} />
       <Route path="/compare" component={Compare} />
       <Route path="/consultation" component={Consultation} />
+      <Route path="/auth/confirm" component={AuthConfirm} />
       <Route path="/admin" component={AdminEntryRoute} />
       <Route path="/admin/" component={AdminEntryRoute} />
       <Route path="/admin/beta" component={ClosedBetaOpsRoute} />
