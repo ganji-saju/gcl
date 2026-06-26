@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -500,6 +501,7 @@ export default function AdminProviderRegistry() {
   const [status, setStatus] = useState<RegistryStatus>("loading");
   const [message, setMessage] = useState("병원 목록을 불러오는 중입니다.");
   const [adminToken] = useState(() => readAdminApiToken());
+  const providerFormRef = useRef<HTMLFormElement | null>(null);
 
   const profileByProviderId = useMemo(
     () => new Map(profiles.map(profile => [profile.providerId, profile])),
@@ -704,7 +706,12 @@ export default function AdminProviderRegistry() {
     setEditingProviderId(provider.id);
     setStatus("ready");
     setMessage(`${provider.name} 정보를 수정 중입니다.`);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.requestAnimationFrame(() => {
+      providerFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
   }
 
   async function removeProvider(provider: BetaProviderCandidate) {
@@ -788,10 +795,11 @@ export default function AdminProviderRegistry() {
       </section>
 
       <section className="section-padding bg-white">
-        <div className="container-wide grid gap-6 xl:grid-cols-[minmax(420px,0.92fr)_minmax(0,1.08fr)]">
+        <div className="container-wide grid gap-6">
           <form
+            ref={providerFormRef}
             onSubmit={submitProvider}
-            className="h-fit rounded-lg border border-ink-200 bg-ink-50 p-5"
+            className="order-2 rounded-lg border border-ink-200 bg-ink-50 p-5"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -1144,7 +1152,7 @@ export default function AdminProviderRegistry() {
             </div>
           </form>
 
-          <div className="min-w-0">
+          <div className="order-1 min-w-0">
             <div
               className={cn(
                 "mb-4 flex items-start gap-3 rounded-lg border p-3 text-sm",
@@ -1351,6 +1359,23 @@ function PublicCmsFields({
     patch: Partial<ProviderPublicProfileI18n>
   ) => void;
 }) {
+  const [activeLocale, setActiveLocale] =
+    useState<ProviderPublicProfileI18n["locale"]>("ko");
+  const activeLocaleOption =
+    publicLocaleOptions.find(option => option.value === activeLocale) ??
+    publicLocaleOptions[0];
+  const activeLocaleRow =
+    publicDraft.i18n.find(row => row.locale === activeLocaleOption.value) ??
+    ({
+      locale: activeLocaleOption.value,
+      name: "",
+      summary: "",
+      description: "",
+      address: "",
+      specialties: [],
+      highlights: [],
+    } satisfies ProviderPublicProfileI18n);
+
   return (
     <div className="border-t border-ink-200 pt-4 md:col-span-2">
       <div className="mb-3 flex flex-col gap-1">
@@ -1513,99 +1538,100 @@ function PublicCmsFields({
         </Field>
       </div>
 
-      <div className="mt-4 grid gap-4">
-        {publicLocaleOptions.map(option => {
-          const localeRow =
-            publicDraft.i18n.find(row => row.locale === option.value) ??
-            ({
-              locale: option.value,
-              name: "",
-              summary: "",
-              description: "",
-              address: "",
-              specialties: [],
-              highlights: [],
-            } satisfies ProviderPublicProfileI18n);
-
-          return (
-            <div
-              key={option.value}
-              className="grid gap-3 border-t border-ink-200 pt-3 md:grid-cols-2"
-            >
-              <div className="text-sm font-semibold text-ink-900 md:col-span-2">
+      <div className="mt-4 border-t border-ink-200 pt-3">
+        <div className="mb-3 flex flex-col gap-2">
+          <div className="text-sm font-semibold text-ink-900">
+            언어별 공개 설정
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {publicLocaleOptions.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setActiveLocale(option.value)}
+                className={cn(
+                  "h-8 rounded-md border px-3 text-xs font-semibold transition",
+                  activeLocaleOption.value === option.value
+                    ? "border-teal-700 bg-teal-700 text-white"
+                    : "border-ink-200 bg-white text-ink-600 hover:bg-ink-50"
+                )}
+              >
                 {option.label}
-              </div>
-              <Field label="공개 병원명">
-                <Input
-                  className={controlClassName}
-                  value={localeRow.name}
-                  onChange={event =>
-                    updatePublicLocale(option.value, {
-                      name: event.target.value,
-                    })
-                  }
-                />
-              </Field>
-              <Field label="공개 주소">
-                <Input
-                  className={controlClassName}
-                  value={localeRow.address ?? ""}
-                  onChange={event =>
-                    updatePublicLocale(option.value, {
-                      address: event.target.value,
-                    })
-                  }
-                />
-              </Field>
-              <Field label="한 줄 요약" span="full">
-                <Input
-                  className={controlClassName}
-                  value={localeRow.summary ?? ""}
-                  onChange={event =>
-                    updatePublicLocale(option.value, {
-                      summary: event.target.value,
-                    })
-                  }
-                />
-              </Field>
-              <Field label="상세 소개" span="full">
-                <Textarea
-                  className="min-h-28 w-full resize-y border-ink-200 bg-white text-sm text-ink-900 shadow-none"
-                  value={localeRow.description ?? ""}
-                  onChange={event =>
-                    updatePublicLocale(option.value, {
-                      description: event.target.value,
-                    })
-                  }
-                />
-              </Field>
-              <Field label="전문 분야" span="full">
-                <Textarea
-                  className={textareaClassName}
-                  value={joinListText(localeRow.specialties)}
-                  onChange={event =>
-                    updatePublicLocale(option.value, {
-                      specialties: splitListText(event.target.value),
-                    })
-                  }
-                  placeholder={"Laser toning\nSkin booster"}
-                />
-              </Field>
-              <Field label="강점/체크포인트" span="full">
-                <Textarea
-                  className={textareaClassName}
-                  value={joinListText(localeRow.highlights)}
-                  onChange={event =>
-                    updatePublicLocale(option.value, {
-                      highlights: splitListText(event.target.value),
-                    })
-                  }
-                  placeholder={"Same-day consult\nLow downtime plan"}
-                />
-              </Field>
-            </div>
-          );
-        })}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field label="공개 병원명">
+            <Input
+              className={controlClassName}
+              value={activeLocaleRow.name}
+              onChange={event =>
+                updatePublicLocale(activeLocaleOption.value, {
+                  name: event.target.value,
+                })
+              }
+            />
+          </Field>
+          <Field label="공개 주소">
+            <Input
+              className={controlClassName}
+              value={activeLocaleRow.address ?? ""}
+              onChange={event =>
+                updatePublicLocale(activeLocaleOption.value, {
+                  address: event.target.value,
+                })
+              }
+            />
+          </Field>
+          <Field label="한 줄 요약" span="full">
+            <Input
+              className={controlClassName}
+              value={activeLocaleRow.summary ?? ""}
+              onChange={event =>
+                updatePublicLocale(activeLocaleOption.value, {
+                  summary: event.target.value,
+                })
+              }
+            />
+          </Field>
+          <Field label="상세 소개" span="full">
+            <Textarea
+              className="min-h-28 w-full resize-y border-ink-200 bg-white text-sm text-ink-900 shadow-none"
+              value={activeLocaleRow.description ?? ""}
+              onChange={event =>
+                updatePublicLocale(activeLocaleOption.value, {
+                  description: event.target.value,
+                })
+              }
+            />
+          </Field>
+          <Field label="전문 분야" span="full">
+            <Textarea
+              className={textareaClassName}
+              value={joinListText(activeLocaleRow.specialties)}
+              onChange={event =>
+                updatePublicLocale(activeLocaleOption.value, {
+                  specialties: splitListText(event.target.value),
+                })
+              }
+              placeholder={"Laser toning\nSkin booster"}
+            />
+          </Field>
+          <Field label="강점/체크포인트" span="full">
+            <Textarea
+              className={textareaClassName}
+              value={joinListText(activeLocaleRow.highlights)}
+              onChange={event =>
+                updatePublicLocale(activeLocaleOption.value, {
+                  highlights: splitListText(event.target.value),
+                })
+              }
+              placeholder={"Same-day consult\nLow downtime plan"}
+            />
+          </Field>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 border-t border-ink-200 pt-3">
