@@ -448,12 +448,14 @@ async function getLeadStorageHealth(config) {
 async function getAdminPersistenceHealth(config) {
   const [
     adminLandingRoutes,
+    adminPackageSkus,
     contactChannels,
     providerOperatingProfiles,
     providerDataQualityChecks,
     notificationOutbox,
   ] = await Promise.all([
     supabaseCount(config, "admin_landing_routes"),
+    supabaseCount(config, "admin_package_skus"),
     supabaseCount(config, "contact_channel_settings"),
     supabaseCount(config, "provider_operating_profiles"),
     supabaseCount(config, "provider_data_quality_checks"),
@@ -462,12 +464,14 @@ async function getAdminPersistenceHealth(config) {
 
   return {
     adminLandingRoutes,
+    adminPackageSkus,
     contactChannels,
     providerOperatingProfiles,
     providerDataQualityChecks,
     notificationOutbox,
     ready:
       adminLandingRoutes !== null &&
+      adminPackageSkus !== null &&
       contactChannels !== null &&
       providerOperatingProfiles !== null &&
       providerDataQualityChecks !== null &&
@@ -866,6 +870,26 @@ function normalizeLandingRoute(row) {
   };
 }
 
+function normalizePackageSku(row) {
+  return {
+    id: row.id,
+    shortTitle: row.short_title || row.id,
+    market: row.market || "global",
+    category: row.category || "skin",
+    priceMinUsd: Number(row.price_min_usd || 0),
+    priceMaxUsd: Number(row.price_max_usd || 0),
+    durationDays: Number(row.duration_days || 1),
+    recoveryWindow: row.recovery_window || "",
+    coordinatorLanguages: row.coordinator_languages || [],
+    bestFor: row.best_for || "",
+    includes: row.includes || [],
+    complianceNote: row.compliance_note || "",
+    source: row.source || "admin",
+    active: Boolean(row.active),
+    updatedAt: row.updated_at,
+  };
+}
+
 function normalizeContactChannel(row) {
   return {
     channel: row.channel,
@@ -906,32 +930,43 @@ async function getAdminOperationsData(config) {
   if (config.role !== "admin") {
     return {
       landingRoutes: [],
+      packageSkus: [],
       contactChannels: [],
       providerOperatingProfiles: [],
     };
   }
 
-  const [landingRoutes, contactChannels, providerOperatingProfiles] =
-    await Promise.all([
-      safeList(
-        config,
-        "admin_landing_routes",
-        "select=id,locale,slug,market,intent,title,subtitle,search_theme,cta,secondary_cta,package_ids,status,source,active,published_at,updated_at&active=eq.true&order=updated_at.desc&limit=120"
-      ),
-      safeList(
-        config,
-        "contact_channel_settings",
-        "select=channel,label,href,official_account_id,official_verified,active,display_order,notes&order=display_order.asc"
-      ),
-      safeList(
-        config,
-        "provider_operating_profiles",
-        "select=provider_id,public_exposure_status,data_source_status,supported_markets,supported_languages,standard_sla_hours,urgent_sla_hours,price_range_usd_min,price_range_usd_max,quote_template_ready,deposit_policy_ready,sla_contract_status,verification_summary,source_notes,last_verified_at,next_step&order=updated_at.desc&limit=120"
-      ),
-    ]);
+  const [
+    landingRoutes,
+    packageSkus,
+    contactChannels,
+    providerOperatingProfiles,
+  ] = await Promise.all([
+    safeList(
+      config,
+      "admin_landing_routes",
+      "select=id,locale,slug,market,intent,title,subtitle,search_theme,cta,secondary_cta,package_ids,status,source,active,published_at,updated_at&active=eq.true&order=updated_at.desc&limit=120"
+    ),
+    safeList(
+      config,
+      "admin_package_skus",
+      "select=id,short_title,market,category,price_min_usd,price_max_usd,duration_days,recovery_window,coordinator_languages,best_for,includes,compliance_note,source,active,updated_at&order=updated_at.desc&limit=240"
+    ),
+    safeList(
+      config,
+      "contact_channel_settings",
+      "select=channel,label,href,official_account_id,official_verified,active,display_order,notes&order=display_order.asc"
+    ),
+    safeList(
+      config,
+      "provider_operating_profiles",
+      "select=provider_id,public_exposure_status,data_source_status,supported_markets,supported_languages,standard_sla_hours,urgent_sla_hours,price_range_usd_min,price_range_usd_max,quote_template_ready,deposit_policy_ready,sla_contract_status,verification_summary,source_notes,last_verified_at,next_step&order=updated_at.desc&limit=120"
+    ),
+  ]);
 
   return {
     landingRoutes: landingRoutes.map(normalizeLandingRoute),
+    packageSkus: packageSkus.map(normalizePackageSku),
     contactChannels: contactChannels.map(normalizeContactChannel),
     providerOperatingProfiles: providerOperatingProfiles.map(
       normalizeProviderOperatingProfile
@@ -1307,6 +1342,7 @@ async function getSnapshot(config) {
 
 const LANDING_ROUTE_LOCALE_PATTERN = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/;
 const LANDING_ROUTE_MARKET_PATTERN = /^[a-z][a-z0-9_]{1,39}$/;
+const PACKAGE_SKU_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{1,79}$/;
 const LANDING_ROUTE_STATUSES = new Set([
   "draft",
   "published",
@@ -1367,6 +1403,13 @@ function cleanTextArray(value, limit = 12) {
   if (!Array.isArray(value)) return [];
   return Array.from(
     new Set(value.map(item => sanitizeText(item).toLowerCase()).filter(Boolean))
+  ).slice(0, limit);
+}
+
+function cleanStringArray(value, limit = 12) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(value.map(item => sanitizeText(item).slice(0, 160)).filter(Boolean))
   ).slice(0, limit);
 }
 
@@ -2236,6 +2279,98 @@ async function upsertLandingRoute(config, body) {
       source: "admin",
       active: route.active !== false,
       published_at: status === "published" ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    }),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+}
+
+async function upsertPackageSku(config, body) {
+  const input = body.packageSku || body.package_sku || body;
+  const id = sanitizeText(input.id).toLowerCase();
+  const shortTitle = sanitizeText(input.shortTitle || input.short_title);
+  const market = sanitizeText(input.market, "global").toLowerCase();
+  const category = sanitizeText(input.category, "skin").toLowerCase();
+  const priceMinUsd = Math.round(
+    numberInRange(input.priceMinUsd ?? input.price_min_usd, 0, 0, 999999)
+  );
+  const priceMaxUsd = Math.round(
+    numberInRange(
+      input.priceMaxUsd ?? input.price_max_usd,
+      priceMinUsd,
+      0,
+      999999
+    )
+  );
+  const durationDays = Math.round(
+    numberInRange(input.durationDays ?? input.duration_days, 1, 1, 60)
+  );
+
+  if (!PACKAGE_SKU_ID_PATTERN.test(id))
+    throw new HttpError(
+      400,
+      "Package code must use lowercase letters, numbers, hyphens, or underscores."
+    );
+  if (!shortTitle) throw new HttpError(400, "Package short title is required.");
+  if (!LANDING_ROUTE_MARKET_PATTERN.test(market))
+    throw new HttpError(400, "Unsupported package market.");
+  if (priceMaxUsd < priceMinUsd)
+    throw new HttpError(
+      400,
+      "Package max price must be greater than or equal to min price."
+    );
+
+  await supabaseFetch(config, "admin_package_skus?on_conflict=id", {
+    method: "POST",
+    body: JSON.stringify({
+      id,
+      short_title: shortTitle,
+      market,
+      category: category || "skin",
+      price_min_usd: priceMinUsd,
+      price_max_usd: priceMaxUsd,
+      duration_days: durationDays,
+      recovery_window: sanitizeText(
+        input.recoveryWindow || input.recovery_window
+      ),
+      coordinator_languages: cleanTextArray(
+        input.coordinatorLanguages || input.coordinator_languages
+      ),
+      best_for: sanitizeText(input.bestFor || input.best_for),
+      includes: cleanStringArray(input.includes, 16),
+      compliance_note: sanitizeText(
+        input.complianceNote || input.compliance_note
+      ),
+      source: "admin",
+      active: input.active !== false,
+      updated_at: new Date().toISOString(),
+    }),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+}
+
+async function deletePackageSku(config, body) {
+  const packageId = sanitizeText(body.packageId || body.id).toLowerCase();
+  if (!PACKAGE_SKU_ID_PATTERN.test(packageId))
+    throw new HttpError(400, "A valid package code is required.");
+
+  await supabaseFetch(config, "admin_package_skus?on_conflict=id", {
+    method: "POST",
+    body: JSON.stringify({
+      id: packageId,
+      short_title: packageId,
+      market: "global",
+      category: "skin",
+      price_min_usd: 0,
+      price_max_usd: 0,
+      duration_days: 1,
+      recovery_window: "",
+      coordinator_languages: [],
+      best_for: "",
+      includes: [],
+      compliance_note: "",
+      source: "admin",
+      active: false,
       updated_at: new Date().toISOString(),
     }),
     prefer: "resolution=merge-duplicates,return=minimal",
@@ -3253,6 +3388,8 @@ function allowedRolesForAction(action) {
     action === "releaseAvailabilitySlot" ||
     action === "confirmHeldBooking" ||
     action === "upsertLandingRoute" ||
+    action === "upsertPackageSku" ||
+    action === "deletePackageSku" ||
     action === "createProvider" ||
     action === "updateProvider" ||
     action === "deleteProvider" ||
@@ -3306,6 +3443,10 @@ export default async function handler(req, res) {
         return json(res, 200, await confirmHeldBooking(config, body));
       else if (body.action === "upsertLandingRoute")
         await upsertLandingRoute(config, body);
+      else if (body.action === "upsertPackageSku")
+        await upsertPackageSku(config, body);
+      else if (body.action === "deletePackageSku")
+        await deletePackageSku(config, body);
       else if (body.action === "createProvider")
         await createProviderRegistry(config, body);
       else if (body.action === "updateProvider")

@@ -12,9 +12,12 @@ import {
   ExternalLink,
   FilePlus2,
   ListChecks,
+  PackagePlus,
+  Pencil,
   RefreshCw,
   Save,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -30,10 +33,13 @@ import {
 import { languageLabel, marketLabel, statusLabel } from "@/lib/adminLabels";
 import {
   fetchPartnerMvpSnapshot,
+  deletePackageSkuMvp,
   readAdminApiToken,
+  upsertPackageSkuMvp,
   upsertLandingRouteMvp,
   type LandingRouteStatus,
   type ManagedLandingRoute,
+  type ManagedPackageSku,
 } from "@/lib/partnerMvpApi";
 import { cn } from "@/lib/utils";
 
@@ -52,9 +58,33 @@ const defaultDraft: ManagedLandingRoute = {
   active: true,
 };
 
+const defaultPackageDraft: ManagedPackageSku = {
+  id: "",
+  shortTitle: "",
+  market: "global",
+  category: "skin",
+  priceMinUsd: 0,
+  priceMaxUsd: 0,
+  durationDays: 1,
+  recoveryWindow: "",
+  coordinatorLanguages: ["en"],
+  bestFor: "",
+  includes: [],
+  complianceNote: "",
+  source: "admin",
+  active: true,
+};
+
 const staticRoutes: ManagedLandingRoute[] = SKIN_LANDING_PAGES.map(page => ({
   ...page,
   status: "published",
+  source: "code",
+  active: true,
+}));
+
+const staticPackageSkus: ManagedPackageSku[] = SKIN_PACKAGE_SKUS.map(pkg => ({
+  ...pkg,
+  category: "skin",
   source: "code",
   active: true,
 }));
@@ -93,6 +123,33 @@ function mergeRoutes(
   );
 }
 
+function mergePackageSkus(
+  remotePackages: ManagedPackageSku[],
+  localPackages: ManagedPackageSku[]
+) {
+  const merged = new Map<string, ManagedPackageSku>();
+  for (const pkg of staticPackageSkus) merged.set(pkg.id, pkg);
+  for (const pkg of [...remotePackages, ...localPackages]) {
+    if (pkg.active === false) merged.delete(pkg.id);
+    else merged.set(pkg.id, { ...pkg, active: true });
+  }
+  return Array.from(merged.values()).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function splitCommaList(value: string) {
+  return value
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function splitLineList(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
 function StatusBadge({ status }: { status: LandingRouteStatus }) {
   return (
     <span
@@ -111,8 +168,17 @@ function StatusBadge({ status }: { status: LandingRouteStatus }) {
 
 export default function AdminLandingRoutes() {
   const [draft, setDraft] = useState<ManagedLandingRoute>(defaultDraft);
+  const [packageDraft, setPackageDraft] =
+    useState<ManagedPackageSku>(defaultPackageDraft);
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
   const [localDrafts, setLocalDrafts] = useState<ManagedLandingRoute[]>([]);
   const [remoteRoutes, setRemoteRoutes] = useState<ManagedLandingRoute[]>([]);
+  const [localPackageSkus, setLocalPackageSkus] = useState<ManagedPackageSku[]>(
+    []
+  );
+  const [remotePackageSkus, setRemotePackageSkus] = useState<
+    ManagedPackageSku[]
+  >([]);
   const [apiStatus, setApiStatus] = useState<
     "loading" | "live" | "static" | "saving" | "error"
   >("loading");
@@ -134,6 +200,7 @@ export default function AdminLandingRoutes() {
       setApiStatus("loading");
       const snapshot = await fetchPartnerMvpSnapshot(token);
       setRemoteRoutes(snapshot.landingRoutes ?? []);
+      setRemotePackageSkus(snapshot.packageSkus ?? []);
       const persistence = snapshot.meta?.adminPersistenceHealth;
       setApiStatus("live");
       setApiMessage(
@@ -159,16 +226,28 @@ export default function AdminLandingRoutes() {
     () => mergeRoutes(remoteRoutes, localDrafts),
     [remoteRoutes, localDrafts]
   );
+  const packageCatalog = useMemo(
+    () => mergePackageSkus(remotePackageSkus, localPackageSkus),
+    [remotePackageSkus, localPackageSkus]
+  );
 
   const localeCount = new Set(routes.map(route => route.locale)).size;
   const marketCount = new Set(routes.map(route => route.market)).size;
   const draftCount = routes.filter(route => route.status === "draft").length;
+  const packageCount = packageCatalog.length;
 
   const updateDraft = <K extends keyof ManagedLandingRoute>(
     key: K,
     value: ManagedLandingRoute[K]
   ) => {
     setDraft(current => ({ ...current, [key]: value }));
+  };
+
+  const updatePackageDraft = <K extends keyof ManagedPackageSku>(
+    key: K,
+    value: ManagedPackageSku[K]
+  ) => {
+    setPackageDraft(current => ({ ...current, [key]: value }));
   };
 
   const updateLocale = (locale: LandingLocale) => {
@@ -186,6 +265,133 @@ export default function AdminLandingRoutes() {
         ? current.packageIds.filter(id => id !== packageId)
         : [...current.packageIds, packageId],
     }));
+  };
+
+  const editPackage = (pkg: ManagedPackageSku) => {
+    setEditingPackageId(pkg.id);
+    setPackageDraft({ ...pkg, active: true });
+  };
+
+  const resetPackageDraft = () => {
+    setEditingPackageId(null);
+    setPackageDraft(defaultPackageDraft);
+  };
+
+  const submitPackageDraft = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const packageId = packageDraft.id.trim().toLowerCase();
+    const shortTitle = packageDraft.shortTitle.trim();
+    if (!packageId || !shortTitle) {
+      setApiStatus("error");
+      setApiMessage("패키지 코드와 짧은 제목은 필수입니다.");
+      return;
+    }
+
+    const nextPackage: ManagedPackageSku = {
+      ...packageDraft,
+      id: packageId,
+      shortTitle,
+      priceMinUsd: Math.max(0, Math.round(packageDraft.priceMinUsd || 0)),
+      priceMaxUsd: Math.max(0, Math.round(packageDraft.priceMaxUsd || 0)),
+      durationDays: Math.max(1, Math.round(packageDraft.durationDays || 1)),
+      source: adminToken ? "admin" : "local",
+      active: true,
+    };
+
+    if (nextPackage.priceMaxUsd < nextPackage.priceMinUsd) {
+      setApiStatus("error");
+      setApiMessage("패키지 최대 금액은 최소 금액보다 작을 수 없습니다.");
+      return;
+    }
+
+    const replacePackageId = (oldId: string | null, newId: string) => {
+      if (!oldId || oldId === newId) return;
+      setDraft(current => ({
+        ...current,
+        packageIds: current.packageIds.map(id => (id === oldId ? newId : id)),
+      }));
+    };
+
+    if (!adminToken) {
+      setLocalPackageSkus(current => {
+        const withoutEdited = current.filter(pkg => pkg.id !== nextPackage.id);
+        const renamed =
+          editingPackageId && editingPackageId !== nextPackage.id
+            ? [
+                ...withoutEdited.filter(pkg => pkg.id !== editingPackageId),
+                {
+                  ...nextPackage,
+                  id: editingPackageId,
+                  active: false,
+                },
+              ]
+            : withoutEdited;
+        return [...renamed, nextPackage];
+      });
+      replacePackageId(editingPackageId, nextPackage.id);
+      resetPackageDraft();
+      setApiStatus("static");
+      setApiMessage("패키지 코드를 현재 브라우저 세션에만 반영했습니다.");
+      return;
+    }
+
+    try {
+      setApiStatus("saving");
+      let snapshot = await upsertPackageSkuMvp(adminToken, nextPackage);
+      if (editingPackageId && editingPackageId !== nextPackage.id) {
+        snapshot = await deletePackageSkuMvp(adminToken, editingPackageId);
+      }
+      setRemoteRoutes(snapshot.landingRoutes ?? []);
+      setRemotePackageSkus(snapshot.packageSkus ?? []);
+      replacePackageId(editingPackageId, nextPackage.id);
+      resetPackageDraft();
+      setApiStatus("live");
+      setApiMessage("패키지 코드를 저장했습니다.");
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage(
+        error instanceof Error
+          ? error.message
+          : "패키지 코드 저장에 실패했습니다."
+      );
+    }
+  };
+
+  const deletePackage = async (pkg: ManagedPackageSku) => {
+    if (!window.confirm(`${pkg.id} 패키지 코드를 삭제할까요?`)) return;
+
+    setDraft(current => ({
+      ...current,
+      packageIds: current.packageIds.filter(id => id !== pkg.id),
+    }));
+
+    if (!adminToken) {
+      setLocalPackageSkus(current => [
+        ...current.filter(item => item.id !== pkg.id),
+        { ...pkg, active: false, source: "local" },
+      ]);
+      if (editingPackageId === pkg.id) resetPackageDraft();
+      setApiStatus("static");
+      setApiMessage("패키지 코드를 현재 브라우저 세션에서 숨겼습니다.");
+      return;
+    }
+
+    try {
+      setApiStatus("saving");
+      const snapshot = await deletePackageSkuMvp(adminToken, pkg.id);
+      setRemoteRoutes(snapshot.landingRoutes ?? []);
+      setRemotePackageSkus(snapshot.packageSkus ?? []);
+      if (editingPackageId === pkg.id) resetPackageDraft();
+      setApiStatus("live");
+      setApiMessage("패키지 코드를 삭제했습니다.");
+    } catch (error) {
+      setApiStatus("error");
+      setApiMessage(
+        error instanceof Error
+          ? error.message
+          : "패키지 코드 삭제에 실패했습니다."
+      );
+    }
   };
 
   const submitDraft = async (event: FormEvent<HTMLFormElement>) => {
@@ -319,7 +525,7 @@ export default function AdminLandingRoutes() {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-5">
+          <div className="mt-8 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
             {[
               ["전체 경로", routes.length],
               [
@@ -330,6 +536,7 @@ export default function AdminLandingRoutes() {
                 "시장 세그먼트",
                 `${marketCount} / ${LANDING_MARKET_OPTIONS.length}`,
               ],
+              ["패키지 코드", packageCount],
               ["DB 초안", draftCount],
               ["DB 저장", remoteRoutes.length],
             ].map(([label, value]) => (
@@ -351,7 +558,7 @@ export default function AdminLandingRoutes() {
 
       <section className="section-padding bg-white">
         <div className="container-wide grid gap-8">
-          <div className="order-2">
+          <div className="order-3">
             <div className="mb-5 flex items-center gap-2">
               <ListChecks className="size-5 text-teal-700" />
               <h2 className="font-serif text-3xl text-ink-950">경로 목록</h2>
@@ -536,7 +743,7 @@ export default function AdminLandingRoutes() {
                   패키지 코드
                 </label>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {SKIN_PACKAGE_SKUS.map(pkg => (
+                  {packageCatalog.map(pkg => (
                     <label
                       key={pkg.id}
                       className="flex gap-2 rounded-md border border-ink-200 bg-white p-3 text-sm text-ink-700"
@@ -575,6 +782,270 @@ export default function AdminLandingRoutes() {
               </p>
             </form>
           </aside>
+
+          <section className="order-2 rounded-lg border border-ink-200 bg-white p-5 md:p-6">
+            <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+              <div className="flex items-center gap-2">
+                <PackagePlus className="size-5 text-teal-700" />
+                <h2 className="font-serif text-3xl text-ink-950">
+                  패키지 코드 관리
+                </h2>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-ink-300 text-ink-800 md:w-fit"
+                onClick={resetPackageDraft}
+              >
+                신규 코드
+              </Button>
+            </div>
+
+            <form
+              onSubmit={submitPackageDraft}
+              className="grid gap-4 lg:grid-cols-4"
+            >
+              <Field label="코드">
+                <Input
+                  value={packageDraft.id}
+                  onChange={event =>
+                    updatePackageDraft("id", event.target.value.toLowerCase())
+                  }
+                  placeholder="global-skin-01"
+                />
+              </Field>
+              <Field label="짧은 제목">
+                <Input
+                  value={packageDraft.shortTitle}
+                  onChange={event =>
+                    updatePackageDraft("shortTitle", event.target.value)
+                  }
+                  placeholder="Laser starter"
+                />
+              </Field>
+              <div className="grid gap-1.5">
+                <label className="text-sm font-semibold text-ink-800">
+                  시장
+                </label>
+                <select
+                  value={packageDraft.market}
+                  onChange={event =>
+                    updatePackageDraft(
+                      "market",
+                      event.target.value as ManagedPackageSku["market"]
+                    )
+                  }
+                  className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                >
+                  <option value="both">공통 (both)</option>
+                  {LANDING_MARKET_OPTIONS.map(option => (
+                    <option key={option.code} value={option.code}>
+                      {option.labelKo} ({option.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Field label="카테고리">
+                <Input
+                  value={packageDraft.category}
+                  onChange={event =>
+                    updatePackageDraft("category", event.target.value)
+                  }
+                  placeholder="skin"
+                />
+              </Field>
+              <Field label="최소 금액 USD">
+                <Input
+                  type="number"
+                  min={0}
+                  value={packageDraft.priceMinUsd}
+                  onChange={event =>
+                    updatePackageDraft(
+                      "priceMinUsd",
+                      Number(event.target.value)
+                    )
+                  }
+                />
+              </Field>
+              <Field label="최대 금액 USD">
+                <Input
+                  type="number"
+                  min={0}
+                  value={packageDraft.priceMaxUsd}
+                  onChange={event =>
+                    updatePackageDraft(
+                      "priceMaxUsd",
+                      Number(event.target.value)
+                    )
+                  }
+                />
+              </Field>
+              <Field label="소요 일수">
+                <Input
+                  type="number"
+                  min={1}
+                  value={packageDraft.durationDays}
+                  onChange={event =>
+                    updatePackageDraft(
+                      "durationDays",
+                      Number(event.target.value)
+                    )
+                  }
+                />
+              </Field>
+              <Field label="회복 기간">
+                <Input
+                  value={packageDraft.recoveryWindow}
+                  onChange={event =>
+                    updatePackageDraft("recoveryWindow", event.target.value)
+                  }
+                  placeholder="0-2 days"
+                />
+              </Field>
+              <Field label="지원 언어" className="lg:col-span-2">
+                <Input
+                  value={packageDraft.coordinatorLanguages.join(", ")}
+                  onChange={event =>
+                    updatePackageDraft(
+                      "coordinatorLanguages",
+                      splitCommaList(event.target.value)
+                    )
+                  }
+                  placeholder="en, ko, ar"
+                />
+              </Field>
+              <Field label="추천 대상" className="lg:col-span-2">
+                <Input
+                  value={packageDraft.bestFor}
+                  onChange={event =>
+                    updatePackageDraft("bestFor", event.target.value)
+                  }
+                  placeholder="Short Seoul dermatology trips"
+                />
+              </Field>
+              <Field label="포함 항목" className="lg:col-span-2">
+                <textarea
+                  value={packageDraft.includes.join("\n")}
+                  onChange={event =>
+                    updatePackageDraft(
+                      "includes",
+                      splitLineList(event.target.value)
+                    )
+                  }
+                  rows={4}
+                  className="w-full resize-none rounded-md border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                  placeholder={
+                    "Skin analysis\nProvider quote\nAftercare checklist"
+                  }
+                />
+              </Field>
+              <Field label="컴플라이언스 메모" className="lg:col-span-2">
+                <textarea
+                  value={packageDraft.complianceNote}
+                  onChange={event =>
+                    updatePackageDraft("complianceNote", event.target.value)
+                  }
+                  rows={4}
+                  className="w-full resize-none rounded-md border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                  placeholder="Final treatment plan and price require provider confirmation."
+                />
+              </Field>
+              <div className="flex flex-wrap gap-3 lg:col-span-4">
+                <Button
+                  type="submit"
+                  className="h-11 bg-teal-700 text-white hover:bg-teal-800"
+                  disabled={apiStatus === "saving"}
+                >
+                  <Save className="size-4" />
+                  {editingPackageId ? "코드 수정 저장" : "코드 추가"}
+                </Button>
+                {editingPackageId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 border-ink-300 text-ink-800"
+                    onClick={resetPackageDraft}
+                  >
+                    취소
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+
+            <div className="mt-6 overflow-x-auto rounded-lg border border-ink-200">
+              <table className="w-full min-w-[980px] text-left text-sm">
+                <thead className="bg-ink-50 text-xs uppercase text-ink-500">
+                  <tr>
+                    <th className="px-4 py-3">코드</th>
+                    <th className="px-4 py-3">시장</th>
+                    <th className="px-4 py-3">가격</th>
+                    <th className="px-4 py-3">기간</th>
+                    <th className="px-4 py-3">포함 항목</th>
+                    <th className="px-4 py-3">출처</th>
+                    <th className="px-4 py-3">관리</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ink-100 bg-white">
+                  {packageCatalog.map(pkg => (
+                    <tr key={pkg.id}>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-ink-950">
+                          {pkg.id}
+                        </div>
+                        <div className="mt-1 line-clamp-1 text-xs text-ink-500">
+                          {pkg.shortTitle}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800">
+                          {pkg.market === "both"
+                            ? "공통"
+                            : marketLabel(pkg.market)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-ink-600">
+                        ${pkg.priceMinUsd.toLocaleString()} - $
+                        {pkg.priceMaxUsd.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-ink-600">
+                        {pkg.durationDays}일 / {pkg.recoveryWindow || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-ink-600">
+                        {pkg.includes.slice(0, 2).join(", ") || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-ink-500">
+                        {pkg.source === "code" ? "승인 기본값" : "DB/admin"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-9 border-ink-300 text-ink-800"
+                            onClick={() => editPackage(pkg)}
+                          >
+                            <Pencil className="size-4" />
+                            수정
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-9 border-rose-200 text-rose-700 hover:bg-rose-50"
+                            onClick={() => void deletePackage(pkg)}
+                          >
+                            <Trash2 className="size-4" />
+                            삭제
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </section>
     </Layout>
