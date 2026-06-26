@@ -17,7 +17,7 @@ GCL stands for global-connected-lab.
 4. Set Vercel environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_OPS_AUTH_SITE_URL` (`https://gcl-project.vercel.app` in production)
+   - `VITE_OPS_AUTH_SITE_URL` (`https://gclab.kr` in production)
    - `SUPABASE_SERVICE_ROLE_KEY`
 
 The app will store demo inquiries in browser local storage until those variables are configured.
@@ -111,8 +111,10 @@ Supabase Auth can send a magic link with the default email template. If you want
 
 For production email sign-in, configure Supabase Auth URL settings:
 
-- Site URL: `https://gcl-project.vercel.app`
+- Site URL: `https://gclab.kr`
 - Additional Redirect URLs:
+  - `https://gclab.kr/**`
+  - `https://www.gclab.kr/**`
   - `https://gcl-project.vercel.app/**`
   - `https://gcl-ganji-sajus-projects.vercel.app/**`
   - `http://localhost:5173/**` for local Vite testing
