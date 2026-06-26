@@ -1293,14 +1293,25 @@ async function getSnapshot(config) {
     bookings: bookingsRaw.map(normalizeBooking),
     activities: activities.map(normalizeActivity),
   });
-  const [leadStorageHealth, adminPersistenceHealth, adminOperationsData] =
-    await Promise.all([
-      getLeadStorageHealth(config),
-      config.role === "admin"
-        ? getAdminPersistenceHealth(config)
-        : Promise.resolve(null),
-      getAdminOperationsData(config),
-    ]);
+  const [
+    leadStorageHealth,
+    adminPersistenceHealth,
+    adminOperationsData,
+    partnerServiceRequestTotal,
+    quoteRequestTotal,
+  ] = await Promise.all([
+    getLeadStorageHealth(config),
+    config.role === "admin"
+      ? getAdminPersistenceHealth(config)
+      : Promise.resolve(null),
+    getAdminOperationsData(config),
+    config.role === "admin"
+      ? supabaseCount(config, "partner_service_requests")
+      : Promise.resolve(requests.length),
+    config.role === "admin"
+      ? supabaseCount(config, "quote_requests")
+      : Promise.resolve(scoped.providerQuoteRequests.length),
+  ]);
 
   return {
     ...scoped,
@@ -1330,8 +1341,11 @@ async function getSnapshot(config) {
       paymentMode: paymentMode(),
       leadStorageHealth,
       adminPersistenceHealth,
-      partnerRequestCount: scoped.cases.length,
-      quoteRequestCount: scoped.providerQuoteRequests.length,
+      partnerServiceRequestTableReady: partnerServiceRequestTotal !== null,
+      quoteRequestTableReady: quoteRequestTotal !== null,
+      partnerRequestCount: partnerServiceRequestTotal ?? scoped.cases.length,
+      quoteRequestCount:
+        quoteRequestTotal ?? scoped.providerQuoteRequests.length,
       quoteResponseCount: scoped.quotes.length,
       generatedAt: new Date().toISOString(),
       hasDbPartners: scoped.partners.length > 0,

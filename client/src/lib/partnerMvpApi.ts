@@ -56,6 +56,8 @@ export interface PartnerMvpSnapshot {
     notificationOutboxConfigured?: boolean;
     stripeConfigured?: boolean;
     paymentMode?: "test" | "live" | "not_configured";
+    partnerServiceRequestTableReady?: boolean;
+    quoteRequestTableReady?: boolean;
     partnerRequestCount: number;
     quoteRequestCount?: number;
     quoteResponseCount?: number;
