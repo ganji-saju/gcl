@@ -1,5 +1,14 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, CheckCircle2, MapPin, Plus, Scale, Star, X } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  MapPin,
+  Plus,
+  Scale,
+  Star,
+  X,
+} from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useCompare } from "@/contexts/CompareContext";
@@ -11,32 +20,64 @@ import {
   getLocalizedTreatmentName,
   LANGUAGE_LABELS,
   REGION_LABELS,
-  SAMPLE_HOSPITALS,
   SAMPLE_HOSPITAL_TREATMENTS,
   SAMPLE_TREATMENTS,
   SPECIALTY_LABELS,
   SPECIALTY_TRANSLATION_KEYS,
+  type Hospital,
 } from "@/lib/sampleData";
+import {
+  fetchPublishedHospitals,
+  mergePublishedHospitals,
+} from "@/lib/publicHospitals";
 import { cn } from "@/lib/utils";
 
 export default function Compare() {
   const { t, lang } = useI18n();
   const { items, removeItem, clearAll } = useCompare();
+  const [publishedHospitals, setPublishedHospitals] = useState<
+    Hospital[] | null
+  >(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchPublishedHospitals()
+      .then(hospitals => {
+        if (mounted) setPublishedHospitals(hospitals);
+      })
+      .catch(() => {
+        if (mounted) setPublishedHospitals([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const hospitalSource = useMemo(
+    () => mergePublishedHospitals(publishedHospitals),
+    [publishedHospitals]
+  );
 
   const hospitals = items
-    .map((item) => SAMPLE_HOSPITALS.find((hospital) => hospital.id === item.hospitalId))
-    .filter(Boolean) as typeof SAMPLE_HOSPITALS;
+    .map(item =>
+      hospitalSource.find(hospital => hospital.id === item.hospitalId)
+    )
+    .filter(Boolean) as Hospital[];
 
   const treatmentIds = new Set<number>();
-  hospitals.forEach((hospital) => {
-    SAMPLE_HOSPITAL_TREATMENTS.filter((item) => item.hospitalId === hospital.id).forEach((item) =>
-      treatmentIds.add(item.treatmentId),
-    );
+  hospitals.forEach(hospital => {
+    SAMPLE_HOSPITAL_TREATMENTS.filter(
+      item => item.hospitalId === hospital.id
+    ).forEach(item => treatmentIds.add(item.treatmentId));
   });
-  const treatments = SAMPLE_TREATMENTS.filter((treatment) => treatmentIds.has(treatment.id));
+  const treatments = SAMPLE_TREATMENTS.filter(treatment =>
+    treatmentIds.has(treatment.id)
+  );
 
-  const getOffering = (hospitalId: number, treatmentId: number) => {
-    return SAMPLE_HOSPITAL_TREATMENTS.find((item) => item.hospitalId === hospitalId && item.treatmentId === treatmentId);
+  const getOffering = (hospitalId: number | string, treatmentId: number) => {
+    return SAMPLE_HOSPITAL_TREATMENTS.find(
+      item => item.hospitalId === hospitalId && item.treatmentId === treatmentId
+    );
   };
 
   return (
@@ -44,7 +85,9 @@ export default function Compare() {
       <section className="border-b border-ink-200 bg-ink-950 py-14 text-white">
         <div className="container-wide">
           <h1 className="font-serif text-5xl">{t("compare.title")}</h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-ink-300">{t("compare.subtitle")}</p>
+          <p className="mt-4 max-w-2xl text-lg leading-8 text-ink-300">
+            {t("compare.subtitle")}
+          </p>
         </div>
       </section>
 
@@ -55,7 +98,9 @@ export default function Compare() {
               <div className="mx-auto mb-5 grid size-16 place-items-center rounded-md bg-teal-50 text-teal-700">
                 <Scale className="size-8" />
               </div>
-              <h2 className="font-serif text-3xl text-ink-950">{t("compare.empty")}</h2>
+              <h2 className="font-serif text-3xl text-ink-950">
+                {t("compare.empty")}
+              </h2>
               <p className="mt-3 text-ink-500">{t("compare.emptyCopy")}</p>
               <Link href="/hospitals">
                 <Button className="mt-6 bg-teal-700 text-white hover:bg-teal-800">
@@ -68,10 +113,17 @@ export default function Compare() {
             <>
               <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <p className="text-sm text-ink-500">
-                  {t("compare.comparing")} <span className="font-semibold text-ink-950">{hospitals.length}</span>{" "}
+                  {t("compare.comparing")}{" "}
+                  <span className="font-semibold text-ink-950">
+                    {hospitals.length}
+                  </span>{" "}
                   {t("nav.hospitals")}
                 </p>
-                <button type="button" onClick={clearAll} className="flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-950">
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-950"
+                >
                   <X className="size-4" />
                   {t("compare.clearAll")}
                 </button>
@@ -81,9 +133,14 @@ export default function Compare() {
                 <table className="w-full min-w-[780px] text-sm">
                   <thead>
                     <tr className="bg-ink-950 text-white">
-                      <th className="w-48 p-4 text-left font-semibold text-ink-300">{t("compare.criteria")}</th>
-                      {hospitals.map((hospital) => (
-                        <th key={hospital.id} className="min-w-56 p-4 text-left align-top">
+                      <th className="w-48 p-4 text-left font-semibold text-ink-300">
+                        {t("compare.criteria")}
+                      </th>
+                      {hospitals.map(hospital => (
+                        <th
+                          key={hospital.id}
+                          className="min-w-56 p-4 text-left align-top"
+                        >
                           <div className="relative">
                             <button
                               type="button"
@@ -93,8 +150,14 @@ export default function Compare() {
                             >
                               <X className="size-3" />
                             </button>
-                            <img src={hospital.coverImage} alt={hospital.nameEn} className="mb-3 h-24 w-full rounded-md object-cover" />
-                            <div className="font-serif text-xl leading-tight">{getLocalizedHospitalName(hospital, lang)}</div>
+                            <img
+                              src={hospital.coverImage}
+                              alt={hospital.nameEn}
+                              className="mb-3 h-24 w-full rounded-md object-cover"
+                            />
+                            <div className="font-serif text-xl leading-tight">
+                              {getLocalizedHospitalName(hospital, lang)}
+                            </div>
                             <div className="mt-1 flex items-center gap-1 text-xs text-coral-200">
                               <Star className="size-3 fill-coral-300 text-coral-300" />
                               {hospital.rating}
@@ -116,10 +179,17 @@ export default function Compare() {
                   </thead>
                   <tbody>
                     <tr className="border-t border-ink-200 bg-ink-50">
-                      <td className="p-4 font-semibold text-ink-700">{t("compare.specialty")}</td>
-                      {hospitals.map((hospital) => (
+                      <td className="p-4 font-semibold text-ink-700">
+                        {t("compare.specialty")}
+                      </td>
+                      {hospitals.map(hospital => (
                         <td key={hospital.id} className="p-4">
-                          <span className={cn("rounded border px-2 py-1 text-xs font-bold", SPECIALTY_LABELS[hospital.specialty].color)}>
+                          <span
+                            className={cn(
+                              "rounded border px-2 py-1 text-xs font-bold",
+                              SPECIALTY_LABELS[hospital.specialty].color
+                            )}
+                          >
                             {t(SPECIALTY_TRANSLATION_KEYS[hospital.specialty])}
                           </span>
                         </td>
@@ -127,8 +197,10 @@ export default function Compare() {
                       {hospitals.length < 3 && <td />}
                     </tr>
                     <tr className="border-t border-ink-200">
-                      <td className="p-4 font-semibold text-ink-700">{t("hospitals.region")}</td>
-                      {hospitals.map((hospital) => (
+                      <td className="p-4 font-semibold text-ink-700">
+                        {t("hospitals.region")}
+                      </td>
+                      {hospitals.map(hospital => (
                         <td key={hospital.id} className="p-4 text-ink-700">
                           <span className="flex items-center gap-1.5">
                             <MapPin className="size-4 text-teal-700" />
@@ -139,12 +211,17 @@ export default function Compare() {
                       {hospitals.length < 3 && <td />}
                     </tr>
                     <tr className="border-t border-ink-200 bg-ink-50">
-                      <td className="p-4 font-semibold text-ink-700">{t("compare.languages")}</td>
-                      {hospitals.map((hospital) => (
+                      <td className="p-4 font-semibold text-ink-700">
+                        {t("compare.languages")}
+                      </td>
+                      {hospitals.map(hospital => (
                         <td key={hospital.id} className="p-4">
                           <div className="flex flex-wrap gap-1">
-                            {hospital.languages.map((language) => (
-                              <span key={language} className="rounded bg-white px-2 py-1 text-xs font-semibold text-ink-700">
+                            {hospital.languages.map(language => (
+                              <span
+                                key={language}
+                                className="rounded bg-white px-2 py-1 text-xs font-semibold text-ink-700"
+                              >
                                 {LANGUAGE_LABELS[language].label}
                               </span>
                             ))}
@@ -154,12 +231,17 @@ export default function Compare() {
                       {hospitals.length < 3 && <td />}
                     </tr>
                     <tr className="border-t border-ink-200">
-                      <td className="p-4 font-semibold text-ink-700">{t("compare.certifications")}</td>
-                      {hospitals.map((hospital) => (
+                      <td className="p-4 font-semibold text-ink-700">
+                        {t("compare.certifications")}
+                      </td>
+                      {hospitals.map(hospital => (
                         <td key={hospital.id} className="p-4">
                           <div className="grid gap-1.5">
-                            {hospital.certifications.slice(0, 3).map((item) => (
-                              <span key={item} className="flex items-center gap-1 text-xs text-ink-600">
+                            {hospital.certifications.slice(0, 3).map(item => (
+                              <span
+                                key={item}
+                                className="flex items-center gap-1 text-xs text-ink-600"
+                              >
                                 <CheckCircle2 className="size-3 text-teal-700" />
                                 {item}
                               </span>
@@ -171,27 +253,46 @@ export default function Compare() {
                     </tr>
 
                     {treatments.map((treatment, index) => (
-                      <tr key={treatment.id} className={cn("border-t border-ink-200", index % 2 === 0 && "bg-ink-50")}>
+                      <tr
+                        key={treatment.id}
+                        className={cn(
+                          "border-t border-ink-200",
+                          index % 2 === 0 && "bg-ink-50"
+                        )}
+                      >
                         <td className="p-4">
-                          <div className="font-semibold text-ink-800">{getLocalizedTreatmentName(treatment, lang)}</div>
+                          <div className="font-semibold text-ink-800">
+                            {getLocalizedTreatmentName(treatment, lang)}
+                          </div>
                           <div className="mt-1 text-xs text-ink-500">
                             {treatment.recoveryDays === 0
                               ? t("treatments.noDowntime")
                               : `${treatment.recoveryDays}${t("treatments.days")} ${t("treatments.recovery")}`}
                           </div>
                         </td>
-                        {hospitals.map((hospital) => {
-                          const offering = getOffering(hospital.id, treatment.id);
+                        {hospitals.map(hospital => {
+                          const offering = getOffering(
+                            hospital.id,
+                            treatment.id
+                          );
                           return (
                             <td key={hospital.id} className="p-4">
                               {offering ? (
                                 <div>
-                                  <div className="font-semibold text-ink-950">{formatKRW(offering.priceKrw)}</div>
-                                  <div className="text-xs text-ink-500">{formatUSD(offering.priceKrw)}</div>
-                                  <div className="mt-1 text-xs text-ink-500">{offering.notes}</div>
+                                  <div className="font-semibold text-ink-950">
+                                    {formatKRW(offering.priceKrw)}
+                                  </div>
+                                  <div className="text-xs text-ink-500">
+                                    {formatUSD(offering.priceKrw)}
+                                  </div>
+                                  <div className="mt-1 text-xs text-ink-500">
+                                    {offering.notes}
+                                  </div>
                                 </div>
                               ) : (
-                                <span className="text-ink-300">{t("compare.notListed")}</span>
+                                <span className="text-ink-300">
+                                  {t("compare.notListed")}
+                                </span>
                               )}
                             </td>
                           );
@@ -201,11 +302,18 @@ export default function Compare() {
                     ))}
 
                     <tr className="border-t border-ink-200 bg-teal-50">
-                      <td className="p-4 font-semibold text-ink-700">{t("compare.nextAction")}</td>
-                      {hospitals.map((hospital) => (
+                      <td className="p-4 font-semibold text-ink-700">
+                        {t("compare.nextAction")}
+                      </td>
+                      {hospitals.map(hospital => (
                         <td key={hospital.id} className="p-4">
-                          <Link href={`/consultation?hospital=${hospital.slug}`}>
-                            <Button size="sm" className="w-full bg-teal-700 text-white hover:bg-teal-800">
+                          <Link
+                            href={`/consultation?hospital=${hospital.slug}`}
+                          >
+                            <Button
+                              size="sm"
+                              className="w-full bg-teal-700 text-white hover:bg-teal-800"
+                            >
                               {t("compare.requestQuote")}
                             </Button>
                           </Link>

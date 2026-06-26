@@ -1,9 +1,28 @@
-export type Specialty = "plastic_surgery" | "dermatology" | "dental" | "hair" | "wellness";
-export type Region = "gangnam" | "seongsu" | "hongdae" | "sinchon" | "bundang" | "other";
-export type LanguageCode = "en" | "ko" | "zh" | "ja" | "ar" | "th" | "vi" | "ru";
+export type Specialty =
+  | "plastic_surgery"
+  | "dermatology"
+  | "dental"
+  | "hair"
+  | "wellness";
+export type Region =
+  | "gangnam"
+  | "seongsu"
+  | "hongdae"
+  | "sinchon"
+  | "bundang"
+  | "other";
+export type LanguageCode =
+  | "en"
+  | "ko"
+  | "zh"
+  | "ja"
+  | "ar"
+  | "th"
+  | "vi"
+  | "ru";
 
 export interface Hospital {
-  id: number;
+  id: number | string;
   slug: string;
   nameEn: string;
   nameKo: string;
@@ -67,7 +86,7 @@ export interface Treatment {
 
 export interface Doctor {
   id: number;
-  hospitalId: number;
+  hospitalId: number | string;
   nameEn: string;
   nameKo: string;
   titleEn: string;
@@ -79,14 +98,17 @@ export interface Doctor {
 
 export interface HospitalTreatment {
   id: number;
-  hospitalId: number;
+  hospitalId: number | string;
   treatmentId: number;
   priceKrw: number;
   notes: string;
   available: boolean;
 }
 
-export const SPECIALTY_LABELS: Record<Specialty, { en: string; short: string; color: string }> = {
+export const SPECIALTY_LABELS: Record<
+  Specialty,
+  { en: string; short: string; color: string }
+> = {
   plastic_surgery: {
     en: "Plastic Surgery",
     short: "Surgery",
@@ -123,7 +145,10 @@ export const REGION_LABELS: Record<Region, string> = {
   other: "Other Seoul",
 };
 
-export const LANGUAGE_LABELS: Record<LanguageCode, { label: string; flag: string }> = {
+export const LANGUAGE_LABELS: Record<
+  LanguageCode,
+  { label: string; flag: string }
+> = {
   en: { label: "English", flag: "EN" },
   ko: { label: "Korean", flag: "KO" },
   zh: { label: "Chinese", flag: "ZH" },
@@ -184,12 +209,25 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     coverImage: clinicExterior,
     images: [clinicExterior, doctorConsult, checkupCare],
     languages: ["en", "ko", "zh", "ja", "ar", "th"],
-    certifications: ["KAHF foreign patient care", "Board-certified surgeons", "Dedicated interpreter desk"],
+    certifications: [
+      "KAHF foreign patient care",
+      "Board-certified surgeons",
+      "Dedicated interpreter desk",
+    ],
     featured: true,
     latitude: 37.5244,
     longitude: 127.0415,
-    specialties: ["Rhinoplasty", "Double eyelid", "Facial contouring", "Revision surgery"],
-    highlights: ["3D imaging review", "Airport pickup option", "Post-op hotel nurse visit"],
+    specialties: [
+      "Rhinoplasty",
+      "Double eyelid",
+      "Facial contouring",
+      "Revision surgery",
+    ],
+    highlights: [
+      "3D imaging review",
+      "Airport pickup option",
+      "Post-op hotel nurse visit",
+    ],
     priceTier: "$$$",
     registrationStatus: "verified",
     registrationLabel: "Foreign-patient registration checked",
@@ -227,12 +265,25 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     coverImage: skinCare,
     images: [skinCare, checkupCare],
     languages: ["en", "ko", "zh", "ja", "vi"],
-    certifications: ["Korean Dermatological Association", "Laser safety protocol", "Medical-grade skincare"],
+    certifications: [
+      "Korean Dermatological Association",
+      "Laser safety protocol",
+      "Medical-grade skincare",
+    ],
     featured: true,
     latitude: 37.5065,
     longitude: 127.0495,
-    specialties: ["Laser toning", "Skin booster", "Acne scar", "Botox and filler"],
-    highlights: ["Same-day consult", "Low downtime plans", "Aftercare kit included"],
+    specialties: [
+      "Laser toning",
+      "Skin booster",
+      "Acne scar",
+      "Botox and filler",
+    ],
+    highlights: [
+      "Same-day consult",
+      "Low downtime plans",
+      "Aftercare kit included",
+    ],
     priceTier: "$$",
     registrationStatus: "verified",
     registrationLabel: "Foreign-patient registration checked",
@@ -270,12 +321,25 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     coverImage: dentalCare,
     images: [dentalCare, doctorConsult],
     languages: ["en", "ko", "zh", "ja"],
-    certifications: ["Korean Dental Association", "Digital smile design", "Implant planning lab"],
+    certifications: [
+      "Korean Dental Association",
+      "Digital smile design",
+      "Implant planning lab",
+    ],
     featured: true,
     latitude: 37.5596,
     longitude: 126.9368,
-    specialties: ["Porcelain veneers", "Dental implants", "Whitening", "Invisalign"],
-    highlights: ["Digital preview", "Multi-visit scheduling", "Warranty documentation"],
+    specialties: [
+      "Porcelain veneers",
+      "Dental implants",
+      "Whitening",
+      "Invisalign",
+    ],
+    highlights: [
+      "Digital preview",
+      "Multi-visit scheduling",
+      "Warranty documentation",
+    ],
     priceTier: "$$",
     registrationStatus: "verified",
     registrationLabel: "Foreign-patient registration checked",
@@ -313,12 +377,25 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     coverImage: hairCare,
     images: [hairCare, clinicExterior],
     languages: ["en", "ko", "ar", "zh", "ru"],
-    certifications: ["Hair restoration society member", "Microscope graft audit", "Remote follow-up"],
+    certifications: [
+      "Hair restoration society member",
+      "Microscope graft audit",
+      "Remote follow-up",
+    ],
     featured: false,
     latitude: 37.5446,
     longitude: 127.0557,
-    specialties: ["FUE transplant", "DHI method", "Scalp treatment", "PRP hair program"],
-    highlights: ["Graft estimate review", "Photo follow-up", "Medication guidance"],
+    specialties: [
+      "FUE transplant",
+      "DHI method",
+      "Scalp treatment",
+      "PRP hair program",
+    ],
+    highlights: [
+      "Graft estimate review",
+      "Photo follow-up",
+      "Medication guidance",
+    ],
     priceTier: "$$",
     registrationStatus: "pending",
     registrationLabel: "Registration evidence under review",
@@ -356,12 +433,25 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     coverImage: checkupCare,
     images: [checkupCare, clinicExterior],
     languages: ["en", "ko", "zh", "ja", "ar"],
-    certifications: ["International checkup desk", "Digital report package", "Dietary translation"],
+    certifications: [
+      "International checkup desk",
+      "Digital report package",
+      "Dietary translation",
+    ],
     featured: false,
     latitude: 37.5037,
     longitude: 127.0447,
-    specialties: ["Executive checkup", "Digestive endoscopy", "Cancer screening", "Imaging"],
-    highlights: ["One-day itinerary", "English summary", "Hotel report delivery"],
+    specialties: [
+      "Executive checkup",
+      "Digestive endoscopy",
+      "Cancer screening",
+      "Imaging",
+    ],
+    highlights: [
+      "One-day itinerary",
+      "English summary",
+      "Hotel report delivery",
+    ],
     priceTier: "$$$",
     registrationStatus: "verified",
     registrationLabel: "Foreign-patient registration checked",
@@ -399,12 +489,25 @@ export const SAMPLE_HOSPITALS: Hospital[] = [
     coverImage: doctorConsult,
     images: [doctorConsult, skinCare],
     languages: ["en", "ko", "zh", "ja", "th", "vi"],
-    certifications: ["Recovery nurse network", "Post-op transport option", "Partner hotel visits"],
+    certifications: [
+      "Recovery nurse network",
+      "Post-op transport option",
+      "Partner hotel visits",
+    ],
     featured: false,
     latitude: 37.5551,
     longitude: 126.9226,
-    specialties: ["Swelling care", "Lymphatic therapy", "IV nutrition", "Scar management"],
-    highlights: ["Post-op route planning", "Hotel visit option", "Daily recovery log"],
+    specialties: [
+      "Swelling care",
+      "Lymphatic therapy",
+      "IV nutrition",
+      "Scar management",
+    ],
+    highlights: [
+      "Post-op route planning",
+      "Hotel visit option",
+      "Daily recovery log",
+    ],
     priceTier: "$",
     registrationStatus: "verified",
     registrationLabel: "Foreign-patient registration checked",
@@ -441,7 +544,8 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     currency: "KRW",
     recoveryDays: 14,
     durationMinutes: 150,
-    precautionsEn: "Avoid heavy exercise for 3 weeks. Do not wear glasses for 6 weeks. Final swelling can take several months.",
+    precautionsEn:
+      "Avoid heavy exercise for 3 weeks. Do not wear glasses for 6 weeks. Final swelling can take several months.",
     coverImage: doctorConsult,
     popular: true,
   },
@@ -469,7 +573,8 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     currency: "KRW",
     recoveryDays: 7,
     durationMinutes: 70,
-    precautionsEn: "Avoid rubbing eyes for 2 weeks. Stitches are usually removed after 5 to 7 days.",
+    precautionsEn:
+      "Avoid rubbing eyes for 2 weeks. Stitches are usually removed after 5 to 7 days.",
     coverImage: clinicExterior,
     popular: true,
   },
@@ -497,7 +602,8 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     currency: "KRW",
     recoveryDays: 0,
     durationMinutes: 35,
-    precautionsEn: "Use SPF 50+ daily. Avoid direct sun exposure for 1 week after each session.",
+    precautionsEn:
+      "Use SPF 50+ daily. Avoid direct sun exposure for 1 week after each session.",
     coverImage: skinCare,
     popular: true,
   },
@@ -525,7 +631,8 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     currency: "KRW",
     recoveryDays: 1,
     durationMinutes: 40,
-    precautionsEn: "Small bumps or redness can last 1 to 3 days. Avoid sauna and alcohol for 48 hours.",
+    precautionsEn:
+      "Small bumps or redness can last 1 to 3 days. Avoid sauna and alcohol for 48 hours.",
     coverImage: skinCare,
     popular: true,
   },
@@ -553,7 +660,8 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     currency: "KRW",
     recoveryDays: 0,
     durationMinutes: 90,
-    precautionsEn: "Usually requires 2 visits. Avoid hard biting until final bonding is complete.",
+    precautionsEn:
+      "Usually requires 2 visits. Avoid hard biting until final bonding is complete.",
     coverImage: dentalCare,
     popular: true,
   },
@@ -581,7 +689,8 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     currency: "KRW",
     recoveryDays: 10,
     durationMinutes: 360,
-    precautionsEn: "Avoid hats and heavy sweating during the first week. Follow wash instructions carefully.",
+    precautionsEn:
+      "Avoid hats and heavy sweating during the first week. Follow wash instructions carefully.",
     coverImage: hairCare,
     popular: false,
   },
@@ -609,7 +718,8 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     currency: "KRW",
     recoveryDays: 0,
     durationMinutes: 240,
-    precautionsEn: "Fasting may be required. Bring medication history and previous test results if available.",
+    precautionsEn:
+      "Fasting may be required. Bring medication history and previous test results if available.",
     coverImage: checkupCare,
     popular: false,
   },
@@ -637,7 +747,8 @@ export const SAMPLE_TREATMENTS: Treatment[] = [
     currency: "KRW",
     recoveryDays: 0,
     durationMinutes: 60,
-    precautionsEn: "Follow the operating doctor's restrictions. Recovery programs do not replace medical emergency care.",
+    precautionsEn:
+      "Follow the operating doctor's restrictions. Recovery programs do not replace medical emergency care.",
     coverImage: doctorConsult,
     popular: false,
   },
@@ -651,7 +762,8 @@ export const SAMPLE_DOCTORS: Doctor[] = [
     nameKo: "서민 원장",
     titleEn: "Facial Plastic Surgeon",
     specialtyEn: "Rhinoplasty and facial contouring",
-    bioEn: "Board-certified surgeon focused on balanced facial planning for international cases.",
+    bioEn:
+      "Board-certified surgeon focused on balanced facial planning for international cases.",
     yearsExperience: 18,
   },
   {
@@ -681,23 +793,101 @@ export const SAMPLE_DOCTORS: Doctor[] = [
     nameKo: "김준 원장",
     titleEn: "Hair Restoration Surgeon",
     specialtyEn: "FUE and DHI transplant",
-    bioEn: "Creates graft plans using donor-density review and long-term follow-up.",
+    bioEn:
+      "Creates graft plans using donor-density review and long-term follow-up.",
     yearsExperience: 12,
   },
 ];
 
 export const SAMPLE_HOSPITAL_TREATMENTS: HospitalTreatment[] = [
-  { id: 1, hospitalId: 1, treatmentId: 1, priceKrw: 5200000, notes: "Includes imaging consult", available: true },
-  { id: 2, hospitalId: 1, treatmentId: 2, priceKrw: 1800000, notes: "Incisional or non-incisional", available: true },
-  { id: 3, hospitalId: 2, treatmentId: 3, priceKrw: 220000, notes: "Per session", available: true },
-  { id: 4, hospitalId: 2, treatmentId: 4, priceKrw: 420000, notes: "HA or PDRN options", available: true },
-  { id: 5, hospitalId: 3, treatmentId: 5, priceKrw: 850000, notes: "Per tooth, digital preview", available: true },
-  { id: 6, hospitalId: 4, treatmentId: 6, priceKrw: 6200000, notes: "2,000 graft estimate", available: true },
-  { id: 7, hospitalId: 5, treatmentId: 7, priceKrw: 2100000, notes: "One-day package", available: true },
-  { id: 8, hospitalId: 6, treatmentId: 8, priceKrw: 180000, notes: "Per recovery session", available: true },
-  { id: 9, hospitalId: 6, treatmentId: 4, priceKrw: 360000, notes: "Recovery-light booster", available: true },
-  { id: 10, hospitalId: 2, treatmentId: 8, priceKrw: 240000, notes: "Swelling care add-on", available: true },
-  { id: 11, hospitalId: 5, treatmentId: 3, priceKrw: 260000, notes: "With physician review", available: true },
+  {
+    id: 1,
+    hospitalId: 1,
+    treatmentId: 1,
+    priceKrw: 5200000,
+    notes: "Includes imaging consult",
+    available: true,
+  },
+  {
+    id: 2,
+    hospitalId: 1,
+    treatmentId: 2,
+    priceKrw: 1800000,
+    notes: "Incisional or non-incisional",
+    available: true,
+  },
+  {
+    id: 3,
+    hospitalId: 2,
+    treatmentId: 3,
+    priceKrw: 220000,
+    notes: "Per session",
+    available: true,
+  },
+  {
+    id: 4,
+    hospitalId: 2,
+    treatmentId: 4,
+    priceKrw: 420000,
+    notes: "HA or PDRN options",
+    available: true,
+  },
+  {
+    id: 5,
+    hospitalId: 3,
+    treatmentId: 5,
+    priceKrw: 850000,
+    notes: "Per tooth, digital preview",
+    available: true,
+  },
+  {
+    id: 6,
+    hospitalId: 4,
+    treatmentId: 6,
+    priceKrw: 6200000,
+    notes: "2,000 graft estimate",
+    available: true,
+  },
+  {
+    id: 7,
+    hospitalId: 5,
+    treatmentId: 7,
+    priceKrw: 2100000,
+    notes: "One-day package",
+    available: true,
+  },
+  {
+    id: 8,
+    hospitalId: 6,
+    treatmentId: 8,
+    priceKrw: 180000,
+    notes: "Per recovery session",
+    available: true,
+  },
+  {
+    id: 9,
+    hospitalId: 6,
+    treatmentId: 4,
+    priceKrw: 360000,
+    notes: "Recovery-light booster",
+    available: true,
+  },
+  {
+    id: 10,
+    hospitalId: 2,
+    treatmentId: 8,
+    priceKrw: 240000,
+    notes: "Swelling care add-on",
+    available: true,
+  },
+  {
+    id: 11,
+    hospitalId: 5,
+    treatmentId: 3,
+    priceKrw: 260000,
+    notes: "With physician review",
+    available: true,
+  },
 ];
 
 export function formatKRW(value: number) {
@@ -732,7 +922,10 @@ export function getLocalizedTreatmentName(treatment: Treatment, lang: string) {
   return treatment.nameEn;
 }
 
-export function getLocalizedHospitalDescription(hospital: Hospital, lang: string) {
+export function getLocalizedHospitalDescription(
+  hospital: Hospital,
+  lang: string
+) {
   if (lang === "ko") return hospital.descriptionKo;
   if (lang === "zh") return hospital.descriptionZh;
   if (lang === "ja") return hospital.descriptionJa;
@@ -740,7 +933,10 @@ export function getLocalizedHospitalDescription(hospital: Hospital, lang: string
   return hospital.descriptionEn;
 }
 
-export function getLocalizedTreatmentDescription(treatment: Treatment, lang: string) {
+export function getLocalizedTreatmentDescription(
+  treatment: Treatment,
+  lang: string
+) {
   if (lang === "ko") return treatment.descriptionKo;
   if (lang === "zh") return treatment.descriptionZh;
   if (lang === "ja") return treatment.descriptionJa;

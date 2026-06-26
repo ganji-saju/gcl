@@ -926,6 +926,87 @@ function normalizeProviderOperatingProfile(row) {
   };
 }
 
+function normalizeProviderPublicProfile(row) {
+  return {
+    providerId: row.provider_id,
+    slug: row.slug,
+    status: row.status,
+    specialty: row.specialty || null,
+    region: row.region || null,
+    phonePublic: row.phone_public || null,
+    websiteUrl: row.website_url || null,
+    priceTier: row.price_tier || null,
+    rating: row.rating === null ? null : Number(row.rating),
+    reviewCount: Number(row.review_count || 0),
+    latitude: row.latitude === null ? null : Number(row.latitude),
+    longitude: row.longitude === null ? null : Number(row.longitude),
+    featured: Boolean(row.featured),
+    publishedAt: row.published_at || null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+function normalizeProviderPublicI18n(row) {
+  return {
+    id: row.id,
+    providerId: row.provider_id,
+    locale: row.locale,
+    name: row.name || "",
+    summary: row.summary || null,
+    description: row.description || null,
+    address: row.address || null,
+    specialties: row.specialties || [],
+    highlights: row.highlights || [],
+    metaTitle: row.meta_title || null,
+    metaDescription: row.meta_description || null,
+  };
+}
+
+function normalizeProviderPublicMedia(row) {
+  return {
+    id: row.id,
+    providerId: row.provider_id,
+    mediaType: row.media_type,
+    storagePath: row.storage_path || null,
+    publicUrl: row.public_url || null,
+    altText: row.alt_text || null,
+    displayOrder: Number(row.display_order || 0),
+    active: Boolean(row.active),
+  };
+}
+
+function normalizeProviderPublicDoctor(row) {
+  return {
+    id: row.id,
+    providerId: row.provider_id,
+    name: row.name || "",
+    title: row.title || null,
+    specialty: row.specialty || null,
+    bio: row.bio || null,
+    photoUrl: row.photo_url || null,
+    yearsExperience:
+      row.years_experience === null ? null : Number(row.years_experience),
+    displayOrder: Number(row.display_order || 0),
+    active: Boolean(row.active),
+  };
+}
+
+function normalizeProviderPublicTreatment(row) {
+  return {
+    id: row.id,
+    providerId: row.provider_id,
+    treatmentSlug: row.treatment_slug || null,
+    title: row.title || "",
+    priceMinKrw: row.price_min_krw === null ? null : Number(row.price_min_krw),
+    priceMaxKrw: row.price_max_krw === null ? null : Number(row.price_max_krw),
+    recoveryDays: row.recovery_days === null ? null : Number(row.recovery_days),
+    durationMinutes:
+      row.duration_minutes === null ? null : Number(row.duration_minutes),
+    notes: row.notes || null,
+    active: Boolean(row.active),
+  };
+}
+
 async function getAdminOperationsData(config) {
   if (config.role !== "admin") {
     return {
@@ -933,6 +1014,11 @@ async function getAdminOperationsData(config) {
       packageSkus: [],
       contactChannels: [],
       providerOperatingProfiles: [],
+      providerPublicProfiles: [],
+      providerPublicProfileI18n: [],
+      providerPublicMedia: [],
+      providerPublicDoctors: [],
+      providerPublicTreatments: [],
     };
   }
 
@@ -941,6 +1027,11 @@ async function getAdminOperationsData(config) {
     packageSkus,
     contactChannels,
     providerOperatingProfiles,
+    providerPublicProfiles,
+    providerPublicProfileI18n,
+    providerPublicMedia,
+    providerPublicDoctors,
+    providerPublicTreatments,
   ] = await Promise.all([
     safeList(
       config,
@@ -962,6 +1053,31 @@ async function getAdminOperationsData(config) {
       "provider_operating_profiles",
       "select=provider_id,public_exposure_status,data_source_status,supported_markets,supported_languages,standard_sla_hours,urgent_sla_hours,price_range_usd_min,price_range_usd_max,quote_template_ready,deposit_policy_ready,sla_contract_status,verification_summary,source_notes,last_verified_at,next_step&order=updated_at.desc&limit=120"
     ),
+    safeList(
+      config,
+      "provider_public_profiles",
+      "select=provider_id,slug,status,specialty,region,phone_public,website_url,price_tier,rating,review_count,latitude,longitude,featured,published_at,updated_at&order=updated_at.desc&limit=240"
+    ),
+    safeList(
+      config,
+      "provider_public_profile_i18n",
+      "select=id,provider_id,locale,name,summary,description,address,specialties,highlights,meta_title,meta_description&order=updated_at.desc&limit=480"
+    ),
+    safeList(
+      config,
+      "provider_public_media",
+      "select=id,provider_id,media_type,storage_path,public_url,alt_text,display_order,active&order=display_order.asc&limit=480"
+    ),
+    safeList(
+      config,
+      "provider_public_doctors",
+      "select=id,provider_id,name,title,specialty,bio,photo_url,years_experience,display_order,active&order=display_order.asc&limit=480"
+    ),
+    safeList(
+      config,
+      "provider_public_treatments",
+      "select=id,provider_id,treatment_slug,title,price_min_krw,price_max_krw,recovery_days,duration_minutes,notes,active&order=created_at.asc&limit=480"
+    ),
   ]);
 
   return {
@@ -970,6 +1086,19 @@ async function getAdminOperationsData(config) {
     contactChannels: contactChannels.map(normalizeContactChannel),
     providerOperatingProfiles: providerOperatingProfiles.map(
       normalizeProviderOperatingProfile
+    ),
+    providerPublicProfiles: providerPublicProfiles.map(
+      normalizeProviderPublicProfile
+    ),
+    providerPublicProfileI18n: providerPublicProfileI18n.map(
+      normalizeProviderPublicI18n
+    ),
+    providerPublicMedia: providerPublicMedia.map(normalizeProviderPublicMedia),
+    providerPublicDoctors: providerPublicDoctors.map(
+      normalizeProviderPublicDoctor
+    ),
+    providerPublicTreatments: providerPublicTreatments.map(
+      normalizeProviderPublicTreatment
     ),
   };
 }
@@ -1387,6 +1516,24 @@ const SLA_CONTRACT_STATUSES = new Set([
   "negotiating",
   "pending_docs",
   "signed",
+]);
+const PROVIDER_PUBLIC_STATUSES = new Set([
+  "draft",
+  "review_requested",
+  "ready",
+  "published",
+  "paused",
+]);
+const PUBLIC_PRICE_TIERS = new Set(["$", "$$", "$$$"]);
+const PUBLIC_LOCALES = new Set([
+  "ko",
+  "en",
+  "ja",
+  "zh",
+  "th",
+  "vi",
+  "ar",
+  "ru",
 ]);
 const PARTNER_TYPES = new Set([
   "agency",
@@ -1881,6 +2028,254 @@ function providerRegistryProfilePayload(providerId, parsed) {
   };
 }
 
+function nullableNumber(value, min = -Infinity, max = Infinity) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return null;
+  return Math.min(max, Math.max(min, number));
+}
+
+function cleanPublicStatus(value) {
+  const status = sanitizeText(value, "draft").toLowerCase();
+  return PROVIDER_PUBLIC_STATUSES.has(status) ? status : "draft";
+}
+
+function cleanPublicLocale(value) {
+  const locale = sanitizeText(value, "en").toLowerCase();
+  if (locale === "jp") return "ja";
+  if (locale === "zh-cn" || locale === "zh-tw") return "zh";
+  return PUBLIC_LOCALES.has(locale) ? locale : "en";
+}
+
+function publicProfileBasePayload(providerId, input, parsed) {
+  const slug =
+    slugify(input.slug || parsed.nameDisplayEn || parsed.nameLegal) ||
+    `provider-${providerId.slice(0, 8)}`;
+  const status = cleanPublicStatus(input.status);
+  const priceTier = sanitizeText(input.priceTier || input.price_tier, "$$");
+  return {
+    provider_id: providerId,
+    slug,
+    status,
+    specialty: sanitizeText(input.specialty || parsed.facilityType),
+    region: sanitizeText(input.region || parsed.district || parsed.city),
+    phone_public: sanitizeText(input.phonePublic || input.phone_public),
+    website_url: sanitizeText(input.websiteUrl || input.website_url),
+    price_tier: PUBLIC_PRICE_TIERS.has(priceTier) ? priceTier : "$$",
+    rating: nullableNumber(input.rating, 0, 5),
+    review_count: Math.round(
+      nullableNumber(input.reviewCount ?? input.review_count, 0, 1000000) || 0
+    ),
+    latitude: nullableNumber(input.latitude, -90, 90),
+    longitude: nullableNumber(input.longitude, -180, 180),
+    featured: Boolean(input.featured),
+    published_at:
+      status === "published"
+        ? new Date().toISOString()
+        : input.publishedAt || null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function publicProfileI18nPayloads(providerId, input, parsed) {
+  const rawRows = Array.isArray(input.i18n) ? input.i18n : [];
+  const fallbackRows = [
+    {
+      locale: "ko",
+      name: parsed.nameDisplayKo,
+      summary: "",
+      description: "",
+      address: parsed.address,
+      specialties: [],
+      highlights: [],
+    },
+    {
+      locale: "en",
+      name: parsed.nameDisplayEn || parsed.nameDisplayKo,
+      summary: "",
+      description: "",
+      address: parsed.address,
+      specialties: [],
+      highlights: [],
+    },
+  ];
+  const rows = rawRows.length ? rawRows : fallbackRows;
+  const byLocale = new Map();
+
+  for (const row of rows) {
+    const locale = cleanPublicLocale(row.locale);
+    const name = sanitizeText(row.name);
+    if (!name) continue;
+    byLocale.set(locale, {
+      provider_id: providerId,
+      locale,
+      name,
+      summary: sanitizeText(row.summary),
+      description: String(row.description || "").trim(),
+      address: sanitizeText(row.address || parsed.address),
+      specialties: cleanStringArray(row.specialties, 12),
+      highlights: cleanStringArray(row.highlights, 12),
+      meta_title: sanitizeText(row.metaTitle || row.meta_title),
+      meta_description: sanitizeText(
+        row.metaDescription || row.meta_description
+      ),
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  return Array.from(byLocale.values());
+}
+
+function publicMediaPayloads(providerId, input) {
+  const rows = Array.isArray(input.media) ? input.media : [];
+  return rows
+    .map((row, index) => {
+      const mediaType = sanitizeText(
+        row.mediaType || row.media_type,
+        "gallery"
+      ).toLowerCase();
+      const publicUrl = sanitizeText(row.publicUrl || row.public_url);
+      const storagePath = sanitizeText(row.storagePath || row.storage_path);
+      if (!publicUrl && !storagePath) return null;
+      return {
+        provider_id: providerId,
+        media_type:
+          mediaType === "cover" || mediaType === "doctor"
+            ? mediaType
+            : "gallery",
+        storage_path: storagePath || null,
+        public_url: publicUrl || null,
+        alt_text: sanitizeText(row.altText || row.alt_text),
+        display_order: Number.isFinite(
+          Number(row.displayOrder ?? row.display_order)
+        )
+          ? Number(row.displayOrder ?? row.display_order)
+          : index,
+        active: row.active !== false,
+      };
+    })
+    .filter(Boolean);
+}
+
+function publicDoctorPayloads(providerId, input) {
+  const rows = Array.isArray(input.doctors) ? input.doctors : [];
+  return rows
+    .map((row, index) => {
+      const name = sanitizeText(row.name);
+      if (!name) return null;
+      return {
+        provider_id: providerId,
+        name,
+        title: sanitizeText(row.title),
+        specialty: sanitizeText(row.specialty),
+        bio: String(row.bio || "").trim(),
+        photo_url: sanitizeText(row.photoUrl || row.photo_url),
+        years_experience: nullableNumber(
+          row.yearsExperience ?? row.years_experience,
+          0,
+          80
+        ),
+        display_order: Number.isFinite(
+          Number(row.displayOrder ?? row.display_order)
+        )
+          ? Number(row.displayOrder ?? row.display_order)
+          : index,
+        active: row.active !== false,
+      };
+    })
+    .filter(Boolean);
+}
+
+function publicTreatmentPayloads(providerId, input) {
+  const rows = Array.isArray(input.treatments) ? input.treatments : [];
+  return rows
+    .map(row => {
+      const title = sanitizeText(row.title);
+      if (!title) return null;
+      return {
+        provider_id: providerId,
+        treatment_slug: sanitizeText(row.treatmentSlug || row.treatment_slug),
+        title,
+        price_min_krw: nullableNumber(row.priceMinKrw ?? row.price_min_krw, 0),
+        price_max_krw: nullableNumber(row.priceMaxKrw ?? row.price_max_krw, 0),
+        recovery_days: nullableNumber(row.recoveryDays ?? row.recovery_days, 0),
+        duration_minutes: nullableNumber(
+          row.durationMinutes ?? row.duration_minutes,
+          0
+        ),
+        notes: String(row.notes || "").trim(),
+        active: row.active !== false,
+      };
+    })
+    .filter(Boolean);
+}
+
+async function replaceProviderPublicRows(config, table, providerId, rows) {
+  await supabaseFetch(config, `${table}?provider_id=eq.${providerId}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+  if (!rows.length) return;
+  await supabaseFetch(config, table, {
+    method: "POST",
+    body: JSON.stringify(rows),
+    prefer: "return=minimal",
+  });
+}
+
+async function upsertProviderPublicCms(
+  config,
+  providerId,
+  publicProfile,
+  parsed
+) {
+  if (!publicProfile) return;
+
+  await supabaseFetch(
+    config,
+    "provider_public_profiles?on_conflict=provider_id",
+    {
+      method: "POST",
+      body: JSON.stringify(
+        publicProfileBasePayload(providerId, publicProfile, parsed)
+      ),
+      prefer: "resolution=merge-duplicates,return=minimal",
+    }
+  );
+
+  const i18nRows = publicProfileI18nPayloads(providerId, publicProfile, parsed);
+  if (i18nRows.length) {
+    await supabaseFetch(
+      config,
+      "provider_public_profile_i18n?on_conflict=provider_id,locale",
+      {
+        method: "POST",
+        body: JSON.stringify(i18nRows),
+        prefer: "resolution=merge-duplicates,return=minimal",
+      }
+    );
+  }
+
+  await replaceProviderPublicRows(
+    config,
+    "provider_public_media",
+    providerId,
+    publicMediaPayloads(providerId, publicProfile)
+  );
+  await replaceProviderPublicRows(
+    config,
+    "provider_public_doctors",
+    providerId,
+    publicDoctorPayloads(providerId, publicProfile)
+  );
+  await replaceProviderPublicRows(
+    config,
+    "provider_public_treatments",
+    providerId,
+    publicTreatmentPayloads(providerId, publicProfile)
+  );
+}
+
 async function syncRegistryOpsAccess(
   config,
   { role, partnerId = null, providerId = null, email, label }
@@ -1956,6 +2351,12 @@ async function createProviderRegistry(config, body) {
     email: parsed.opsEmail,
     label: parsed.nameLegal,
   });
+  await upsertProviderPublicCms(
+    config,
+    provider.id,
+    parsed.input.publicProfile || parsed.input.public_profile,
+    parsed
+  );
 
   return { ok: true, providerId: provider.id };
 }
@@ -1997,6 +2398,12 @@ async function updateProvider(config, body) {
     email: parsed.opsEmail,
     label: parsed.nameLegal,
   });
+  await upsertProviderPublicCms(
+    config,
+    provider.id,
+    parsed.input.publicProfile || parsed.input.public_profile,
+    parsed
+  );
 
   return { ok: true, providerId: provider.id };
 }
@@ -2055,6 +2462,18 @@ async function deleteProvider(config, body) {
     }),
     prefer: "return=minimal",
   });
+  await supabaseFetch(
+    config,
+    `provider_public_profiles?provider_id=eq.${providerId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "paused",
+        updated_at: new Date().toISOString(),
+      }),
+      prefer: "return=minimal",
+    }
+  );
 
   return { ok: true, providerId };
 }

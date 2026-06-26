@@ -34,6 +34,13 @@ import {
   updateProviderMvp,
   type AdminProviderInput,
   type ProviderOperatingProfile,
+  type ProviderPublicDoctor,
+  type ProviderPublicMedia,
+  type ProviderPublicProfile,
+  type ProviderPublicProfileI18n,
+  type ProviderPublicProfileInput,
+  type ProviderPublicStatus,
+  type ProviderPublicTreatment,
 } from "@/lib/partnerMvpApi";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +105,68 @@ const slaStatusOptions: Array<{
   { value: "signed", label: "서명 완료" },
 ];
 
+const publicStatusOptions: Array<{
+  value: ProviderPublicStatus;
+  label: string;
+}> = [
+  { value: "draft", label: "초안" },
+  { value: "review_requested", label: "검수 요청" },
+  { value: "ready", label: "공개 준비" },
+  { value: "published", label: "공개" },
+  { value: "paused", label: "비공개" },
+];
+
+const publicLocaleOptions = [
+  { value: "ko", label: "한국어" },
+  { value: "en", label: "English" },
+  { value: "ja", label: "Japanese" },
+  { value: "zh", label: "Chinese" },
+  { value: "th", label: "Thai" },
+  { value: "vi", label: "Vietnamese" },
+  { value: "ar", label: "Arabic" },
+  { value: "ru", label: "Russian" },
+] as const;
+
+function createDefaultPublicProfile(): ProviderPublicProfileInput {
+  return {
+    slug: "",
+    status: "draft",
+    specialty: "dermatology",
+    region: "gangnam",
+    phonePublic: "",
+    websiteUrl: "",
+    priceTier: "$$",
+    rating: 0,
+    reviewCount: 0,
+    latitude: null,
+    longitude: null,
+    featured: false,
+    i18n: [
+      {
+        locale: "ko",
+        name: "",
+        summary: "",
+        description: "",
+        address: "",
+        specialties: [],
+        highlights: [],
+      },
+      {
+        locale: "en",
+        name: "",
+        summary: "",
+        description: "",
+        address: "",
+        specialties: [],
+        highlights: [],
+      },
+    ],
+    media: [],
+    doctors: [],
+    treatments: [],
+  };
+}
+
 function createDefaultProviderDraft(): AdminProviderInput {
   return {
     nameLegal: "",
@@ -126,6 +195,7 @@ function createDefaultProviderDraft(): AdminProviderInput {
     slaContractStatus: "draft",
     verificationSummary: "",
     sourceNotes: "",
+    publicProfile: createDefaultPublicProfile(),
     nextStep: "검증 서류 확인",
   };
 }
@@ -144,6 +214,146 @@ function fromPercent(value: string) {
   return Number(value) / 100;
 }
 
+function splitListText(value: string) {
+  return value
+    .split(/\n|,/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function joinListText(values?: string[]) {
+  return values?.join("\n") ?? "";
+}
+
+function mediaRowsToText(rows: ProviderPublicMedia[]) {
+  return rows
+    .filter(row => row.mediaType !== "cover")
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map(row => row.publicUrl || row.storagePath || "")
+    .filter(Boolean)
+    .join("\n");
+}
+
+function mediaRowsFromText(value: string, current: ProviderPublicMedia[]) {
+  const cover = current.filter(row => row.mediaType === "cover");
+  const gallery = splitListText(value).map((url, index) => ({
+    mediaType: "gallery" as const,
+    publicUrl: url,
+    storagePath: "",
+    altText: "",
+    displayOrder: index + 1,
+    active: true,
+  }));
+  return [...cover, ...gallery];
+}
+
+function coverUrl(profile?: ProviderPublicProfileInput) {
+  return (
+    profile?.media.find(row => row.mediaType === "cover")?.publicUrl ||
+    profile?.media.find(row => row.mediaType === "cover")?.storagePath ||
+    ""
+  );
+}
+
+function updateCoverUrl(profile: ProviderPublicProfileInput, url: string) {
+  const otherRows = profile.media.filter(row => row.mediaType !== "cover");
+  const coverRows = url.trim()
+    ? [
+        {
+          mediaType: "cover" as const,
+          publicUrl: url.trim(),
+          storagePath: "",
+          altText: profile.i18n[0]?.name || "",
+          displayOrder: 0,
+          active: true,
+        },
+      ]
+    : [];
+  return [...coverRows, ...otherRows];
+}
+
+function doctorsToText(rows: ProviderPublicDoctor[]) {
+  return rows
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map(row =>
+      [
+        row.name,
+        row.title || "",
+        row.specialty || "",
+        row.yearsExperience ?? "",
+        row.bio || "",
+        row.photoUrl || "",
+      ].join(" | ")
+    )
+    .join("\n");
+}
+
+function doctorsFromText(value: string): ProviderPublicDoctor[] {
+  return value
+    .split("\n")
+    .map((line, index) => {
+      const [name, title, specialty, years, bio, photoUrl] = line
+        .split("|")
+        .map(item => item.trim());
+      if (!name) return null;
+      return {
+        name,
+        title,
+        specialty,
+        bio,
+        photoUrl,
+        yearsExperience: years ? Number(years) : null,
+        displayOrder: index,
+        active: true,
+      };
+    })
+    .filter(Boolean) as ProviderPublicDoctor[];
+}
+
+function treatmentsToText(rows: ProviderPublicTreatment[]) {
+  return rows
+    .map(row =>
+      [
+        row.title,
+        row.priceMinKrw ?? "",
+        row.priceMaxKrw ?? "",
+        row.recoveryDays ?? "",
+        row.durationMinutes ?? "",
+        row.notes || "",
+        row.treatmentSlug || "",
+      ].join(" | ")
+    )
+    .join("\n");
+}
+
+function treatmentsFromText(value: string): ProviderPublicTreatment[] {
+  return value
+    .split("\n")
+    .map(line => {
+      const [
+        title,
+        priceMin,
+        priceMax,
+        recoveryDays,
+        durationMinutes,
+        notes,
+        slug,
+      ] = line.split("|").map(item => item.trim());
+      if (!title) return null;
+      return {
+        title,
+        priceMinKrw: priceMin ? Number(priceMin) : null,
+        priceMaxKrw: priceMax ? Number(priceMax) : null,
+        recoveryDays: recoveryDays ? Number(recoveryDays) : null,
+        durationMinutes: durationMinutes ? Number(durationMinutes) : null,
+        notes,
+        treatmentSlug: slug,
+        active: true,
+      };
+    })
+    .filter(Boolean) as ProviderPublicTreatment[];
+}
+
 function normalizeFacilityType(
   value?: string
 ): AdminProviderInput["facilityType"] {
@@ -152,9 +362,70 @@ function normalizeFacilityType(
     : "clinic";
 }
 
+function publicProfileToDraft({
+  provider,
+  publicProfile,
+  i18n,
+  media,
+  doctors,
+  treatments,
+}: {
+  provider: BetaProviderCandidate;
+  publicProfile?: ProviderPublicProfile;
+  i18n: ProviderPublicProfileI18n[];
+  media: ProviderPublicMedia[];
+  doctors: ProviderPublicDoctor[];
+  treatments: ProviderPublicTreatment[];
+}): ProviderPublicProfileInput {
+  const fallback = createDefaultPublicProfile();
+  const existingLocales = new Set(i18n.map(row => row.locale));
+  const normalizedI18n = [
+    ...i18n,
+    ...fallback.i18n
+      .filter(row => !existingLocales.has(row.locale))
+      .map(row => ({
+        ...row,
+        name:
+          row.locale === "ko"
+            ? provider.nameDisplayKo || provider.name
+            : provider.nameDisplayEn || provider.name,
+        address: provider.address || "",
+      })),
+  ];
+
+  return {
+    ...fallback,
+    slug: publicProfile?.slug ?? "",
+    status: publicProfile?.status ?? "draft",
+    specialty:
+      publicProfile?.specialty ??
+      provider.specialty?.toLowerCase() ??
+      "dermatology",
+    region:
+      publicProfile?.region ?? provider.region?.toLowerCase() ?? "gangnam",
+    phonePublic: publicProfile?.phonePublic ?? "",
+    websiteUrl: publicProfile?.websiteUrl ?? "",
+    priceTier: publicProfile?.priceTier ?? "$$",
+    rating: publicProfile?.rating ?? 0,
+    reviewCount: publicProfile?.reviewCount ?? 0,
+    latitude: publicProfile?.latitude ?? null,
+    longitude: publicProfile?.longitude ?? null,
+    featured: publicProfile?.featured ?? false,
+    i18n: normalizedI18n,
+    media,
+    doctors,
+    treatments,
+  };
+}
+
 function providerToDraft(
   provider: BetaProviderCandidate,
-  profile?: ProviderOperatingProfile
+  profile?: ProviderOperatingProfile,
+  publicProfile?: ProviderPublicProfile,
+  i18n: ProviderPublicProfileI18n[] = [],
+  media: ProviderPublicMedia[] = [],
+  doctors: ProviderPublicDoctor[] = [],
+  treatments: ProviderPublicTreatment[] = []
 ): AdminProviderInput {
   return {
     ...createDefaultProviderDraft(),
@@ -194,6 +465,14 @@ function providerToDraft(
     verificationSummary: profile?.verificationSummary ?? "",
     sourceNotes: profile?.sourceNotes ?? "",
     nextStep: profile?.nextStep ?? provider.nextStep,
+    publicProfile: publicProfileToDraft({
+      provider,
+      publicProfile,
+      i18n,
+      media,
+      doctors,
+      treatments,
+    }),
   };
 }
 
@@ -207,6 +486,17 @@ export default function AdminProviderRegistry() {
   const [providers, setProviders] =
     useState<BetaProviderCandidate[]>(betaProviders);
   const [profiles, setProfiles] = useState<ProviderOperatingProfile[]>([]);
+  const [publicProfiles, setPublicProfiles] = useState<ProviderPublicProfile[]>(
+    []
+  );
+  const [publicI18n, setPublicI18n] = useState<ProviderPublicProfileI18n[]>([]);
+  const [publicMedia, setPublicMedia] = useState<ProviderPublicMedia[]>([]);
+  const [publicDoctors, setPublicDoctors] = useState<ProviderPublicDoctor[]>(
+    []
+  );
+  const [publicTreatments, setPublicTreatments] = useState<
+    ProviderPublicTreatment[]
+  >([]);
   const [status, setStatus] = useState<RegistryStatus>("loading");
   const [message, setMessage] = useState("병원 목록을 불러오는 중입니다.");
   const [adminToken] = useState(() => readAdminApiToken());
@@ -215,6 +505,50 @@ export default function AdminProviderRegistry() {
     () => new Map(profiles.map(profile => [profile.providerId, profile])),
     [profiles]
   );
+  const publicProfileByProviderId = useMemo(
+    () => new Map(publicProfiles.map(profile => [profile.providerId, profile])),
+    [publicProfiles]
+  );
+  const publicI18nByProviderId = useMemo(() => {
+    const map = new Map<string, ProviderPublicProfileI18n[]>();
+    for (const row of publicI18n) {
+      if (!row.providerId) continue;
+      const rows = map.get(row.providerId) ?? [];
+      rows.push(row);
+      map.set(row.providerId, rows);
+    }
+    return map;
+  }, [publicI18n]);
+  const publicMediaByProviderId = useMemo(() => {
+    const map = new Map<string, ProviderPublicMedia[]>();
+    for (const row of publicMedia) {
+      if (!row.providerId) continue;
+      const rows = map.get(row.providerId) ?? [];
+      rows.push(row);
+      map.set(row.providerId, rows);
+    }
+    return map;
+  }, [publicMedia]);
+  const publicDoctorsByProviderId = useMemo(() => {
+    const map = new Map<string, ProviderPublicDoctor[]>();
+    for (const row of publicDoctors) {
+      if (!row.providerId) continue;
+      const rows = map.get(row.providerId) ?? [];
+      rows.push(row);
+      map.set(row.providerId, rows);
+    }
+    return map;
+  }, [publicDoctors]);
+  const publicTreatmentsByProviderId = useMemo(() => {
+    const map = new Map<string, ProviderPublicTreatment[]>();
+    for (const row of publicTreatments) {
+      if (!row.providerId) continue;
+      const rows = map.get(row.providerId) ?? [];
+      rows.push(row);
+      map.set(row.providerId, rows);
+    }
+    return map;
+  }, [publicTreatments]);
   const activeCount = providers.filter(provider => provider.active).length;
   const readyCount = profiles.filter(
     profile =>
@@ -233,6 +567,11 @@ export default function AdminProviderRegistry() {
   ) {
     setProviders(snapshot.providers);
     setProfiles(snapshot.providerOperatingProfiles ?? []);
+    setPublicProfiles(snapshot.providerPublicProfiles ?? []);
+    setPublicI18n(snapshot.providerPublicProfileI18n ?? []);
+    setPublicMedia(snapshot.providerPublicMedia ?? []);
+    setPublicDoctors(snapshot.providerPublicDoctors ?? []);
+    setPublicTreatments(snapshot.providerPublicTreatments ?? []);
   }
 
   async function refreshProviders() {
@@ -271,6 +610,51 @@ export default function AdminProviderRegistry() {
     setDraft(current => ({ ...current, [key]: value }));
   };
 
+  const updatePublicDraft = <K extends keyof ProviderPublicProfileInput>(
+    key: K,
+    value: ProviderPublicProfileInput[K]
+  ) => {
+    setDraft(current => ({
+      ...current,
+      publicProfile: {
+        ...(current.publicProfile ?? createDefaultPublicProfile()),
+        [key]: value,
+      },
+    }));
+  };
+
+  function updatePublicLocale(
+    locale: ProviderPublicProfileI18n["locale"],
+    patch: Partial<ProviderPublicProfileI18n>
+  ) {
+    setDraft(current => {
+      const publicProfile =
+        current.publicProfile ?? createDefaultPublicProfile();
+      const existing = publicProfile.i18n.find(row => row.locale === locale);
+      const nextRow = {
+        locale,
+        name: "",
+        summary: "",
+        description: "",
+        address: "",
+        specialties: [],
+        highlights: [],
+        ...(existing ?? {}),
+        ...patch,
+      };
+      return {
+        ...current,
+        publicProfile: {
+          ...publicProfile,
+          i18n: [
+            ...publicProfile.i18n.filter(row => row.locale !== locale),
+            nextRow,
+          ],
+        },
+      };
+    });
+  }
+
   async function submitProvider(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!adminToken) return;
@@ -306,7 +690,17 @@ export default function AdminProviderRegistry() {
   }
 
   function startEdit(provider: BetaProviderCandidate) {
-    setDraft(providerToDraft(provider, profileByProviderId.get(provider.id)));
+    setDraft(
+      providerToDraft(
+        provider,
+        profileByProviderId.get(provider.id),
+        publicProfileByProviderId.get(provider.id),
+        publicI18nByProviderId.get(provider.id) ?? [],
+        publicMediaByProviderId.get(provider.id) ?? [],
+        publicDoctorsByProviderId.get(provider.id) ?? [],
+        publicTreatmentsByProviderId.get(provider.id) ?? []
+      )
+    );
     setEditingProviderId(provider.id);
     setStatus("ready");
     setMessage(`${provider.name} 정보를 수정 중입니다.`);
@@ -336,6 +730,8 @@ export default function AdminProviderRegistry() {
       );
     }
   }
+
+  const publicDraft = draft.publicProfile ?? createDefaultPublicProfile();
 
   return (
     <Layout>
@@ -727,6 +1123,12 @@ export default function AdminProviderRegistry() {
                 />
               </Field>
 
+              <PublicCmsFields
+                publicDraft={publicDraft}
+                updatePublicDraft={updatePublicDraft}
+                updatePublicLocale={updatePublicLocale}
+              />
+
               <Button
                 type="submit"
                 disabled={isBusy}
@@ -931,5 +1333,306 @@ function Check({
       />
       <span className="font-semibold">{label}</span>
     </label>
+  );
+}
+
+function PublicCmsFields({
+  publicDraft,
+  updatePublicDraft,
+  updatePublicLocale,
+}: {
+  publicDraft: ProviderPublicProfileInput;
+  updatePublicDraft: <K extends keyof ProviderPublicProfileInput>(
+    key: K,
+    value: ProviderPublicProfileInput[K]
+  ) => void;
+  updatePublicLocale: (
+    locale: ProviderPublicProfileI18n["locale"],
+    patch: Partial<ProviderPublicProfileI18n>
+  ) => void;
+}) {
+  return (
+    <div className="border-t border-ink-200 pt-4 md:col-span-2">
+      <div className="mb-3 flex flex-col gap-1">
+        <h3 className="font-serif text-2xl text-ink-950">공개 프로필 CMS</h3>
+        <p className="text-sm leading-6 text-ink-600">
+          공개 사이트 /hospitals에 노출될 병원 소개, 이미지, 의료진, 시술 정보를
+          관리합니다. 상태가 published인 병원만 공개 API에 포함됩니다.
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="공개 상태">
+          <select
+            value={publicDraft.status}
+            onChange={event =>
+              updatePublicDraft(
+                "status",
+                event.target.value as ProviderPublicStatus
+              )
+            }
+            className={selectClassName}
+          >
+            {publicStatusOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="공개 URL slug">
+          <Input
+            className={controlClassName}
+            value={publicDraft.slug}
+            onChange={event => updatePublicDraft("slug", event.target.value)}
+            placeholder="gangnam-skin-clinic"
+          />
+        </Field>
+        <Field label="공개 카테고리">
+          <select
+            value={publicDraft.specialty ?? "dermatology"}
+            onChange={event =>
+              updatePublicDraft("specialty", event.target.value)
+            }
+            className={selectClassName}
+          >
+            <option value="dermatology">피부과</option>
+            <option value="plastic_surgery">성형외과</option>
+            <option value="dental">치과</option>
+            <option value="hair">모발이식</option>
+            <option value="wellness">검진/웰니스</option>
+          </select>
+        </Field>
+        <Field label="공개 지역">
+          <select
+            value={publicDraft.region ?? "gangnam"}
+            onChange={event => updatePublicDraft("region", event.target.value)}
+            className={selectClassName}
+          >
+            <option value="gangnam">Gangnam</option>
+            <option value="seongsu">Seongsu</option>
+            <option value="hongdae">Hongdae</option>
+            <option value="sinchon">Sinchon</option>
+            <option value="bundang">Bundang</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+        <Field label="공개 전화번호">
+          <Input
+            className={controlClassName}
+            value={publicDraft.phonePublic ?? ""}
+            onChange={event =>
+              updatePublicDraft("phonePublic", event.target.value)
+            }
+            placeholder="+82-2-0000-0000"
+          />
+        </Field>
+        <Field label="공식 웹사이트">
+          <Input
+            className={controlClassName}
+            value={publicDraft.websiteUrl ?? ""}
+            onChange={event =>
+              updatePublicDraft("websiteUrl", event.target.value)
+            }
+            placeholder="https://example.com"
+          />
+        </Field>
+        <Field label="가격대">
+          <select
+            value={publicDraft.priceTier ?? "$$"}
+            onChange={event =>
+              updatePublicDraft(
+                "priceTier",
+                event.target.value as ProviderPublicProfileInput["priceTier"]
+              )
+            }
+            className={selectClassName}
+          >
+            <option value="$">$</option>
+            <option value="$$">$$</option>
+            <option value="$$$">$$$</option>
+          </select>
+        </Field>
+        <Field label="평점">
+          <Input
+            className={controlClassName}
+            type="number"
+            min={0}
+            max={5}
+            step={0.1}
+            value={publicDraft.rating ?? ""}
+            onChange={event =>
+              updatePublicDraft(
+                "rating",
+                event.target.value ? Number(event.target.value) : null
+              )
+            }
+          />
+        </Field>
+        <Field label="리뷰 수">
+          <Input
+            className={controlClassName}
+            type="number"
+            min={0}
+            value={publicDraft.reviewCount ?? 0}
+            onChange={event =>
+              updatePublicDraft("reviewCount", Number(event.target.value))
+            }
+          />
+        </Field>
+        <Check
+          label="추천 병원으로 노출"
+          checked={Boolean(publicDraft.featured)}
+          onChange={checked => updatePublicDraft("featured", checked)}
+        />
+        <Field label="대표 이미지 URL" span="full">
+          <Input
+            className={controlClassName}
+            value={coverUrl(publicDraft)}
+            onChange={event =>
+              updatePublicDraft(
+                "media",
+                updateCoverUrl(publicDraft, event.target.value)
+              )
+            }
+            placeholder="https://..."
+          />
+        </Field>
+        <Field label="상세 이미지 URL 목록" span="full">
+          <Textarea
+            className={textareaClassName}
+            value={mediaRowsToText(publicDraft.media)}
+            onChange={event =>
+              updatePublicDraft(
+                "media",
+                mediaRowsFromText(event.target.value, publicDraft.media)
+              )
+            }
+            placeholder="이미지 URL을 한 줄에 하나씩 입력"
+          />
+        </Field>
+      </div>
+
+      <div className="mt-4 grid gap-4">
+        {publicLocaleOptions.map(option => {
+          const localeRow =
+            publicDraft.i18n.find(row => row.locale === option.value) ??
+            ({
+              locale: option.value,
+              name: "",
+              summary: "",
+              description: "",
+              address: "",
+              specialties: [],
+              highlights: [],
+            } satisfies ProviderPublicProfileI18n);
+
+          return (
+            <div
+              key={option.value}
+              className="grid gap-3 border-t border-ink-200 pt-3 md:grid-cols-2"
+            >
+              <div className="text-sm font-semibold text-ink-900 md:col-span-2">
+                {option.label}
+              </div>
+              <Field label="공개 병원명">
+                <Input
+                  className={controlClassName}
+                  value={localeRow.name}
+                  onChange={event =>
+                    updatePublicLocale(option.value, {
+                      name: event.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field label="공개 주소">
+                <Input
+                  className={controlClassName}
+                  value={localeRow.address ?? ""}
+                  onChange={event =>
+                    updatePublicLocale(option.value, {
+                      address: event.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field label="한 줄 요약" span="full">
+                <Input
+                  className={controlClassName}
+                  value={localeRow.summary ?? ""}
+                  onChange={event =>
+                    updatePublicLocale(option.value, {
+                      summary: event.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field label="상세 소개" span="full">
+                <Textarea
+                  className="min-h-28 w-full resize-y border-ink-200 bg-white text-sm text-ink-900 shadow-none"
+                  value={localeRow.description ?? ""}
+                  onChange={event =>
+                    updatePublicLocale(option.value, {
+                      description: event.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field label="전문 분야" span="full">
+                <Textarea
+                  className={textareaClassName}
+                  value={joinListText(localeRow.specialties)}
+                  onChange={event =>
+                    updatePublicLocale(option.value, {
+                      specialties: splitListText(event.target.value),
+                    })
+                  }
+                  placeholder={"Laser toning\nSkin booster"}
+                />
+              </Field>
+              <Field label="강점/체크포인트" span="full">
+                <Textarea
+                  className={textareaClassName}
+                  value={joinListText(localeRow.highlights)}
+                  onChange={event =>
+                    updatePublicLocale(option.value, {
+                      highlights: splitListText(event.target.value),
+                    })
+                  }
+                  placeholder={"Same-day consult\nLow downtime plan"}
+                />
+              </Field>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 grid gap-3 border-t border-ink-200 pt-3">
+        <Field label="의료진 목록" span="full">
+          <Textarea
+            className="min-h-28 w-full resize-y border-ink-200 bg-white text-sm text-ink-900 shadow-none"
+            value={doctorsToText(publicDraft.doctors)}
+            onChange={event =>
+              updatePublicDraft("doctors", doctorsFromText(event.target.value))
+            }
+            placeholder="Dr. Kim | Dermatologist | Laser | 12 | Bio text | https://photo-url"
+          />
+        </Field>
+        <Field label="공개 시술/가격 목록" span="full">
+          <Textarea
+            className="min-h-28 w-full resize-y border-ink-200 bg-white text-sm text-ink-900 shadow-none"
+            value={treatmentsToText(publicDraft.treatments)}
+            onChange={event =>
+              updatePublicDraft(
+                "treatments",
+                treatmentsFromText(event.target.value)
+              )
+            }
+            placeholder="Laser toning | 200000 | 600000 | 0 | 40 | Per session | laser-toning"
+          />
+        </Field>
+      </div>
+    </div>
   );
 }

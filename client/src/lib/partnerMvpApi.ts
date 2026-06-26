@@ -18,6 +18,11 @@ export interface PartnerMvpSnapshot {
   packageSkus?: ManagedPackageSku[];
   contactChannels?: ContactChannelSetting[];
   providerOperatingProfiles?: ProviderOperatingProfile[];
+  providerPublicProfiles?: ProviderPublicProfile[];
+  providerPublicProfileI18n?: ProviderPublicProfileI18n[];
+  providerPublicMedia?: ProviderPublicMedia[];
+  providerPublicDoctors?: ProviderPublicDoctor[];
+  providerPublicTreatments?: ProviderPublicTreatment[];
   meta?: {
     mode: "supabase";
     role?: OpsRole;
@@ -142,6 +147,94 @@ export interface ProviderOperatingProfile {
   sourceNotes?: string | null;
   lastVerifiedAt?: string | null;
   nextStep?: string | null;
+}
+
+export type ProviderPublicStatus =
+  | "draft"
+  | "review_requested"
+  | "ready"
+  | "published"
+  | "paused";
+
+export interface ProviderPublicProfile {
+  providerId: string;
+  slug: string;
+  status: ProviderPublicStatus;
+  specialty?: string | null;
+  region?: string | null;
+  phonePublic?: string | null;
+  websiteUrl?: string | null;
+  priceTier?: "$" | "$$" | "$$$" | null;
+  rating?: number | null;
+  reviewCount: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  featured: boolean;
+  publishedAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface ProviderPublicProfileI18n {
+  id?: string;
+  providerId?: string;
+  locale: "ko" | "en" | "ja" | "zh" | "th" | "vi" | "ar" | "ru";
+  name: string;
+  summary?: string | null;
+  description?: string | null;
+  address?: string | null;
+  specialties: string[];
+  highlights: string[];
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+}
+
+export interface ProviderPublicMedia {
+  id?: string;
+  providerId?: string;
+  mediaType: "cover" | "gallery" | "doctor";
+  storagePath?: string | null;
+  publicUrl?: string | null;
+  altText?: string | null;
+  displayOrder: number;
+  active: boolean;
+}
+
+export interface ProviderPublicDoctor {
+  id?: string;
+  providerId?: string;
+  name: string;
+  title?: string | null;
+  specialty?: string | null;
+  bio?: string | null;
+  photoUrl?: string | null;
+  yearsExperience?: number | null;
+  displayOrder: number;
+  active: boolean;
+}
+
+export interface ProviderPublicTreatment {
+  id?: string;
+  providerId?: string;
+  treatmentSlug?: string | null;
+  title: string;
+  priceMinKrw?: number | null;
+  priceMaxKrw?: number | null;
+  recoveryDays?: number | null;
+  durationMinutes?: number | null;
+  notes?: string | null;
+  active: boolean;
+}
+
+export interface ProviderPublicProfileInput extends Omit<
+  ProviderPublicProfile,
+  "providerId" | "publishedAt" | "updatedAt" | "reviewCount" | "featured"
+> {
+  reviewCount?: number;
+  featured?: boolean;
+  i18n: ProviderPublicProfileI18n[];
+  media: ProviderPublicMedia[];
+  doctors: ProviderPublicDoctor[];
+  treatments: ProviderPublicTreatment[];
 }
 
 export interface ProviderQuote {
@@ -323,6 +416,7 @@ export interface AdminProviderInput {
   verificationSummary?: string;
   sourceNotes?: string;
   nextStep?: string;
+  publicProfile?: ProviderPublicProfileInput;
 }
 
 export interface AdminPartnerInput {

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 
 interface CompareItem {
-  hospitalId: number;
+  hospitalId: number | string;
   hospitalName: string;
   treatmentId?: number;
 }
@@ -9,9 +9,9 @@ interface CompareItem {
 interface CompareContextValue {
   items: CompareItem[];
   addItem: (item: CompareItem) => void;
-  removeItem: (hospitalId: number) => void;
+  removeItem: (hospitalId: number | string) => void;
   clearAll: () => void;
-  isInCompare: (hospitalId: number) => boolean;
+  isInCompare: (hospitalId: number | string) => boolean;
   canAdd: boolean;
 }
 
@@ -28,25 +28,30 @@ export function CompareProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const removeItem = useCallback((hospitalId: number) => {
+  const removeItem = useCallback((hospitalId: number | string) => {
     setItems(prev => prev.filter(i => i.hospitalId !== hospitalId));
   }, []);
 
   const clearAll = useCallback(() => setItems([]), []);
 
-  const isInCompare = useCallback((hospitalId: number) => {
-    return items.some(i => i.hospitalId === hospitalId);
-  }, [items]);
+  const isInCompare = useCallback(
+    (hospitalId: number | string) => {
+      return items.some(i => i.hospitalId === hospitalId);
+    },
+    [items]
+  );
 
   return (
-    <CompareContext.Provider value={{
-      items,
-      addItem,
-      removeItem,
-      clearAll,
-      isInCompare,
-      canAdd: items.length < 3,
-    }}>
+    <CompareContext.Provider
+      value={{
+        items,
+        addItem,
+        removeItem,
+        clearAll,
+        isInCompare,
+        canAdd: items.length < 3,
+      }}
+    >
       {children}
     </CompareContext.Provider>
   );
