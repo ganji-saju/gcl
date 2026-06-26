@@ -19,12 +19,14 @@ import {
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SKIN_LANDING_PAGES, SKIN_PACKAGE_SKUS } from "@/lib/wedgeData";
 import {
-  SKIN_LANDING_PAGES,
-  SKIN_PACKAGE_SKUS,
+  LANDING_LOCALE_OPTIONS,
+  LANDING_MARKET_OPTIONS,
+  getDefaultMarketForLocale,
   type LandingLocale,
   type WedgeMarket,
-} from "@/lib/wedgeData";
+} from "@/lib/landingRouteOptions";
 import { languageLabel, marketLabel, statusLabel } from "@/lib/adminLabels";
 import {
   fetchPartnerMvpSnapshot,
@@ -38,7 +40,7 @@ import { cn } from "@/lib/utils";
 const defaultDraft: ManagedLandingRoute = {
   locale: "en",
   slug: "",
-  market: "japan",
+  market: "anglophone",
   intent: "",
   title: "",
   subtitle: "",
@@ -56,6 +58,13 @@ const staticRoutes: ManagedLandingRoute[] = SKIN_LANDING_PAGES.map(page => ({
   source: "code",
   active: true,
 }));
+
+const languageGroups = LANDING_MARKET_OPTIONS.map(market => ({
+  market,
+  languages: LANDING_LOCALE_OPTIONS.filter(
+    option => option.defaultMarket === market.code
+  ),
+})).filter(group => group.languages.length);
 
 function normalizeSlug(value: string) {
   return value
@@ -116,7 +125,7 @@ export default function AdminLandingRoutes() {
     if (!token) {
       setApiStatus("static");
       setApiMessage(
-        "이메일 인증 세션이 없어 코드에 포함된 기본 EN/JP route만 표시합니다."
+        "이메일 인증 세션이 없어 코드에 포함된 기본 글로벌 route만 표시합니다."
       );
       return;
     }
@@ -151,10 +160,8 @@ export default function AdminLandingRoutes() {
     [remoteRoutes, localDrafts]
   );
 
-  const enCount = routes.filter(route => route.locale === "en").length;
-  const jpCount = routes.filter(route => route.locale === "jp").length;
-  const japanCount = routes.filter(route => route.market === "japan").length;
-  const taiwanCount = routes.filter(route => route.market === "taiwan").length;
+  const localeCount = new Set(routes.map(route => route.locale)).size;
+  const marketCount = new Set(routes.map(route => route.market)).size;
   const draftCount = routes.filter(route => route.status === "draft").length;
 
   const updateDraft = <K extends keyof ManagedLandingRoute>(
@@ -162,6 +169,14 @@ export default function AdminLandingRoutes() {
     value: ManagedLandingRoute[K]
   ) => {
     setDraft(current => ({ ...current, [key]: value }));
+  };
+
+  const updateLocale = (locale: LandingLocale) => {
+    setDraft(current => ({
+      ...current,
+      locale,
+      market: getDefaultMarketForLocale(locale),
+    }));
   };
 
   const togglePackage = (packageId: string) => {
@@ -237,9 +252,10 @@ export default function AdminLandingRoutes() {
                 랜딩 경로 관리
               </h1>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-600">
-                공개 홈에 노출하지 않는 EN/JP 일본·대만 피부 패키지 랜딩 경로를
-                관리합니다. 승인된 기본 경로는 코드에서 렌더링하고, 신규 초안은
-                Supabase 운영 테이블에 저장해 배포 전 검수 대상으로 분리합니다.
+                공개 홈에 노출하지 않는 글로벌 피부 패키지 랜딩 경로를 언어권과
+                시장별로 관리합니다. 승인된 기본 경로는 코드에서 렌더링하고,
+                신규 초안은 Supabase 운영 테이블에 저장해 배포 전 검수 대상으로
+                분리합니다.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -306,8 +322,14 @@ export default function AdminLandingRoutes() {
           <div className="mt-8 grid gap-4 md:grid-cols-5">
             {[
               ["전체 경로", routes.length],
-              ["영어 / 일본어", `${enCount} / ${jpCount}`],
-              ["일본 / 대만", `${japanCount} / ${taiwanCount}`],
+              [
+                "활성 언어",
+                `${localeCount} / ${LANDING_LOCALE_OPTIONS.length}`,
+              ],
+              [
+                "시장 세그먼트",
+                `${marketCount} / ${LANDING_MARKET_OPTIONS.length}`,
+              ],
               ["DB 초안", draftCount],
               ["DB 저장", remoteRoutes.length],
             ].map(([label, value]) => (
@@ -413,12 +435,22 @@ export default function AdminLandingRoutes() {
                 <select
                   value={draft.locale}
                   onChange={event =>
-                    updateDraft("locale", event.target.value as LandingLocale)
+                    updateLocale(event.target.value as LandingLocale)
                   }
                   className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                 >
-                  <option value="en">영어</option>
-                  <option value="jp">일본어</option>
+                  {languageGroups.map(group => (
+                    <optgroup
+                      key={group.market.code}
+                      label={group.market.labelKo}
+                    >
+                      {group.languages.map(option => (
+                        <option key={option.code} value={option.code}>
+                          {option.labelKo} / {option.nativeName} ({option.code})
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
 
@@ -433,8 +465,11 @@ export default function AdminLandingRoutes() {
                   }
                   className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                 >
-                  <option value="japan">일본</option>
-                  <option value="taiwan">대만</option>
+                  {LANDING_MARKET_OPTIONS.map(option => (
+                    <option key={option.code} value={option.code}>
+                      {option.labelKo} ({option.code})
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -449,7 +484,7 @@ export default function AdminLandingRoutes() {
                 <Input
                   value={draft.intent}
                   onChange={event => updateDraft("intent", event.target.value)}
-                  placeholder="Korea skin package for Japan patients"
+                  placeholder="Korea dermatology package for Arabic patients"
                 />
               </Field>
               <Field label="제목" className="lg:col-span-2">
@@ -476,7 +511,7 @@ export default function AdminLandingRoutes() {
                   onChange={event =>
                     updateDraft("searchTheme", event.target.value)
                   }
-                  placeholder="Laser toning package"
+                  placeholder="K-beauty clinic package"
                 />
               </Field>
               <Field label="주요 버튼 문구">

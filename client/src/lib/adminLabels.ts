@@ -1,4 +1,8 @@
 import type { BetaCaseStatus } from "@/lib/betaData";
+import {
+  LANDING_LOCALE_OPTIONS,
+  LANDING_MARKET_OPTIONS,
+} from "@/lib/landingRouteOptions";
 
 const CASE_STATUS_LABELS: Record<string, string> = {
   new: "신규",
@@ -103,33 +107,29 @@ const ACTOR_LABELS: Record<string, string> = {
 };
 
 const NEXT_ACTION_LABELS: Record<string, string> = {
-  "Partner assigned; review provider shortlist": "파트너 배정 완료, 병원 후보를 검토하세요",
-  "Assign partner for requested services": "요청 서비스에 맞는 파트너를 배정하세요",
-  "Coordinator to request quotes from partner shortlist": "파트너가 고른 병원 후보에 견적을 요청하세요",
-  "Partner should select provider candidates": "파트너가 병원 후보를 선택해야 합니다",
+  "Partner assigned; review provider shortlist":
+    "파트너 배정 완료, 병원 후보를 검토하세요",
+  "Assign partner for requested services":
+    "요청 서비스에 맞는 파트너를 배정하세요",
+  "Coordinator to request quotes from partner shortlist":
+    "파트너가 고른 병원 후보에 견적을 요청하세요",
+  "Partner should select provider candidates":
+    "파트너가 병원 후보를 선택해야 합니다",
   "Provider quote SLA check": "병원 견적 응답 기준을 확인하세요",
-  "Continue coordinator qualification": "코디네이터가 상담 가능 여부를 계속 확인하세요",
+  "Continue coordinator qualification":
+    "코디네이터가 상담 가능 여부를 계속 확인하세요",
   "Follow up quote acceptance": "견적 수락 여부를 확인하세요",
 };
 
-const MARKET_LABELS: Record<string, string> = {
-  japan: "일본",
-  taiwan: "대만",
-  global: "글로벌",
-};
+const MARKET_LABELS: Record<string, string> = Object.fromEntries(
+  LANDING_MARKET_OPTIONS.map(option => [option.code, option.labelKo])
+);
 
 const LANGUAGE_LABELS: Record<string, string> = {
-  en: "영어",
-  jp: "일본어",
+  ...Object.fromEntries(
+    LANDING_LOCALE_OPTIONS.map(option => [option.code, option.labelKo])
+  ),
   ja: "일본어",
-  ko: "한국어",
-  zh: "중국어",
-  "zh-tw": "중국어(번체)",
-  "zh-cn": "중국어(간체)",
-  th: "태국어",
-  vi: "베트남어",
-  ru: "러시아어",
-  ar: "아랍어",
 };
 
 const RISK_FLAG_LABELS: Record<string, string> = {
@@ -146,15 +146,20 @@ const PROVIDER_NEXT_STEP_LABELS: Record<string, string> = {
   "Send first SLA draft": "1차 응답 기준 초안 발송",
   "Verify insurance before assigning cases": "케이스 배정 전 보험 서류 확인",
   "Finalize quote template": "견적 템플릿 최종 확정",
-  "Collect registration certificate and insurance evidence.": "유치기관 등록증과 보험 증빙 수집",
-  "Confirm deposit refund wording and SLA owner.": "예약금 환불 문구와 SLA 담당자 확정",
-  "Send first SLA draft and confirm language coverage.": "1차 SLA 초안 발송 및 언어 지원 확인",
+  "Collect registration certificate and insurance evidence.":
+    "유치기관 등록증과 보험 증빙 수집",
+  "Confirm deposit refund wording and SLA owner.":
+    "예약금 환불 문구와 SLA 담당자 확정",
+  "Send first SLA draft and confirm language coverage.":
+    "1차 SLA 초안 발송 및 언어 지원 확인",
   "Verify insurance before assigning cases.": "케이스 배정 전 보험 확인",
-  "Finalize quote template and package price ranges.": "견적 템플릿과 패키지 가격 범위 확정",
+  "Finalize quote template and package price ranges.":
+    "견적 템플릿과 패키지 가격 범위 확정",
 };
 
 const QUOTE_NOTE_LABELS: Record<string, string> = {
-  "Final treatment plan and price may change after provider consultation.": "최종 시술 계획과 금액은 병원 상담 후 변경될 수 있습니다.",
+  "Final treatment plan and price may change after provider consultation.":
+    "최종 시술 계획과 금액은 병원 상담 후 변경될 수 있습니다.",
 };
 
 export function caseStatusLabel(status?: string) {
@@ -164,7 +169,11 @@ export function caseStatusLabel(status?: string) {
 
 export function statusLabel(status?: string) {
   if (!status) return "-";
-  return CASE_STATUS_LABELS[status] ?? GENERIC_STATUS_LABELS[status] ?? status.replaceAll("_", " ");
+  return (
+    CASE_STATUS_LABELS[status] ??
+    GENERIC_STATUS_LABELS[status] ??
+    status.replaceAll("_", " ")
+  );
 }
 
 export function partnerModeLabel(value?: string) {
@@ -193,7 +202,8 @@ export function actorLabel(value?: string) {
 
 export function nextActionLabel(value?: string) {
   if (!value) return "-";
-  if (value.startsWith("Move to ")) return `${caseStatusLabel(value.replace("Move to ", "") as BetaCaseStatus)} 단계로 이동`;
+  if (value.startsWith("Move to "))
+    return `${caseStatusLabel(value.replace("Move to ", "") as BetaCaseStatus)} 단계로 이동`;
   return NEXT_ACTION_LABELS[value] ?? value;
 }
 
