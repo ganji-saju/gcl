@@ -59,13 +59,13 @@ function CheckRow({
 }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-ink-100 py-3 last:border-b-0">
-      <div>
+      <div className="min-w-0">
         <div className="font-semibold text-ink-950">{label}</div>
         <div className="mt-1 text-sm text-ink-500">{detail}</div>
       </div>
       <span
         className={cn(
-          "rounded-md border px-2 py-1 text-xs font-bold",
+          "inline-flex min-w-[4.75rem] shrink-0 justify-center whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-bold",
           ok
             ? "border-teal-200 bg-teal-50 text-teal-800"
             : "border-coral-200 bg-coral-50 text-coral-800"
