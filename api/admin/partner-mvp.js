@@ -383,7 +383,7 @@ async function supabaseCount(config, table) {
 
   try {
     const response = await fetch(
-      `${config.supabaseUrl}/rest/v1/${table}?select=id`,
+      `${config.supabaseUrl}/rest/v1/${table}?select=*`,
       {
         method: "GET",
         signal: controller.signal,
