@@ -581,8 +581,8 @@ export default function CaseDashboard() {
       </section>
 
       <section className="bg-ink-50 py-6">
-        <div className="container-wide grid gap-6 xl:h-[calc(100vh-5rem)] xl:min-h-[680px] xl:grid-cols-[minmax(0,1fr)_420px] xl:items-stretch">
-          <div className="flex min-h-[560px] flex-col overflow-hidden rounded-lg border border-ink-200 bg-white xl:min-h-0">
+        <div className="container-wide grid gap-6">
+          <div className="sticky top-16 z-30 flex max-h-[42vh] min-h-[260px] flex-col overflow-hidden rounded-lg border border-ink-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-ink-100 p-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-2 font-semibold text-ink-950">
                 <Filter className="size-4 text-teal-700" />
@@ -645,7 +645,7 @@ export default function CaseDashboard() {
           </div>
 
           {selected && (
-            <aside className="flex min-h-[560px] flex-col overflow-hidden rounded-lg border border-ink-200 bg-white xl:min-h-0">
+            <section className="overflow-hidden rounded-lg border border-ink-200 bg-white">
               <div className="flex items-start justify-between gap-3 border-b border-ink-100 p-5">
                 <div>
                   <div className="text-xs font-bold uppercase text-teal-700">
@@ -658,298 +658,306 @@ export default function CaseDashboard() {
                 <StatusPill status={selected.status} />
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                <div className="rounded-md border border-teal-200 bg-teal-50 p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-teal-900">
-                    <Handshake className="size-4" />
-                    파트너 서비스 요청
+              <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                <div className="grid content-start gap-5">
+                  <div className="rounded-md border border-teal-200 bg-teal-50 p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-teal-900">
+                      <Handshake className="size-4" />
+                      파트너 서비스 요청
+                    </div>
+                    <div className="grid gap-2 text-sm text-ink-700">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-ink-500">요청 방식</span>
+                        <span className="font-semibold text-ink-950">
+                          {partnerModeLabel(selected.partnerAssistanceMode)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-ink-500">공유 동의</span>
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            selected.partnerShareConsent
+                              ? "text-teal-700"
+                              : "text-coral-700"
+                          )}
+                        >
+                          {selected.partnerShareConsent
+                            ? "동의 완료"
+                            : "동의 필요"}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="mb-1 text-ink-500">요청 서비스</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(selected.requestedPartnerServices?.length
+                            ? selected.requestedPartnerServices
+                            : ["none"]
+                          ).map(service => (
+                            <span
+                              key={service}
+                              className="rounded bg-white px-2 py-1 text-xs font-semibold text-ink-700"
+                            >
+                              {partnerServiceLabel(service)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <label className="mt-2 grid gap-1.5 font-medium text-ink-800">
+                        파트너 배정
+                        <select
+                          value={selected.assignedPartnerId ?? ""}
+                          onChange={event => assignPartner(event.target.value)}
+                          className="h-11 rounded-md border border-teal-200 bg-white px-3 text-sm text-ink-900"
+                        >
+                          <option value="">미배정</option>
+                          {partners
+                            .filter(partner => partner.active)
+                            .map(partner => (
+                              <option key={partner.id} value={partner.id}>
+                                {partner.name} /{" "}
+                                {partnerTypeLabel(partner.type)}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                    </div>
+                    {liveMode && !selected.assignedPartnerId && (
+                      <div className="mt-3 rounded-md border border-coral-200 bg-coral-50 p-3 text-xs font-semibold text-coral-800">
+                        Supabase에 병원 후보를 저장하려면 먼저 파트너를 배정해야
+                        합니다.
+                      </div>
+                    )}
                   </div>
-                  <div className="grid gap-2 text-sm text-ink-700">
-                    <div className="flex justify-between gap-3">
-                      <span className="text-ink-500">요청 방식</span>
-                      <span className="font-semibold text-ink-950">
-                        {partnerModeLabel(selected.partnerAssistanceMode)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span className="text-ink-500">공유 동의</span>
-                      <span
-                        className={cn(
-                          "font-semibold",
-                          selected.partnerShareConsent
-                            ? "text-teal-700"
-                            : "text-coral-700"
-                        )}
-                      >
-                        {selected.partnerShareConsent
-                          ? "동의 완료"
-                          : "동의 필요"}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="mb-1 text-ink-500">요청 서비스</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(selected.requestedPartnerServices?.length
-                          ? selected.requestedPartnerServices
-                          : ["none"]
-                        ).map(service => (
-                          <span
-                            key={service}
-                            className="rounded bg-white px-2 py-1 text-xs font-semibold text-ink-700"
-                          >
-                            {partnerServiceLabel(service)}
-                          </span>
-                        ))}
+
+                  <div className="grid gap-3 text-sm">
+                    <div className="rounded-md bg-ink-50 p-3">
+                      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
+                        <Languages className="size-3.5" />
+                        언어 / 시장
+                      </div>
+                      <div className="font-semibold text-ink-950">
+                        {marketLabel(selected.market)} /{" "}
+                        {languageLabel(selected.language)} /{" "}
+                        {languageLabel(selected.locale)}
                       </div>
                     </div>
-                    <label className="mt-2 grid gap-1.5 font-medium text-ink-800">
-                      파트너 배정
-                      <select
-                        value={selected.assignedPartnerId ?? ""}
-                        onChange={event => assignPartner(event.target.value)}
-                        className="h-11 rounded-md border border-teal-200 bg-white px-3 text-sm text-ink-900"
-                      >
-                        <option value="">미배정</option>
-                        {partners
-                          .filter(partner => partner.active)
-                          .map(partner => (
-                            <option key={partner.id} value={partner.id}>
-                              {partner.name} / {partnerTypeLabel(partner.type)}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
+                    <div className="rounded-md bg-ink-50 p-3">
+                      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
+                        <CalendarClock className="size-3.5" />
+                        방문 희망 일정
+                      </div>
+                      <div className="font-semibold text-ink-950">
+                        {selected.travelStart} ~ {selected.travelEnd}
+                      </div>
+                    </div>
+                    <div className="rounded-md bg-ink-50 p-3">
+                      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
+                        <UserRoundCheck className="size-3.5" />
+                        매칭 병원
+                      </div>
+                      <div className="font-semibold text-ink-950">
+                        {selectedProvider?.name ?? "미매칭"}
+                      </div>
+                    </div>
                   </div>
-                  {liveMode && !selected.assignedPartnerId && (
-                    <div className="mt-3 rounded-md border border-coral-200 bg-coral-50 p-3 text-xs font-semibold text-coral-800">
-                      Supabase에 병원 후보를 저장하려면 먼저 파트너를 배정해야
-                      합니다.
+
+                  <div className="rounded-md border border-coral-200 bg-coral-50 p-4">
+                    <div className="text-sm font-semibold text-coral-900">
+                      다음 작업
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-ink-700">
+                      {nextActionLabel(selected.nextAction)}
+                    </p>
+                    <div className="mt-2 text-xs font-semibold text-coral-800">
+                      {selected.nextActionAt}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Button
+                      onClick={advanceSelected}
+                      className="w-full bg-teal-700 text-white hover:bg-teal-800"
+                    >
+                      다음 상태로 이동
+                    </Button>
+                    <select
+                      value={selected.matchedProviderId ?? ""}
+                      onChange={event => assignProvider(event.target.value)}
+                      className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900"
+                    >
+                      <option value="">병원 배정</option>
+                      {providers
+                        .filter(provider => provider.active)
+                        .map(provider => (
+                          <option key={provider.id} value={provider.id}>
+                            {provider.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {selected.riskFlags.length > 0 && (
+                    <div className="rounded-md border border-coral-200 p-3 text-sm text-coral-800">
+                      위험 플래그:{" "}
+                      {selected.riskFlags.map(riskFlagLabel).join(", ")}
                     </div>
                   )}
                 </div>
 
-                <div className="mt-5 grid gap-3 text-sm">
-                  <div className="rounded-md bg-ink-50 p-3">
-                    <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
-                      <Languages className="size-3.5" />
-                      언어 / 시장
+                <div className="grid content-start gap-5">
+                  <div className="rounded-md border border-ink-200 bg-white p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
+                      <Building2 className="size-4 text-teal-700" />
+                      파트너 병원 후보
                     </div>
-                    <div className="font-semibold text-ink-950">
-                      {marketLabel(selected.market)} /{" "}
-                      {languageLabel(selected.language)} /{" "}
-                      {languageLabel(selected.locale)}
-                    </div>
-                  </div>
-                  <div className="rounded-md bg-ink-50 p-3">
-                    <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
-                      <CalendarClock className="size-3.5" />
-                      방문 희망 일정
-                    </div>
-                    <div className="font-semibold text-ink-950">
-                      {selected.travelStart} ~ {selected.travelEnd}
-                    </div>
-                  </div>
-                  <div className="rounded-md bg-ink-50 p-3">
-                    <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-ink-500">
-                      <UserRoundCheck className="size-3.5" />
-                      매칭 병원
-                    </div>
-                    <div className="font-semibold text-ink-950">
-                      {selectedProvider?.name ?? "미매칭"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
-                    <Building2 className="size-4 text-teal-700" />
-                    파트너 병원 후보
-                  </div>
-                  <div className="grid gap-2">
-                    {providers
-                      .filter(provider => provider.active)
-                      .map(provider => {
-                        const selectedForShortlist = Boolean(
-                          selected.partnerShortlistedProviderIds?.includes(
-                            provider.id
-                          )
-                        );
-                        const requested = Boolean(
-                          selected.quoteRequestedProviderIds?.includes(
-                            provider.id
-                          )
-                        );
-                        return (
-                          <button
-                            key={provider.id}
-                            type="button"
-                            onClick={() => togglePartnerShortlist(provider.id)}
-                            className={cn(
-                              "rounded-md border p-3 text-left text-sm transition-colors",
-                              selectedForShortlist
-                                ? "border-teal-300 bg-teal-50"
-                                : "border-ink-200 bg-ink-50 hover:bg-white"
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="font-semibold text-ink-950">
-                                {provider.name}
-                              </span>
-                              <span
-                                className={cn(
-                                  "text-xs font-bold",
-                                  requested ? "text-teal-700" : "text-ink-400"
-                                )}
-                              >
-                                {requested
-                                  ? "견적 요청됨"
-                                  : `적합도 ${provider.betaScore}`}
-                              </span>
-                            </div>
-                            <div className="mt-1 text-xs text-ink-500">
-                              {languageListLabel(provider.languages)} / 응답{" "}
-                              {provider.slaHours}시간
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
-                  <Button
-                    onClick={requestQuotesFromShortlist}
-                    disabled={!selected.partnerShortlistedProviderIds?.length}
-                    className="mt-3 w-full bg-teal-700 text-white hover:bg-teal-800 disabled:bg-ink-300"
-                  >
-                    <Send className="size-4" />
-                    코디네이터 견적 요청
-                  </Button>
-                </div>
-
-                <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
-                    <Send className="size-4 text-teal-700" />
-                    병원 견적 응답
-                  </div>
-                  <div className="grid gap-2">
-                    {selectedQuoteRequests.length ? (
-                      selectedQuoteRequests.map(request => (
-                        <div
-                          key={request.id}
-                          className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-ink-950">
-                                {request.providerName}
-                              </div>
-                              <div className="mt-1 text-xs text-ink-500">
-                                {statusLabel(request.status)} / 기한{" "}
-                                {request.dueAt ?? "미설정"}
-                              </div>
-                            </div>
-                            <span
+                    <div className="grid gap-2">
+                      {providers
+                        .filter(provider => provider.active)
+                        .map(provider => {
+                          const selectedForShortlist = Boolean(
+                            selected.partnerShortlistedProviderIds?.includes(
+                              provider.id
+                            )
+                          );
+                          const requested = Boolean(
+                            selected.quoteRequestedProviderIds?.includes(
+                              provider.id
+                            )
+                          );
+                          return (
+                            <button
+                              key={provider.id}
+                              type="button"
+                              onClick={() =>
+                                togglePartnerShortlist(provider.id)
+                              }
                               className={cn(
-                                "inline-flex shrink-0 justify-center whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-bold",
-                                request.quote
-                                  ? "border-teal-200 bg-teal-50 text-teal-800"
-                                  : "border-coral-200 bg-coral-50 text-coral-800"
+                                "rounded-md border p-3 text-left text-sm transition-colors",
+                                selectedForShortlist
+                                  ? "border-teal-300 bg-teal-50"
+                                  : "border-ink-200 bg-ink-50 hover:bg-white"
                               )}
                             >
-                              {request.quote ? "응답 완료" : "응답 대기"}
-                            </span>
-                          </div>
-                          {request.quote && (
-                            <div className="mt-2 text-xs font-semibold text-teal-800">
-                              견적{" "}
-                              {formatUsd(
-                                request.quote.medicalFeeUsd +
-                                  request.quote.nonmedicalFeeUsd
-                              )}{" "}
-                              / 예약금{" "}
-                              {formatUsd(request.quote.depositAmountUsd)}
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="font-semibold text-ink-950">
+                                  {provider.name}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "text-xs font-bold",
+                                    requested ? "text-teal-700" : "text-ink-400"
+                                  )}
+                                >
+                                  {requested
+                                    ? "견적 요청됨"
+                                    : `적합도 ${provider.betaScore}`}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-xs text-ink-500">
+                                {languageListLabel(provider.languages)} / 응답{" "}
+                                {provider.slaHours}시간
+                              </div>
+                            </button>
+                          );
+                        })}
+                    </div>
+                    <Button
+                      onClick={requestQuotesFromShortlist}
+                      disabled={!selected.partnerShortlistedProviderIds?.length}
+                      className="mt-3 w-full bg-teal-700 text-white hover:bg-teal-800 disabled:bg-ink-300"
+                    >
+                      <Send className="size-4" />
+                      코디네이터 견적 요청
+                    </Button>
+                  </div>
+
+                  <div className="rounded-md border border-ink-200 bg-white p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
+                      <Send className="size-4 text-teal-700" />
+                      병원 견적 응답
+                    </div>
+                    <div className="grid gap-2">
+                      {selectedQuoteRequests.length ? (
+                        selectedQuoteRequests.map(request => (
+                          <div
+                            key={request.id}
+                            className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="font-semibold text-ink-950">
+                                  {request.providerName}
+                                </div>
+                                <div className="mt-1 text-xs text-ink-500">
+                                  {statusLabel(request.status)} / 기한{" "}
+                                  {request.dueAt ?? "미설정"}
+                                </div>
+                              </div>
+                              <span
+                                className={cn(
+                                  "inline-flex shrink-0 justify-center whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-bold",
+                                  request.quote
+                                    ? "border-teal-200 bg-teal-50 text-teal-800"
+                                    : "border-coral-200 bg-coral-50 text-coral-800"
+                                )}
+                              >
+                                {request.quote ? "응답 완료" : "응답 대기"}
+                              </span>
                             </div>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">
-                        아직 이 케이스에 병원 견적 요청이 없습니다.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-md border border-ink-200 bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
-                    <Activity className="size-4 text-teal-700" />
-                    케이스 활동 기록
-                  </div>
-                  <div className="grid gap-2">
-                    {selectedActivities.length ? (
-                      selectedActivities.map(event => (
-                        <div
-                          key={event.id}
-                          className="rounded-md bg-ink-50 p-3 text-sm"
-                        >
-                          <div className="font-semibold text-ink-950">
-                            {eventLabel(event.eventType)}
+                            {request.quote && (
+                              <div className="mt-2 text-xs font-semibold text-teal-800">
+                                견적{" "}
+                                {formatUsd(
+                                  request.quote.medicalFeeUsd +
+                                    request.quote.nonmedicalFeeUsd
+                                )}{" "}
+                                / 예약금{" "}
+                                {formatUsd(request.quote.depositAmountUsd)}
+                              </div>
+                            )}
                           </div>
-                          <div className="mt-1 text-xs text-ink-500">
-                            {event.actorLabel ?? actorLabel(event.actorRole)} /{" "}
-                            {event.createdAt?.slice(0, 16).replace("T", " ")}
-                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">
+                          아직 이 케이스에 병원 견적 요청이 없습니다.
                         </div>
-                      ))
-                    ) : (
-                      <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">
-                        아직 활동 기록이 없습니다.
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-ink-200 bg-white p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-950">
+                      <Activity className="size-4 text-teal-700" />
+                      케이스 활동 기록
+                    </div>
+                    <div className="grid gap-2">
+                      {selectedActivities.length ? (
+                        selectedActivities.map(event => (
+                          <div
+                            key={event.id}
+                            className="rounded-md bg-ink-50 p-3 text-sm"
+                          >
+                            <div className="font-semibold text-ink-950">
+                              {eventLabel(event.eventType)}
+                            </div>
+                            <div className="mt-1 text-xs text-ink-500">
+                              {event.actorLabel ?? actorLabel(event.actorRole)}{" "}
+                              /{" "}
+                              {event.createdAt?.slice(0, 16).replace("T", " ")}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-md border border-ink-200 bg-ink-50 p-3 text-sm text-ink-500">
+                          아직 활동 기록이 없습니다.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="mt-5 rounded-md border border-coral-200 bg-coral-50 p-4">
-                  <div className="text-sm font-semibold text-coral-900">
-                    다음 작업
-                  </div>
-                  <p className="mt-1 text-sm leading-6 text-ink-700">
-                    {nextActionLabel(selected.nextAction)}
-                  </p>
-                  <div className="mt-2 text-xs font-semibold text-coral-800">
-                    {selected.nextActionAt}
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-2">
-                  <Button
-                    onClick={advanceSelected}
-                    className="w-full bg-teal-700 text-white hover:bg-teal-800"
-                  >
-                    다음 상태로 이동
-                  </Button>
-                  <select
-                    value={selected.matchedProviderId ?? ""}
-                    onChange={event => assignProvider(event.target.value)}
-                    className="h-11 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-900"
-                  >
-                    <option value="">병원 배정</option>
-                    {providers
-                      .filter(provider => provider.active)
-                      .map(provider => (
-                        <option key={provider.id} value={provider.id}>
-                          {provider.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {selected.riskFlags.length > 0 && (
-                  <div className="mt-5 rounded-md border border-coral-200 p-3 text-sm text-coral-800">
-                    위험 플래그:{" "}
-                    {selected.riskFlags.map(riskFlagLabel).join(", ")}
-                  </div>
-                )}
               </div>
-            </aside>
+            </section>
           )}
         </div>
       </section>
