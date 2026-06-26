@@ -87,7 +87,7 @@ function StatusPill({ status }: { status: BetaCaseStatus }) {
   return (
     <span
       className={cn(
-        "rounded-md border px-2 py-1 text-xs font-semibold",
+        "whitespace-nowrap rounded-md border px-2 py-1 text-xs font-semibold",
         statusClass(status)
       )}
     >
@@ -107,12 +107,14 @@ function CaseRow({
   onSelect,
   providersById,
   partnersById,
+  compact = false,
 }: {
   row: BetaCase;
   selected: boolean;
   onSelect: () => void;
   providersById: Map<string, { name: string }>;
   partnersById: Map<string, { name: string }>;
+  compact?: boolean;
 }) {
   const provider = row.matchedProviderId
     ? providersById.get(row.matchedProviderId)
@@ -133,7 +135,8 @@ function CaseRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "grid w-full gap-4 border-b border-ink-100 p-4 text-left transition-colors md:grid-cols-[1.05fr_0.75fr_0.8fr_0.7fr_0.9fr]",
+        "grid w-full gap-4 border-b border-ink-100 text-left transition-colors md:grid-cols-[1.05fr_0.75fr_0.8fr_0.7fr_0.9fr]",
+        compact ? "p-3" : "p-4",
         selected ? "bg-teal-50/60" : "bg-white hover:bg-ink-50"
       )}
     >
@@ -207,6 +210,7 @@ export default function CaseDashboard() {
   const [apiMessage, setApiMessage] = useState(
     adminToken ? "Supabase 운영 데이터에 연결 중..." : "데모 보드"
   );
+  const [caseListCollapsed, setCaseListCollapsed] = useState(false);
 
   const owners = useMemo(
     () => Array.from(new Set(cases.map(row => row.owner))),
@@ -227,6 +231,7 @@ export default function CaseDashboard() {
   });
   const selected =
     cases.find(row => row.id === selectedId) ?? filtered[0] ?? cases[0];
+  const visibleCaseRows = caseListCollapsed && selected ? [selected] : filtered;
   const selectedProvider = selected?.matchedProviderId
     ? providersById.get(selected.matchedProviderId)
     : undefined;
@@ -273,6 +278,21 @@ export default function CaseDashboard() {
   useEffect(() => {
     if (adminToken) void refreshOps(adminToken);
   }, [adminToken]);
+
+  useEffect(() => {
+    const syncCollapsedState = () => {
+      setCaseListCollapsed(window.scrollY > 420);
+    };
+
+    syncCollapsedState();
+    window.addEventListener("scroll", syncCollapsedState, { passive: true });
+    return () => window.removeEventListener("scroll", syncCollapsedState);
+  }, []);
+
+  function expandCaseList() {
+    setCaseListCollapsed(false);
+    window.scrollTo({ top: 330, behavior: "smooth" });
+  }
 
   function applySnapshotAfterSave(snapshot: PartnerMvpSnapshot) {
     applySnapshot(snapshot);
@@ -582,54 +602,75 @@ export default function CaseDashboard() {
 
       <section className="bg-ink-50 py-6">
         <div className="container-wide grid gap-6">
-          <div className="sticky top-16 z-30 flex max-h-[42vh] min-h-[260px] flex-col overflow-hidden rounded-lg border border-ink-200 bg-white shadow-sm">
+          <div
+            className={cn(
+              "sticky top-16 z-30 flex flex-col overflow-hidden rounded-lg border border-ink-200 bg-white shadow-sm transition-[max-height,min-height] duration-200",
+              caseListCollapsed
+                ? "max-h-[170px] min-h-[132px]"
+                : "max-h-[42vh] min-h-[260px]"
+            )}
+          >
             <div className="flex flex-col gap-3 border-b border-ink-100 p-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-2 font-semibold text-ink-950">
                 <Filter className="size-4 text-teal-700" />
-                케이스 목록
+                {caseListCollapsed ? "선택 케이스" : "케이스 목록"}
               </div>
-              <div className="flex flex-wrap gap-2">
-                <select
-                  value={statusFilter}
-                  onChange={event =>
-                    setStatusFilter(
-                      event.target.value as BetaCaseStatus | "all"
-                    )
-                  }
-                  className="h-10 rounded-md border border-ink-200 bg-white px-3 text-sm"
+              {caseListCollapsed ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={expandCaseList}
+                  className="border-ink-300 text-ink-800"
                 >
-                  <option value="all">전체 상태</option>
-                  {statusOrder.map(status => (
-                    <option key={status} value={status}>
-                      {caseStatusLabel(status)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={ownerFilter}
-                  onChange={event => setOwnerFilter(event.target.value)}
-                  className="h-10 rounded-md border border-ink-200 bg-white px-3 text-sm"
-                >
-                  <option value="all">전체 담당자</option>
-                  {owners.map(owner => (
-                    <option key={owner} value={owner}>
-                      {owner}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  목록 보기
+                </Button>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={event =>
+                      setStatusFilter(
+                        event.target.value as BetaCaseStatus | "all"
+                      )
+                    }
+                    className="h-10 rounded-md border border-ink-200 bg-white px-3 text-sm"
+                  >
+                    <option value="all">전체 상태</option>
+                    {statusOrder.map(status => (
+                      <option key={status} value={status}>
+                        {caseStatusLabel(status)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={ownerFilter}
+                    onChange={event => setOwnerFilter(event.target.value)}
+                    className="h-10 rounded-md border border-ink-200 bg-white px-3 text-sm"
+                  >
+                    <option value="all">전체 담당자</option>
+                    {owners.map(owner => (
+                      <option key={owner} value={owner}>
+                        {owner}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="min-h-0 flex-1 overflow-hidden">
               <div className="h-full overflow-auto">
                 <div className="min-w-[920px]">
-                  <div className="sticky top-0 z-10 grid gap-4 border-b border-ink-100 bg-ink-50 px-4 py-3 text-xs font-bold uppercase text-ink-500 md:grid-cols-[1.05fr_0.75fr_0.8fr_0.7fr_0.9fr]">
-                    <div>케이스</div>
-                    <div>요청 내용</div>
-                    <div>병원 / 유입</div>
-                    <div>예산 / 일정</div>
-                    <div>응답 기준 / 다음 작업</div>
-                  </div>
-                  {filtered.map(row => (
+                  {!caseListCollapsed && (
+                    <div className="sticky top-0 z-10 grid gap-4 border-b border-ink-100 bg-ink-50 px-4 py-3 text-xs font-bold uppercase text-ink-500 md:grid-cols-[1.05fr_0.75fr_0.8fr_0.7fr_0.9fr]">
+                      <div>케이스</div>
+                      <div>요청 내용</div>
+                      <div>병원 / 유입</div>
+                      <div>예산 / 일정</div>
+                      <div>응답 기준 / 다음 작업</div>
+                    </div>
+                  )}
+                  {visibleCaseRows.map(row => (
                     <CaseRow
                       key={row.id}
                       row={row}
@@ -637,6 +678,7 @@ export default function CaseDashboard() {
                       onSelect={() => setSelectedId(row.id)}
                       providersById={providersById}
                       partnersById={partnersById}
+                      compact={caseListCollapsed}
                     />
                   ))}
                 </div>
