@@ -15,6 +15,7 @@ export interface PartnerMvpSnapshot {
   bookings?: BookingReservation[];
   activities?: CaseActivityEvent[];
   landingRoutes?: ManagedLandingRoute[];
+  packageSkus?: ManagedPackageSku[];
   contactChannels?: ContactChannelSetting[];
   providerOperatingProfiles?: ProviderOperatingProfile[];
   meta?: {
@@ -43,6 +44,7 @@ export interface PartnerMvpSnapshot {
     };
     adminPersistenceHealth?: {
       adminLandingRoutes: number | null;
+      adminPackageSkus?: number | null;
       contactChannels: number | null;
       providerOperatingProfiles: number | null;
       providerDataQualityChecks: number | null;
@@ -66,6 +68,7 @@ export interface PartnerMvpSnapshot {
 export type PartnerMvpActionSnapshot = PartnerMvpSnapshot;
 export type OpsRole = "admin" | "partner" | "provider";
 export type LandingRouteStatus = "draft" | "published" | "paused" | "archived";
+export type ManagedPackageMarket = WedgeMarket | "both";
 
 export interface ManagedLandingRoute {
   id?: string;
@@ -83,6 +86,24 @@ export interface ManagedLandingRoute {
   source?: string;
   active?: boolean;
   publishedAt?: string | null;
+  updatedAt?: string;
+}
+
+export interface ManagedPackageSku {
+  id: string;
+  shortTitle: string;
+  market: ManagedPackageMarket;
+  category: string;
+  priceMinUsd: number;
+  priceMaxUsd: number;
+  durationDays: number;
+  recoveryWindow: string;
+  coordinatorLanguages: string[];
+  bestFor: string;
+  includes: string[];
+  complianceNote: string;
+  source?: string;
+  active?: boolean;
   updatedAt?: string;
 }
 
@@ -637,6 +658,23 @@ export function upsertLandingRouteMvp(
   return requestPartnerMvpAction(token, {
     method: "POST",
     body: JSON.stringify({ action: "upsertLandingRoute", route }),
+  });
+}
+
+export function upsertPackageSkuMvp(
+  token: string,
+  packageSku: ManagedPackageSku
+) {
+  return requestPartnerMvpAction(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "upsertPackageSku", packageSku }),
+  });
+}
+
+export function deletePackageSkuMvp(token: string, packageId: string) {
+  return requestPartnerMvpAction(token, {
+    method: "POST",
+    body: JSON.stringify({ action: "deletePackageSku", packageId }),
   });
 }
 
